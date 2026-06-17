@@ -483,6 +483,182 @@ body {
     border-top: 1px solid rgba(255,255,255,0.05);
 }
 
+/* ======================================== */
+/* WITHDRAWAL SECTION - CUSTOM COLORS      */
+/* ======================================== */
+
+.withdraw-info {
+    margin-bottom: 20px;
+}
+
+.withdraw-info .info-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.withdraw-info .info-card h3 {
+    color: #00d4ff;
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+/* Withdrawal Balance Display */
+.withdraw-balance {
+    font-size: 32px;
+    font-weight: bold;
+    color: #00ff87;
+    text-align: center;
+    padding: 16px 0;
+}
+
+/* Withdrawal Form */
+#withdrawForm .form-group {
+    margin-bottom: 16px;
+}
+
+#withdrawForm .form-group label {
+    display: block;
+    font-size: 13px;
+    color: #8899bb;
+    margin-bottom: 6px;
+}
+
+#withdrawForm .form-group input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3);
+    color: white;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+#withdrawForm .form-group input:focus {
+    outline: none;
+    border-color: #00d4ff;
+    background: rgba(0,212,255,0.05);
+}
+
+#withdrawForm .form-group input::placeholder {
+    color: #556688;
+}
+
+/* Withdrawal Button */
+.withdraw-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+}
+
+.withdraw-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(238, 90, 36, 0.4);
+}
+
+.withdraw-btn:active {
+    transform: scale(0.95);
+}
+
+.withdraw-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Withdrawal Info Text */
+.withdraw-info-text {
+    color: #ccd6f0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.withdraw-info-text .highlight {
+    color: #00ff87;
+    font-weight: bold;
+}
+
+.withdraw-info-text .fee {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+/* Withdrawal Warning */
+.withdraw-warning {
+    background: rgba(255,107,107,0.1);
+    border-left: 3px solid #ff6b6b;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.withdraw-warning p {
+    color: #ff6b6b;
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+/* Success Message */
+.withdraw-success {
+    background: rgba(0,255,135,0.1);
+    border-left: 3px solid #00ff87;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.withdraw-success p {
+    color: #00ff87;
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+/* Fee Summary Box */
+.fee-summary {
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.fee-summary .fee-row {
+    display: flex;
+    justify-content: space-between;
+    color: #8899bb;
+    font-size: 14px;
+    padding: 4px 0;
+}
+
+.fee-summary .fee-row .amount {
+    color: #00ff87;
+}
+
+.fee-summary .fee-row .fee-amount {
+    color: #ff6b6b;
+}
+
+.fee-summary .fee-row.total {
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 8px;
+    margin-top: 4px;
+    font-weight: bold;
+}
+
+.fee-summary .fee-row.total .net {
+    color: #00ff87;
+    font-size: 18px;
+}
+
 /* Responsive */
 @media (max-width: 400px) {
     .stats-grid {
@@ -509,5 +685,13 @@ body {
 
     .referral-link-box span {
         font-size: 11px;
+    }
+
+    .withdraw-balance {
+        font-size: 24px;
+    }
+
+    .fee-summary .fee-row {
+        font-size: 12px;
     }
 }
