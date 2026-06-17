@@ -191,7 +191,7 @@ def get_history():
     return jsonify({'transactions': transactions})
 
 # ============================================
-# WALLET SAVE API ROUTES
+# WALLET SAVE API ROUTES - SIMPLE & SECURE
 # ============================================
 
 @app.route('/api/save_wallet', methods=['POST'])
