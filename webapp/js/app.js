@@ -148,7 +148,7 @@ async function saveWallet() {
     }
     
     // Basic validation
-    if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+    if (!walletAddress.startswith('0x') || walletAddress.length !== 42) {
         tg.showPopup({
             title: '❌ Invalid Address',
             message: 'Please enter a valid BSC wallet address (starts with 0x, 42 characters).',
@@ -527,7 +527,10 @@ function renderHistory(transactions) {
     historyList.innerHTML = html;
 }
 
-// Setup event listeners
+// ============================================
+// WITHDRAW FORM WITH ERROR HANDLING - FIXED
+// ============================================
+
 function setupEventListeners() {
     const withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
@@ -568,6 +571,14 @@ function setupEventListeners() {
             }
             
             const userId = tgUser?.id || '0';
+            
+            // Show loading
+            tg.showPopup({
+                title: '⏳ Processing...',
+                message: 'Please wait...',
+                buttons: []
+            });
+            
             fetch('/api/withdraw', {
                 method: 'POST',
                 headers: {
@@ -584,22 +595,38 @@ function setupEventListeners() {
                 if (data.success) {
                     tg.showPopup({
                         title: '✅ Success!',
-                        message: 'Withdrawal request submitted successfully!',
+                        message: data.message || 'Withdrawal request submitted successfully!',
                         buttons: [{type: 'ok'}]
                     });
+                    // Refresh balance
+                    loadUserData();
                 } else {
+                    // ============================================
+                    // SHOW ERROR MESSAGE FROM API
+                    // ============================================
                     tg.showPopup({
                         title: '❌ Error',
-                        message: data.message || 'Withdrawal failed.',
+                        message: data.message || 'Withdrawal failed. Please try again.',
                         buttons: [{type: 'ok'}]
                     });
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                tg.showPopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
             });
         });
     }
 }
 
-// Export for HTML
+// ============================================
+// EXPORT FOR HTML
+// ============================================
+
 window.navigateTo = navigateTo;
 window.goBack = goBack;
 window.copyAddress = copyAddress;
