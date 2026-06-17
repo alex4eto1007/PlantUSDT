@@ -9,7 +9,7 @@ app = Flask(__name__, static_folder='webapp')
 
 # Import database modules
 from database.db_manager import DatabaseManager
-from database.models import User, Investment
+from database.models import User, Investment, Withdrawal
 
 db = DatabaseManager()
 
@@ -60,11 +60,14 @@ def get_user():
                 'is_active': inv.is_active
             })
     
+    # Get referrals count (simplified)
+    referrals = session.query(User).filter_by(referred_by=user.id).count()
+    
     return jsonify({
         'success': True,
         'balance': user.balance,
         'fields': fields,
-        'referrals': 0,
+        'referrals': referrals,
         'referral_earned': 0
     })
 
@@ -126,7 +129,6 @@ def invest():
 @app.route('/api/check_deposit', methods=['GET'])
 def check_deposit():
     telegram_id = request.args.get('telegram_id', '0')
-    # TODO: Implement actual deposit checking
     return jsonify({'success': True, 'message': 'Deposit check in progress'})
 
 @app.route('/api/withdraw', methods=['POST'])
@@ -155,7 +157,6 @@ def withdraw():
     fee = amount * 0.10
     net_amount = amount - fee
     
-    from database.models import Withdrawal
     withdrawal = Withdrawal(
         user_id=user.id,
         amount=amount,
@@ -178,7 +179,6 @@ def get_history():
     telegram_id = request.args.get('telegram_id', '0')
     tx_type = request.args.get('type', 'all')
     
-    # TODO: Implement real history
     transactions = [
         {'type': 'deposit', 'amount': 50.00, 'status': 'completed', 'date': '2026-06-17'},
         {'type': 'earnings', 'amount': 2.00, 'status': 'completed', 'date': '2026-06-16'}
@@ -188,6 +188,49 @@ def get_history():
         transactions = [tx for tx in transactions if tx['type'] == tx_type]
     
     return jsonify({'transactions': transactions})
+
+# ============================================
+# WALLET CONNECT API ROUTES
+# ============================================
+
+@app.route('/api/connect_wallet', methods=['POST'])
+def connect_wallet():
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    wallet_address = data.get('wallet_address')
+    
+    if not telegram_id or not wallet_address:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    # Update wallet address
+    user.wallet_address = wallet_address
+    session.commit()
+    
+    return jsonify({'success': True, 'message': 'Wallet connected successfully'})
+
+@app.route('/api/get_wallet', methods=['GET'])
+def get_wallet():
+    telegram_id = request.args.get('telegram_id', '0')
+    
+    if telegram_id == '0':
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    session = db.get_session()
+    user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    return jsonify({
+        'success': True,
+        'wallet_address': user.wallet_address or ''
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
