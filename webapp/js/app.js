@@ -328,6 +328,44 @@ async function loadSavedWallet() {
     }
 }
 
+// ============================================
+// SET WALLET FOR WITHDRAWAL
+// ============================================
+
+async function setWallet() {
+    const userId = tgUser?.id || '0';
+    
+    try {
+        const response = await fetch(`/api/get_wallet?telegram_id=${userId}`);
+        const data = await response.json();
+        
+        if (data.success && data.wallet_address) {
+            const withdrawAddress = document.getElementById('withdrawAddress');
+            if (withdrawAddress) {
+                withdrawAddress.value = data.wallet_address;
+                tg.showPopup({
+                    title: '✅ Wallet Loaded!',
+                    message: `Wallet address loaded: ${data.wallet_address.slice(0, 6)}...${data.wallet_address.slice(-4)}`,
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        } else {
+            tg.showPopup({
+                title: '❌ No Wallet Found',
+                message: 'Please save a wallet address first in the main menu.',
+                buttons: [{type: 'ok'}]
+            });
+        }
+    } catch (error) {
+        console.error('Error loading wallet:', error);
+        tg.showPopup({
+            title: '❌ Error',
+            message: 'Failed to load wallet. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+    }
+}
+
 // Invest in a field
 async function investField(fieldNumber) {
     const userId = tgUser?.id || '0';
@@ -571,3 +609,4 @@ window.investField = investField;
 window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
 window.disconnectWallet = disconnectWallet;
+window.setWallet = setWallet;
