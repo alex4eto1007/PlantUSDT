@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=8">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -26,10 +26,16 @@
             </div>
             <div class="wallet-input-group">
                 <input type="text" id="walletInput" placeholder="Enter your BSC wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
-                <button class="action-btn primary" onclick="saveWallet()" style="width: 100%; padding: 12px;">
-                    <span class="btn-icon">💾</span>
-                    Save Wallet
-                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="action-btn primary" onclick="saveWallet()" id="saveWalletBtn" style="flex: 1; padding: 12px;">
+                        <span class="btn-icon">💾</span>
+                        Save Wallet
+                    </button>
+                    <button class="action-btn warning" onclick="disconnectWallet()" id="disconnectWalletBtn" style="display: none; flex: 1; padding: 12px; background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important; color: white !important;">
+                        <span class="btn-icon">🔓</span>
+                        Disconnect
+                    </button>
+                </div>
             </div>
             <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #00ff87; margin-top: 8px; word-break: break-all; padding: 8px 12px; background: rgba(0,255,135,0.05); border-radius: 6px; border: 1px solid rgba(0,255,135,0.1);"></div>
         </div>

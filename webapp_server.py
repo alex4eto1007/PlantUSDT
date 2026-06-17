@@ -13,6 +13,11 @@ from database.models import User, Investment, Withdrawal
 
 db = DatabaseManager()
 
+# ============================================
+# PROJECT WALLET - BLOCKED FROM USER USE
+# ============================================
+PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
+
 @app.route('/')
 def index():
     return send_from_directory('webapp', 'index.html')
@@ -141,6 +146,12 @@ def withdraw():
     if not telegram_id or not amount or not address:
         return jsonify({'success': False, 'message': 'Missing required fields'})
     
+    # ============================================
+    # BLOCK WITHDRAWALS TO PROJECT WALLET
+    # ============================================
+    if address.lower() == PROJECT_WALLET.lower():
+        return jsonify({'success': False, 'message': 'Cannot withdraw to project wallet. Please use your own wallet address.'})
+    
     session = db.get_session()
     user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
     
@@ -191,7 +202,7 @@ def get_history():
     return jsonify({'transactions': transactions})
 
 # ============================================
-# WALLET SAVE API ROUTES - SIMPLE & SECURE
+# WALLET SAVE API ROUTES - WITH PROJECT WALLET BLOCK
 # ============================================
 
 @app.route('/api/save_wallet', methods=['POST'])
@@ -200,12 +211,28 @@ def save_wallet():
     telegram_id = data.get('telegram_id')
     wallet_address = data.get('wallet_address')
     
-    if not telegram_id or not wallet_address:
-        return jsonify({'success': False, 'message': 'Missing required fields'})
+    if not telegram_id:
+        return jsonify({'success': False, 'message': 'Missing telegram_id'})
+    
+    # If wallet_address is empty, clear it (disconnect)
+    if not wallet_address or wallet_address == '':
+        session = db.get_session()
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if user:
+            user.wallet_address = ''
+            session.commit()
+            return jsonify({'success': True, 'message': 'Wallet disconnected'})
+        return jsonify({'success': False, 'message': 'User not found'})
     
     # Basic validation
     if not wallet_address.startswith('0x') or len(wallet_address) != 42:
         return jsonify({'success': False, 'message': 'Invalid wallet address'})
+    
+    # ============================================
+    # BLOCK PROJECT WALLET
+    # ============================================
+    if wallet_address.lower() == PROJECT_WALLET.lower():
+        return jsonify({'success': False, 'message': 'This is the project wallet. Please enter your own wallet address.'})
     
     session = db.get_session()
     user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
@@ -213,7 +240,6 @@ def save_wallet():
     if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
-    # Update wallet address
     user.wallet_address = wallet_address
     session.commit()
     

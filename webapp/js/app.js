@@ -4,6 +4,9 @@
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe?.user;
 
+// Project wallet address (blocked from being used as user wallet)
+const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -127,7 +130,7 @@ function updateReferral(data) {
 }
 
 // ============================================
-// SIMPLE WALLET SAVE FUNCTIONS
+// WALLET FUNCTIONS WITH DISCONNECT
 // ============================================
 
 async function saveWallet() {
@@ -149,6 +152,18 @@ async function saveWallet() {
         tg.showPopup({
             title: '❌ Invalid Address',
             message: 'Please enter a valid BSC wallet address (starts with 0x, 42 characters).',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    // ============================================
+    // BLOCK PROJECT WALLET
+    // ============================================
+    if (walletAddress.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
+        tg.showPopup({
+            title: '❌ Invalid Wallet',
+            message: 'This is the project wallet address. Please enter your own personal wallet address.',
             buttons: [{type: 'ok'}]
         });
         return;
@@ -196,7 +211,8 @@ function updateWalletUI(address) {
     const statusText = document.getElementById('walletText');
     const addressDisplay = document.getElementById('walletAddressDisplay');
     const walletInput = document.getElementById('walletInput');
-    const saveBtn = document.querySelector('.wallet-input-group .action-btn');
+    const saveBtn = document.getElementById('saveWalletBtn');
+    const disconnectBtn = document.getElementById('disconnectWalletBtn');
     
     if (statusText) {
         statusText.textContent = '✅ Wallet Connected';
@@ -212,11 +228,90 @@ function updateWalletUI(address) {
         walletInput.style.opacity = '0.6';
     }
     if (saveBtn) {
-        saveBtn.textContent = '✅ Saved';
-        saveBtn.disabled = true;
-        saveBtn.style.opacity = '0.6';
-        saveBtn.style.cursor = 'default';
+        saveBtn.style.display = 'none';
     }
+    if (disconnectBtn) {
+        disconnectBtn.style.display = 'flex';
+    }
+}
+
+function resetWalletUI() {
+    const statusText = document.getElementById('walletText');
+    const addressDisplay = document.getElementById('walletAddressDisplay');
+    const walletInput = document.getElementById('walletInput');
+    const saveBtn = document.getElementById('saveWalletBtn');
+    const disconnectBtn = document.getElementById('disconnectWalletBtn');
+    
+    if (statusText) {
+        statusText.textContent = 'Wallet not connected';
+        statusText.className = 'disconnected';
+    }
+    if (addressDisplay) {
+        addressDisplay.style.display = 'none';
+    }
+    if (walletInput) {
+        walletInput.value = '';
+        walletInput.disabled = false;
+        walletInput.style.opacity = '1';
+    }
+    if (saveBtn) {
+        saveBtn.style.display = 'flex';
+    }
+    if (disconnectBtn) {
+        disconnectBtn.style.display = 'none';
+    }
+}
+
+async function disconnectWallet() {
+    const userId = tgUser?.id || '0';
+    
+    tg.showPopup({
+        title: '🔓 Disconnect Wallet',
+        message: 'Are you sure you want to disconnect your wallet? You will need to re-enter it for withdrawals.',
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'confirm', type: 'ok', text: 'Disconnect'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch('/api/save_wallet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        wallet_address: ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resetWalletUI();
+                    tg.showPopup({
+                        title: '✅ Disconnected',
+                        message: 'Your wallet has been disconnected.',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    tg.showPopup({
+                        title: '❌ Error',
+                        message: 'Failed to disconnect wallet.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error disconnecting wallet:', error);
+                tg.showPopup({
+                    title: '❌ Error',
+                    message: 'Failed to disconnect wallet. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
 }
 
 // Load saved wallet from server
@@ -422,6 +517,18 @@ function setupEventListeners() {
                 return;
             }
             
+            // ============================================
+            // BLOCK WITHDRAWALS TO PROJECT WALLET
+            // ============================================
+            if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
+                tg.showPopup({
+                    title: '❌ Invalid Wallet',
+                    message: 'Cannot withdraw to project wallet. Please use your own wallet address.',
+                    buttons: [{type: 'ok'}]
+                });
+                return;
+            }
+            
             const userId = tgUser?.id || '0';
             fetch('/api/withdraw', {
                 method: 'POST',
@@ -463,3 +570,4 @@ window.checkDeposit = checkDeposit;
 window.investField = investField;
 window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
+window.disconnectWallet = disconnectWallet;
