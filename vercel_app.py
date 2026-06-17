@@ -1,12 +1,12 @@
 from flask import Flask, send_from_directory, jsonify, request
 import os
-import requests
+import json
+import urllib.request
+import urllib.error
 
 app = Flask(__name__, static_folder='webapp')
 
-# Your VPS API URL
 VPS_API_URL = "http://167.233.132.127:5001"
-
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 @app.route('/')
@@ -22,9 +22,10 @@ def get_wallet():
     telegram_id = request.args.get('telegram_id', '0')
     
     try:
-        response = requests.get(f"{VPS_API_URL}/api/get_wallet?telegram_id={telegram_id}", timeout=5)
-        if response.status_code == 200:
-            return jsonify(response.json())
+        url = f"{VPS_API_URL}/api/get_wallet?telegram_id={telegram_id}"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return jsonify(data)
     except:
         pass
     
@@ -40,9 +41,15 @@ def save_wallet():
         return jsonify({'success': False, 'message': 'Missing telegram_id'})
     
     try:
-        response = requests.post(f"{VPS_API_URL}/api/save_wallet", json=data, timeout=5)
-        if response.status_code == 200:
-            return jsonify(response.json())
+        url = f"{VPS_API_URL}/api/save_wallet"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(data).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            result = json.loads(response.read().decode())
+            return jsonify(result)
     except:
         pass
     
