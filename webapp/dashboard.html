@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard - PlantUSDT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1>📊 Dashboard</h1>
+        </div>
+
+        <div class="dashboard-stats">
+            <div class="stat-card large">
+                <div class="stat-label">💰 Balance</div>
+                <div class="stat-value large" id="dashBalance">$0.00</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-card small">
+                    <div class="stat-label">📈 Invested</div>
+                    <div class="stat-value" id="dashInvested">$0.00</div>
+                </div>
+                <div class="stat-card small">
+                    <div class="stat-label">💵 Earned</div>
+                    <div class="stat-value" id="dashEarned">$0.00</div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-card small">
+                    <div class="stat-label">💳 Deposited</div>
+                    <div class="stat-value" id="dashDeposited">$0.00</div>
+                </div>
+                <div class="stat-card small">
+                    <div class="stat-label">🔄 Referrals</div>
+                    <div class="stat-value" id="dashReferrals">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="investments-section">
+            <h3>💼 Your Investments</h3>
+            <div id="investmentsList">
+                <p class="empty-state">No investments yet. Start with /deposit!</p>
+            </div>
+        </div>
+
+        <div class="actions-grid">
+            <button class="action-btn primary" onclick="navigateTo('deposit')">💳 Deposit</button>
+            <button class="action-btn success" onclick="navigateTo('invest')">💰 Invest</button>
+            <button class="action-btn warning" onclick="navigateTo('withdraw')">🏦 Withdraw</button>
+            <button class="action-btn info" onclick="navigateTo('history')">📜 History</button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

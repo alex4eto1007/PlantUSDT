@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💳 Deposit - PlantUSDT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1>💳 Deposit</h1>
+        </div>
+
+        <div class="deposit-info">
+            <div class="info-card">
+                <h3>📋 Deposit Instructions</h3>
+                <p><strong>Network:</strong> BSC (BEP-20)</p>
+                <p><strong>Token:</strong> USDT</p>
+                <p><strong>Min Amount:</strong> $5 USDT</p>
+                <p><strong>Address:</strong></p>
+                <div class="address-box" id="walletAddress">
+                    <span id="addressText">0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76</span>
+                    <button class="copy-btn" onclick="copyAddress()">📋</button>
+                </div>
+                <p class="warning">⚠️ Only send USDT on BSC network!</p>
+            </div>
+
+            <div class="info-card">
+                <h3>🔍 Check Deposit</h3>
+                <button class="action-btn primary" onclick="checkDeposit()">✅ I've Sent USDT</button>
+                <div id="depositStatus"></div>
+            </div>
+        </div>
+
+        <button class="action-btn secondary" onclick="navigateTo('dashboard')">📊 Back to Dashboard</button>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

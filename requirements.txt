@@ -1,0 +1,9 @@
+# PlantUSDT requirements 
+python-telegram-bot==20.7
+sqlalchemy==2.0.23
+web3==6.11.3
+python-dotenv==1.0.0
+apscheduler==3.10.4
+psycopg2-binary==2.9.9
+redis==5.0.1
+requests==2.31.0

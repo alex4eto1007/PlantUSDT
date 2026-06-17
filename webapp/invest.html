@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 Invest - PlantUSDT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1>💰 Invest</h1>
+        </div>
+
+        <div class="invest-info">
+            <div class="info-card">
+                <h3>📈 Investment Plan</h3>
+                <div class="plan-details">
+                    <div class="plan-item">
+                        <span>Daily Return</span>
+                        <span class="highlight">2%</span>
+                    </div>
+                    <div class="plan-item">
+                        <span>Duration</span>
+                        <span class="highlight">30 Days</span>
+                    </div>
+                    <div class="plan-item">
+                        <span>Total Return</span>
+                        <span class="highlight">160%</span>
+                    </div>
+                    <div class="plan-item">
+                        <span>Min Deposit</span>
+                        <span class="highlight">$5 USDT</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>💰 Your Balance</h3>
+                <div class="balance-display" id="investBalance">$0.00</div>
+                <button class="action-btn success" onclick="navigateTo('deposit')">💳 Deposit First</button>
+            </div>
+
+            <div class="info-card">
+                <h3>📊 Example</h3>
+                <p>Invest $100 USDT</p>
+                <p>→ Earn $2 DAILY</p>
+                <p>→ Total $160 after 30 days</p>
+            </div>
+        </div>
+
+        <button class="action-btn secondary" onclick="navigateTo('dashboard')">📊 Back to Dashboard</button>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
