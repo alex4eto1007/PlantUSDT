@@ -26,7 +26,7 @@ deposit_scanner = DepositScanner()
 db.create_tables()
 
 # Vercel URL for Mini App
-VERCEL_URL = "https://plantusdt.vercel.app"  # Change this to your actual Vercel URL
+VERCEL_URL = "https://plant-usdt.vercel.app"  # Change this to your actual Vercel URL
 
 # Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
