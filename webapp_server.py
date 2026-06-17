@@ -60,7 +60,7 @@ def get_user():
                 'is_active': inv.is_active
             })
     
-    # Get referrals count (simplified)
+    # Get referrals count
     referrals = session.query(User).filter_by(referred_by=user.id).count()
     
     return jsonify({
@@ -179,6 +179,7 @@ def get_history():
     telegram_id = request.args.get('telegram_id', '0')
     tx_type = request.args.get('type', 'all')
     
+    # TODO: Implement real history from database
     transactions = [
         {'type': 'deposit', 'amount': 50.00, 'status': 'completed', 'date': '2026-06-17'},
         {'type': 'earnings', 'amount': 2.00, 'status': 'completed', 'date': '2026-06-16'}
@@ -190,17 +191,21 @@ def get_history():
     return jsonify({'transactions': transactions})
 
 # ============================================
-# WALLET CONNECT API ROUTES
+# WALLET SAVE API ROUTES
 # ============================================
 
-@app.route('/api/connect_wallet', methods=['POST'])
-def connect_wallet():
+@app.route('/api/save_wallet', methods=['POST'])
+def save_wallet():
     data = request.json
     telegram_id = data.get('telegram_id')
     wallet_address = data.get('wallet_address')
     
     if not telegram_id or not wallet_address:
         return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    # Basic validation
+    if not wallet_address.startswith('0x') or len(wallet_address) != 42:
+        return jsonify({'success': False, 'message': 'Invalid wallet address'})
     
     session = db.get_session()
     user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
@@ -212,7 +217,7 @@ def connect_wallet():
     user.wallet_address = wallet_address
     session.commit()
     
-    return jsonify({'success': True, 'message': 'Wallet connected successfully'})
+    return jsonify({'success': True, 'message': 'Wallet saved successfully'})
 
 @app.route('/api/get_wallet', methods=['GET'])
 def get_wallet():
