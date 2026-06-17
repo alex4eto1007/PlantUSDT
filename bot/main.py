@@ -1,13 +1,13 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config.settings import Config
 from database.db_manager import DatabaseManager
 from services.investment import InvestmentService
 from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
+from services.scheduler import SchedulerService
 import logging
 import asyncio
-from datetime import datetime
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -20,13 +20,19 @@ logger = logging.getLogger(__name__)
 db = DatabaseManager()
 investment_service = InvestmentService()
 wallet_service = WalletService()
+scheduler = SchedulerService()
 deposit_scanner = DepositScanner()
 
 # Create tables
 db.create_tables()
 
 # Vercel URL for Mini App
-VERCEL_URL = "https://plant-usdt.vercel.app"  # Change this to your actual Vercel URL
+VERCEL_URL = "https://plant-usdt.vercel.app"
+
+# Admin check function
+def is_admin(user_id: int) -> bool:
+    user = db.get_user(user_id)
+    return user and user.is_admin
 
 # Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -34,18 +40,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     existing_user = db.get_user(user.id)
     if not existing_user:
-        referred_by = None
-        if context.args and len(context.args) > 0:
-            referral_code = context.args[0]
-            referrer = db.get_user_by_referral_code(referral_code)
-            if referrer:
-                referred_by = referrer.id
-        
         db.create_user(
             telegram_id=user.id,
             username=user.username,
-            first_name=user.first_name,
-            referred_by=referred_by
+            first_name=user.first_name
         )
         
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
@@ -58,35 +56,27 @@ Grow your USDT with 2% DAILY returns for 30 days!
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
 • 🔒 Platform fee: 10% on withdrawals
+• 🌱 3 Planting Fields: $100 max each
 
 👥 REFERRAL BONUS:
 Share your referral link and earn 5% from your friends' deposits!
 
-Use /invest to get started!
-Use /dashboard to check your stats!
 Use /app to open the Mini App!"""
         
-        # WebApp button
         keyboard = [
-            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))],
-            [InlineKeyboardButton("💰 Invest", callback_data="invest_amount")],
-            [InlineKeyboardButton("📊 Dashboard", callback_data="dashboard")]
+            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(welcome_text, reply_markup=reply_markup)
     else:
-        # WebApp button for existing users
         keyboard = [
-            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))],
-            [InlineKeyboardButton("💰 Invest", callback_data="invest_amount")],
-            [InlineKeyboardButton("📊 Dashboard", callback_data="dashboard")]
+            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            f"Welcome back, {user.first_name}! 🌱\n\n"
-            f"Open the PlantUSDT App below:",
+            f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:",
             reply_markup=reply_markup
         )
 
@@ -97,263 +87,145 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "🌱 Open the PlantUSDT Mini App:",
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text("🌱 Open the PlantUSDT Mini App:", reply_markup=reply_markup)
 
-# Invest command
-async def invest(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Admin Commands
+async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db_user = db.get_user(user.id)
-    
-    if not db_user:
-        await update.message.reply_text("Please use /start first to register!")
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
         return
     
-    keyboard = [
-        [InlineKeyboardButton("💰 Invest USDT", callback_data="invest_amount")],
-        [InlineKeyboardButton("📊 My Investments", callback_data="my_investments")],
-        [InlineKeyboardButton("🏦 Withdraw", callback_data="withdraw")],
-        [InlineKeyboardButton("💳 Set Wallet", callback_data="set_wallet")],
-        [InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    pending = db.get_pending_withdrawals()
     
-    await update.message.reply_text(
-        f"💰 Investment Menu\n\n"
-        f"• 2% daily return\n"
-        f"• 30 days investment period\n"
-        f"• Minimum: ${Config.MIN_INVESTMENT} USDT\n"
-        f"• Your Balance: ${db_user.balance:.2f} USDT\n\n"
-        f"Select an option:",
-        reply_markup=reply_markup
-    )
-
-# Dashboard command
-async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    db_user = db.get_user(user.id)
-    
-    if not db_user:
-        await update.message.reply_text("Please use /start first to register!")
+    if not pending:
+        await update.message.reply_text("📋 No pending withdrawals.")
         return
     
-    investments = db.get_user_investments(db_user.id)
-    active_investments = [inv for inv in investments if inv.is_active]
-    completed_investments = [inv for inv in investments if inv.is_completed]
+    text = "📋 PENDING WITHDRAWALS\n\n"
+    for w in pending:
+        user_obj = db.get_user_by_id(w.user_id)
+        username = user_obj.username if user_obj else "Unknown"
+        text += f"ID: {w.id}\n"
+        text += f"👤 User: @{username}\n"
+        text += f"💰 Amount: ${w.amount:.2f} USDT\n"
+        text += f"🔒 Fee (10%): ${w.fee:.2f} USDT\n"
+        text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
+        text += f"🏦 Wallet: {w.wallet_address[:10]}...{w.wallet_address[-8:]}\n"
+        text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
+        text += f"Status: ⏳ Pending\n"
+        text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
     
-    # Calculate today's earnings
-    today_earnings = 0
-    for inv in active_investments:
-        today_earnings += inv.amount * 0.02
-    
-    dashboard_text = f"""📊 YOUR DASHBOARD
+    await update.message.reply_text(text)
 
-👤 User: @{user.username or 'No username'}
-📅 Member since: {db_user.created_at.strftime('%d/%m/%Y')}
-
-💰 BALANCE: ${db_user.balance:.2f} USDT
-📈 TOTAL INVESTED: ${db_user.total_invested:.2f} USDT
-💵 TOTAL EARNED: ${db_user.total_earned:.2f} USDT
-💳 TOTAL DEPOSITED: ${db_user.total_deposited:.2f} USDT
-
-💼 ACTIVE INVESTMENTS: {len(active_investments)}
-✅ COMPLETED INVESTMENTS: {len(completed_investments)}
-
-📊 TODAY'S EARNINGS: ${today_earnings:.2f} USDT
-
-Use /invest to grow your USDT!"""
-    
-    keyboard = [[InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(dashboard_text, reply_markup=reply_markup)
-
-# Deposit command
-async def deposit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db_user = db.get_user(user.id)
-    
-    if not db_user:
-        await update.message.reply_text("Please use /start first to register!")
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
         return
     
-    deposit_text = f"""💳 DEPOSIT INSTRUCTIONS
-
-1️⃣ Send USDT (BEP-20) to this address:
-`{Config.WALLET_ADDRESS}`
-
-2️⃣ Minimum deposit: $5 USDT
-
-3️⃣ Your deposit will be automatically detected within 5-15 minutes
-
-⚠️ IMPORTANT:
-• ONLY send USDT on BSC (BEP-20) network
-• Make sure the network is BSC (BEP-20), NOT ERC-20
-
-📊 NETWORK DETAILS:
-• Network: BSC (BEP-20)
-• Contract: {Config.USDT_CONTRACT}
-• Decimals: 18
-
-Need help? Contact @{Config.ADMIN_USERNAME}"""
-    
-    keyboard = [
-        [InlineKeyboardButton("✅ I've Sent USDT", callback_data="check_deposit")],
-        [InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(deposit_text, reply_markup=reply_markup, parse_mode='Markdown')
-
-# Help command
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = f"""❓ HELP CENTER
-
-📚 QUICK GUIDE:
-• /start - Start the bot
-• /app - Open Mini App
-• /invest - Make an investment
-• /dashboard - View your stats
-• /deposit - Get deposit address
-• /withdraw - Request withdrawal
-• /setwallet - Set withdrawal address
-• /help - Show this message
-
-💡 TIPS:
-• Minimum deposit: $5 USDT
-• Daily returns: 2% for 30 days
-• Minimum withdrawal: $2 USDT
-• 10% fee on withdrawals
-
-🔐 SECURITY:
-• Never share your private keys
-• Only use official deposit address
-
-📞 SUPPORT:
-Need help? Contact: @{Config.ADMIN_USERNAME}
-
-🚀 Start growing your USDT today!"""
-    
-    keyboard = [[InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(help_text, reply_markup=reply_markup)
-
-# Set wallet command
-async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    db_user = db.get_user(user.id)
-    
-    if not db_user:
-        await update.message.reply_text("Please use /start first to register!")
-        return
-    
-    if not context.args or len(context.args) == 0:
+    if len(context.args) < 2:
         await update.message.reply_text(
-            "❌ Please provide your BSC wallet address.\n\n"
-            "Example: /setwallet 0x123456789...\n\n"
-            "You can find your address in your wallet app (SafePal, Trust Wallet, MetaMask, etc.)"
+            "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
+            "Example: /complete_payout 1 0xabc123..."
         )
         return
     
-    wallet_address = context.args[0]
+    try:
+        withdrawal_id = int(context.args[0])
+        tx_hash = context.args[1]
+    except ValueError:
+        await update.message.reply_text("❌ Invalid withdrawal ID. Please provide a valid number.")
+        return
     
-    if not wallet_address.startswith('0x') or len(wallet_address) != 42:
+    withdrawal = db.get_withdrawal_by_id(withdrawal_id)
+    if not withdrawal:
+        await update.message.reply_text(f"❌ Withdrawal ID {withdrawal_id} not found.")
+        return
+    
+    if withdrawal.status != "pending":
+        await update.message.reply_text(f"❌ Withdrawal {withdrawal_id} is already {withdrawal.status}.")
+        return
+    
+    updated = db.update_withdrawal_status(withdrawal_id, "completed", tx_hash)
+    if updated:
         await update.message.reply_text(
-            "❌ Invalid wallet address!\n\n"
-            "A BSC wallet address should:\n"
-            "• Start with '0x'\n"
-            "• Be 42 characters long\n\n"
-            "Example: 0x1234567890abcdef1234567890abcdef12345678"
+            f"✅ Withdrawal {withdrawal_id} marked as COMPLETED!\n\n"
+            f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
+            f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
+            f"🔗 TX: {tx_hash}"
         )
+        
+        user_obj = db.get_user_by_id(withdrawal.user_id)
+        if user_obj:
+            try:
+                await context.bot.send_message(
+                    chat_id=user_obj.telegram_id,
+                    text=f"✅ Your withdrawal request has been processed!\n\n"
+                         f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
+                         f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
+                         f"🔗 TX: {tx_hash}\n\n"
+                         f"Check your wallet!"
+                )
+            except Exception as e:
+                logger.error(f"Error notifying user: {e}")
+    else:
+        await update.message.reply_text(f"❌ Failed to update withdrawal {withdrawal_id}.")
+
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
         return
     
-    db.update_wallet_address(db_user.id, wallet_address)
-    
-    await update.message.reply_text(
-        f"✅ Wallet address updated successfully!\n\n"
-        f"🏦 New address:\n`{wallet_address}`\n\n"
-        f"This address will be used for withdrawals.",
-        parse_mode='Markdown'
-    )
+    help_text = """👑 ADMIN COMMANDS
 
-# Callback query handler
-async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+/pending - View all pending withdrawals
+/complete_payout <id> <tx_hash> - Mark a payout as completed
+
+Example:
+/pending
+/complete_payout 1 0xabc123...
+
+💡 The transaction hash should be from sending USDT on BEP-20 (BSC) network."""
     
-    user = update.effective_user
-    db_user = db.get_user(user.id)
-    
-    if query.data == "invest_amount":
-        await query.edit_message_text(
-            "💰 To invest, please send USDT to the deposit address using /deposit\n\n"
-            "Once your deposit is confirmed, you can start investing!"
-        )
-    
-    elif query.data == "my_investments":
-        investments = db.get_user_investments(db_user.id)
-        if not investments:
-            await query.edit_message_text("You have no investments yet. Use /deposit to start!")
-            return
-        
-        text = "📊 YOUR INVESTMENTS\n\n"
-        for inv in investments:
-            status = "🟢 Active" if inv.is_active else "✅ Completed"
-            text += f"• ${inv.amount:.2f} USDT - {status}\n"
-            text += f"  Paid: ${inv.paid_out:.2f} / ${inv.total_return:.2f}\n\n"
-        
-        await query.edit_message_text(text)
-    
-    elif query.data == "withdraw":
-        await query.edit_message_text(
-            "🏦 WITHDRAWAL\n\n"
-            f"💰 Available Balance: ${db_user.balance:.2f} USDT\n"
-            f"💵 Minimum Withdrawal: ${Config.MIN_WITHDRAWAL} USDT\n"
-            f"🔒 Withdrawal Fee: 10%\n\n"
-            "Please use /withdraw command to request a withdrawal."
-        )
-    
-    elif query.data == "set_wallet":
-        await query.edit_message_text(
-            "💳 SET WITHDRAWAL WALLET\n\n"
-            "Please use /setwallet command followed by your BSC wallet address.\n\n"
-            "Example: /setwallet 0x123456789..."
-        )
-    
-    elif query.data == "check_deposit":
-        await query.edit_message_text(
-            "🔍 Checking for deposits...\n\n"
-            "Please wait a few moments. Your deposit will be detected automatically.\n"
-            "If you just sent USDT, it should appear within 5-15 minutes."
-        )
-    
-    elif query.data == "dashboard":
-        # Redirect to dashboard
-        await query.edit_message_text("📊 Opening dashboard...")
-        # The bot will handle this via the dashboard command
+    await update.message.reply_text(help_text)
 
 def main():
     """Start the bot"""
     try:
-        # Create application
+        # Start scheduler
+        scheduler.start()
+        
         application = Application.builder().token(Config.BOT_TOKEN).build()
         
-        # Add handlers
+        # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
-        application.add_handler(CommandHandler("invest", invest))
-        application.add_handler(CommandHandler("dashboard", dashboard))
-        application.add_handler(CommandHandler("deposit", deposit))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("setwallet", set_wallet))
-        application.add_handler(CallbackQueryHandler(callback_handler))
         
-        # Start the bot
+        # Admin commands
+        application.add_handler(CommandHandler("pending", pending_withdrawals))
+        application.add_handler(CommandHandler("complete_payout", complete_payout))
+        application.add_handler(CommandHandler("adminhelp", admin_help))
+        
+        # Start deposit scanner in background
+        async def start_deposit_scanner():
+            while True:
+                try:
+                    await deposit_scanner.scan_for_deposits(application.bot)
+                except Exception as e:
+                    logger.error(f"Error in deposit scanner loop: {e}")
+                await asyncio.sleep(300)  # Wait 5 minutes
+        
+        # Run the scanner in background
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(start_deposit_scanner())
+        
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
+        logger.info("🔍 Deposit scanner running (checks every 5 minutes)")
+        
         application.run_polling(allowed_updates=Update.ALL_TYPES)
         
     except Exception as e:

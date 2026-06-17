@@ -1,5 +1,4 @@
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from config.settings import Config
 import json
 import requests
@@ -12,7 +11,6 @@ class WalletService:
     def __init__(self):
         # BSC RPC Connection
         self.w3 = Web3(Web3.HTTPProvider(Config.BSC_RPC_URL))
-        self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         
         # USDT BSC Contract ABI (BEP-20)
         self.usdt_abi = json.loads('''[
@@ -162,3 +160,48 @@ class WalletService:
         except Exception as e:
             logger.error(f"Error getting latest block: {e}")
             return 0
+    
+    def check_user_deposits(self, user_address: str, hours_back: int = 1) -> list:
+        """Check for new deposits from a specific user"""
+        try:
+            url = f"{Config.BSC_SCAN_API}?module=account&action=tokentx&contractaddress={Config.USDT_CONTRACT}&address={self.wallet_address}&sort=desc&apikey={Config.BSC_SCAN_API_KEY}"
+            
+            response = requests.get(url, timeout=10)
+            data = response.json()
+            
+            if data.get('status') != '1':
+                return []
+            
+            transactions = data.get('result', [])
+            cutoff_time = datetime.now() - timedelta(hours=hours_back)
+            
+            new_deposits = []
+            for tx in transactions:
+                # Check if sender matches user
+                if tx.get('from', '').lower() != user_address.lower():
+                    continue
+                
+                tx_time = datetime.fromtimestamp(int(tx.get('timeStamp', 0)))
+                if tx_time < cutoff_time:
+                    continue
+                
+                if tx.get('txreceipt_status') != '1':
+                    continue
+                
+                if tx.get('to', '').lower() != self.wallet_address.lower():
+                    continue
+                
+                amount = float(tx.get('value', 0)) / (10 ** self.decimals)
+                if amount > 0:
+                    new_deposits.append({
+                        'amount': amount,
+                        'tx_hash': tx.get('hash'),
+                        'timestamp': tx_time,
+                        'from': tx.get('from')
+                    })
+            
+            return new_deposits
+            
+        except Exception as e:
+            logger.error(f"Error checking user deposits: {e}")
+            return []
