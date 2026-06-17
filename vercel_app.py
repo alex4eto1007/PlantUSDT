@@ -55,6 +55,26 @@ def save_wallet():
     
     return jsonify({'success': False, 'message': 'Could not connect to VPS API'})
 
+# ============================================
+# FORWARD WITHDRAW TO VPS API
+# ============================================
+@app.route('/api/withdraw', methods=['POST'])
+def withdraw():
+    data = request.json
+    
+    try:
+        url = f"{VPS_API_URL}/api/withdraw"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(data).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            result = json.loads(response.read().decode())
+            return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/user', methods=['GET'])
 def get_user():
     return jsonify({
@@ -68,16 +88,6 @@ def get_user():
 @app.route('/api/invest', methods=['POST'])
 def invest():
     return jsonify({'success': False, 'message': 'Please use the bot for investments'})
-
-@app.route('/api/withdraw', methods=['POST'])
-def withdraw():
-    data = request.json
-    address = data.get('address', '')
-    
-    if address.lower() == PROJECT_WALLET.lower():
-        return jsonify({'success': False, 'message': 'Cannot withdraw to project wallet'})
-    
-    return jsonify({'success': True, 'message': 'Withdrawal request submitted'})
 
 @app.route('/api/check_deposit', methods=['GET'])
 def check_deposit():
