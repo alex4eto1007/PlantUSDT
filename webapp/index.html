@@ -42,15 +42,57 @@
             </div>
         </div>
 
+        <!-- 3 Planting Fields -->
+        <div class="section-title">🌱 Your Planting Fields</div>
+        <div class="fields-grid">
+            <div class="field-card" id="field1">
+                <div class="field-number">🌾 Field #1</div>
+                <div class="field-status" id="field1Status">Available</div>
+                <div class="field-amount" id="field1Amount">$0.00</div>
+                <div class="field-progress">
+                    <div class="progress-bar" id="field1Progress" style="width: 0%"></div>
+                </div>
+                <div class="field-details">
+                    <span>Days: <span id="field1Days">0/30</span></span>
+                    <span>Earned: <span id="field1Earned">$0.00</span></span>
+                </div>
+                <button class="action-btn primary" onclick="investField(1)">🌱 Plant Now</button>
+            </div>
+
+            <div class="field-card" id="field2">
+                <div class="field-number">🌾 Field #2</div>
+                <div class="field-status" id="field2Status">Available</div>
+                <div class="field-amount" id="field2Amount">$0.00</div>
+                <div class="field-progress">
+                    <div class="progress-bar" id="field2Progress" style="width: 0%"></div>
+                </div>
+                <div class="field-details">
+                    <span>Days: <span id="field2Days">0/30</span></span>
+                    <span>Earned: <span id="field2Earned">$0.00</span></span>
+                </div>
+                <button class="action-btn primary" onclick="investField(2)">🌱 Plant Now</button>
+            </div>
+
+            <div class="field-card" id="field3">
+                <div class="field-number">🌾 Field #3</div>
+                <div class="field-status" id="field3Status">Available</div>
+                <div class="field-amount" id="field3Amount">$0.00</div>
+                <div class="field-progress">
+                    <div class="progress-bar" id="field3Progress" style="width: 0%"></div>
+                </div>
+                <div class="field-details">
+                    <span>Days: <span id="field3Days">0/30</span></span>
+                    <span>Earned: <span id="field3Earned">$0.00</span></span>
+                </div>
+                <button class="action-btn primary" onclick="investField(3)">🌱 Plant Now</button>
+            </div>
+        </div>
+
         <!-- Main Actions -->
         <div class="actions-grid">
             <button class="action-btn primary" onclick="navigateTo('deposit')">
                 <span class="btn-icon">💳</span>
                 Deposit
-            </button>
-            <button class="action-btn success" onclick="navigateTo('invest')">
-                <span class="btn-icon">💰</span>
-                Invest
             </button>
             <button class="action-btn warning" onclick="navigateTo('withdraw')">
                 <span class="btn-icon">🏦</span>
@@ -60,24 +102,34 @@
                 <span class="btn-icon">📊</span>
                 Dashboard
             </button>
-        </div>
-
-        <!-- Investment Info -->
-        <div class="info-card">
-            <h3>💎 How It Works</h3>
-            <p>1. Deposit $5+ USDT (BEP-20)</p>
-            <p>2. Earn 2% DAILY for 30 days</p>
-            <p>3. Total return: 160%</p>
-            <p>4. Withdraw anytime after 30 days</p>
+            <button class="action-btn secondary" onclick="copyReferral()">
+                <span class="btn-icon">👥</span>
+                Referral
+            </button>
         </div>
 
         <!-- Referral Section -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
             <p>Earn 5% from your referrals' deposits!</p>
-            <button class="action-btn secondary" onclick="copyReferral()">
-                📋 Copy Referral Link
-            </button>
+            <div class="referral-link-box" id="referralLinkBox">
+                <span id="referralLinkText">Loading referral link...</span>
+                <button class="copy-btn" onclick="copyReferral()">📋</button>
+            </div>
+            <div class="referral-stats">
+                <span>Referrals: <strong id="referralCount">0</strong></span>
+                <span>Earned: <strong id="referralEarned">$0.00</strong></span>
+            </div>
+        </div>
+
+        <!-- Investment Info -->
+        <div class="info-card">
+            <h3>💎 How It Works</h3>
+            <p>1. Deposit $5+ USDT (BEP-20)</p>
+            <p>2. Choose a field and invest (max $100 per field)</p>
+            <p>3. Earn 2% DAILY for 30 days</p>
+            <p>4. After 30 days, your $100 is returned to balance</p>
+            <p>5. Withdraw anytime (min $2, 10% fee)</p>
         </div>
 
         <!-- Footer -->

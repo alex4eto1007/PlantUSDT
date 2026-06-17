@@ -2,6 +2,7 @@
 
 // Telegram WebApp
 let tg = window.Telegram.WebApp;
+let tgUser = tg.initDataUnsafe?.user;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -21,8 +22,6 @@ function navigateTo(page) {
         window.location.href = 'dashboard.html';
     } else if (page === 'deposit') {
         window.location.href = 'deposit.html';
-    } else if (page === 'invest') {
-        window.location.href = 'invest.html';
     } else if (page === 'withdraw') {
         window.location.href = 'withdraw.html';
     } else if (page === 'history') {
@@ -39,11 +38,16 @@ function goBack() {
 // Load user data from bot
 async function loadUserData() {
     try {
-        const response = await fetch('/api/user');
+        // Get user ID from Telegram
+        const userId = tgUser?.id || '0';
+        
+        const response = await fetch(`/api/user?telegram_id=${userId}`);
         const data = await response.json();
         
         if (data.success) {
             updateUI(data);
+            updateFields(data);
+            updateReferral(data);
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -52,50 +56,171 @@ async function loadUserData() {
 
 // Update UI with user data
 function updateUI(data) {
-    // Update balances
-    const balanceElements = document.querySelectorAll('.balance-amount, #balance, #dashBalance, #investBalance, #withdrawBalance');
-    balanceElements.forEach(el => {
-        if (el.id === 'balance' || el.id === 'dashBalance' || el.id === 'investBalance' || el.id === 'withdrawBalance') {
-            el.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
-        }
-    });
-    
-    // Update dashboard stats
-    if (document.getElementById('dashInvested')) {
-        document.getElementById('dashInvested').textContent = `$${data.total_invested?.toFixed(2) || '0.00'}`;
-    }
-    if (document.getElementById('dashEarned')) {
-        document.getElementById('dashEarned').textContent = `$${data.total_earned?.toFixed(2) || '0.00'}`;
-    }
-    if (document.getElementById('dashDeposited')) {
-        document.getElementById('dashDeposited').textContent = `$${data.total_deposited?.toFixed(2) || '0.00'}`;
-    }
-    if (document.getElementById('dashReferrals')) {
-        document.getElementById('dashReferrals').textContent = data.referrals || 0;
+    // Update balance
+    const balanceEl = document.getElementById('balance');
+    if (balanceEl) {
+        balanceEl.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
     }
 }
 
-// Copy address to clipboard
-function copyAddress() {
-    const address = document.getElementById('addressText').textContent;
-    navigator.clipboard.writeText(address).then(() => {
+// Update fields
+function updateFields(data) {
+    const fields = data.fields || [];
+    
+    for (let i = 1; i <= 3; i++) {
+        const field = fields.find(f => f.field_number === i);
+        const statusEl = document.getElementById(`field${i}Status`);
+        const amountEl = document.getElementById(`field${i}Amount`);
+        const daysEl = document.getElementById(`field${i}Days`);
+        const earnedEl = document.getElementById(`field${i}Earned`);
+        const progressEl = document.getElementById(`field${i}Progress`);
+        const cardEl = document.getElementById(`field${i}`);
+        const btnEl = cardEl?.querySelector('.action-btn');
+        
+        if (field) {
+            // Field is active
+            const progress = field.paid_out / field.total_return * 100;
+            const days = Math.floor((Date.now() - new Date(field.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            
+            statusEl.textContent = '🟢 Active';
+            statusEl.className = 'field-status active';
+            amountEl.textContent = `$${field.amount.toFixed(2)}`;
+            daysEl.textContent = `${Math.min(days, 30)}/30`;
+            earnedEl.textContent = `$${field.paid_out.toFixed(2)}`;
+            progressEl.style.width = `${Math.min(progress, 100)}%`;
+            cardEl.className = 'field-card active';
+            btnEl.textContent = '🌱 Active';
+            btnEl.disabled = true;
+            btnEl.style.opacity = '0.5';
+            btnEl.style.cursor = 'not-allowed';
+        } else {
+            // Field is available
+            statusEl.textContent = '✅ Available';
+            statusEl.className = 'field-status available';
+            amountEl.textContent = '$0.00';
+            daysEl.textContent = '0/30';
+            earnedEl.textContent = '$0.00';
+            progressEl.style.width = '0%';
+            cardEl.className = 'field-card';
+            btnEl.textContent = '🌱 Plant Now';
+            btnEl.disabled = false;
+            btnEl.style.opacity = '1';
+            btnEl.style.cursor = 'pointer';
+        }
+    }
+}
+
+// Update referral
+function updateReferral(data) {
+    const referralLink = document.getElementById('referralLinkText');
+    const referralCount = document.getElementById('referralCount');
+    const referralEarned = document.getElementById('referralEarned');
+    
+    if (referralLink) {
+        const userId = tgUser?.id || '0';
+        referralLink.textContent = `https://t.me/PlantUSDT_bot?start=${userId}`;
+    }
+    if (referralCount) {
+        referralCount.textContent = data.referrals || 0;
+    }
+    if (referralEarned) {
+        referralEarned.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
+    }
+}
+
+// Invest in a field
+async function investField(fieldNumber) {
+    const userId = tgUser?.id || '0';
+    
+    // Show prompt
+    tg.showPopup({
+        title: `🌾 Field #${fieldNumber}`,
+        message: 'Enter amount to invest (max $100, min $5):',
+        buttons: [
+            {type: 'cancel'},
+            {type: 'ok'}
+        ]
+    });
+    
+    // Show a prompt for amount (simplified - use a custom input)
+    const amount = prompt(`Enter amount to invest in Field #${fieldNumber} (min $5, max $100):`);
+    
+    if (!amount) return;
+    
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
+        tg.showPopup({
+            title: '❌ Invalid Amount',
+            message: 'Please enter between $5 and $100.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/invest', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                telegram_id: userId,
+                field_number: fieldNumber,
+                amount: amountNum
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            tg.showPopup({
+                title: '✅ Success!',
+                message: `$${amountNum} invested in Field #${fieldNumber}!`,
+                buttons: [{type: 'ok'}]
+            });
+            // Reload data
+            loadUserData();
+        } else {
+            tg.showPopup({
+                title: '❌ Error',
+                message: data.message || 'Investment failed.',
+                buttons: [{type: 'ok'}]
+            });
+        }
+    } catch (error) {
+        console.error('Error investing:', error);
+    }
+}
+
+// Copy referral link
+function copyReferral() {
+    const userId = tgUser?.id || '0';
+    const link = `https://t.me/PlantUSDT_bot?start=${userId}`;
+    
+    navigator.clipboard.writeText(link).then(() => {
         tg.showPopup({
             title: '✅ Copied!',
-            message: 'Wallet address copied to clipboard',
+            message: 'Referral link copied! Share it with your friends.',
+            buttons: [{type: 'ok'}]
+        });
+    }).catch(() => {
+        // Fallback
+        tg.showPopup({
+            title: '📋 Referral Link',
+            message: link,
             buttons: [{type: 'ok'}]
         });
     });
 }
 
-// Copy referral link
-function copyReferral() {
-    const tgUser = tg.initDataUnsafe?.user;
-    if (tgUser) {
-        const link = `https://t.me/PlantUSDT_bot?start=${tgUser.id}`;
-        navigator.clipboard.writeText(link).then(() => {
+// Copy address
+function copyAddress() {
+    const address = document.getElementById('addressText')?.textContent || '';
+    if (address) {
+        navigator.clipboard.writeText(address).then(() => {
             tg.showPopup({
                 title: '✅ Copied!',
-                message: 'Referral link copied! Share it with your friends.',
+                message: 'Wallet address copied to clipboard',
                 buttons: [{type: 'ok'}]
             });
         });
@@ -109,11 +234,13 @@ async function checkDeposit() {
         statusDiv.innerHTML = '🔍 Checking for deposits...';
         
         try {
-            const response = await fetch('/api/check_deposit');
+            const userId = tgUser?.id || '0';
+            const response = await fetch(`/api/check_deposit?telegram_id=${userId}`);
             const data = await response.json();
             
             if (data.success) {
                 statusDiv.innerHTML = '✅ Deposit detected! Your balance has been updated.';
+                loadUserData();
             } else {
                 statusDiv.innerHTML = '⏳ No new deposits found. Please wait 5-15 minutes.';
             }
@@ -123,34 +250,18 @@ async function checkDeposit() {
     }
 }
 
-// Set wallet address
-function setWallet() {
-    tg.showPopup({
-        title: '💳 Set Wallet',
-        message: 'Enter your BSC wallet address:',
-        buttons: [
-            {type: 'cancel'},
-            {type: 'ok'}
-        ]
-    });
-}
-
 // Filter history
 function filterHistory(type) {
-    // Remove active class from all filter buttons
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    
-    // Add active class to clicked button
     event.target.classList.add('active');
     
-    // Show loading
     const historyList = document.getElementById('historyList');
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     
-    // Fetch filtered history
-    fetch(`/api/history?type=${type}`)
+    const userId = tgUser?.id || '0';
+    fetch(`/api/history?type=${type}&telegram_id=${userId}`)
         .then(response => response.json())
         .then(data => {
             if (data.transactions && data.transactions.length > 0) {
@@ -193,14 +304,13 @@ function renderHistory(transactions) {
 
 // Setup event listeners
 function setupEventListeners() {
-    // Withdraw form
     const withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const amount = document.getElementById('withdrawAmount').value;
-            const address = document.getElementById('withdrawAddress').value;
+            const amount = document.getElementById('withdrawAmount')?.value;
+            const address = document.getElementById('withdrawAddress')?.value;
             
             if (!amount || amount < 2) {
                 tg.showPopup({
@@ -220,13 +330,14 @@ function setupEventListeners() {
                 return;
             }
             
-            // Send withdrawal request to bot
+            const userId = tgUser?.id || '0';
             fetch('/api/withdraw', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    telegram_id: userId,
                     amount: parseFloat(amount),
                     address: address
                 })
@@ -251,11 +362,11 @@ function setupEventListeners() {
     }
 }
 
-// Export for use in HTML
+// Export for HTML
 window.navigateTo = navigateTo;
 window.goBack = goBack;
 window.copyAddress = copyAddress;
 window.copyReferral = copyReferral;
 window.checkDeposit = checkDeposit;
-window.setWallet = setWallet;
+window.investField = investField;
 window.filterHistory = filterHistory;

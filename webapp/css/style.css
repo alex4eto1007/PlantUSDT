@@ -93,6 +93,105 @@ body {
     color: #00ff87;
 }
 
+/* Section Title */
+.section-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00d4ff;
+    margin: 20px 0 12px 0;
+}
+
+/* Fields Grid */
+.fields-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.field-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.3s ease;
+}
+
+.field-card.active {
+    border-color: #00ff87;
+    background: rgba(0,255,135,0.05);
+}
+
+.field-card.completed {
+    border-color: #ff6b6b;
+    background: rgba(255,107,107,0.05);
+}
+
+.field-number {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ccd6f0;
+}
+
+.field-status {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    display: inline-block;
+    margin: 4px 0 8px 0;
+}
+
+.field-status.available {
+    background: rgba(0,212,255,0.2);
+    color: #00d4ff;
+}
+
+.field-status.active {
+    background: rgba(0,255,135,0.2);
+    color: #00ff87;
+}
+
+.field-status.completed {
+    background: rgba(255,107,107,0.2);
+    color: #ff6b6b;
+}
+
+.field-amount {
+    font-size: 20px;
+    font-weight: bold;
+    color: #00ff87;
+}
+
+.field-progress {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    height: 6px;
+    margin: 8px 0;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #00d4ff, #00ff87);
+    transition: width 0.5s ease;
+}
+
+.field-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #8899bb;
+    margin: 6px 0;
+}
+
+.field-card .action-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    font-size: 13px;
+}
+
 /* Actions Grid */
 .actions-grid {
     display: grid;
@@ -117,6 +216,11 @@ body {
 
 .action-btn:active {
     transform: scale(0.95);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-icon {
@@ -188,13 +292,32 @@ body {
     margin-bottom: 8px;
 }
 
-/* Footer */
-.footer {
-    text-align: center;
-    padding: 20px 0;
-    font-size: 12px;
-    color: #556688;
-    border-top: 1px solid rgba(255,255,255,0.05);
+.referral-link-box {
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+    word-break: break-all;
+}
+
+.referral-link-box span {
+    font-size: 13px;
+    color: #ccd6f0;
+}
+
+.referral-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #ccd6f0;
+}
+
+.referral-stats strong {
+    color: #00ff87;
 }
 
 /* Address Box */
@@ -217,6 +340,10 @@ body {
     border-radius: 6px;
     cursor: pointer;
     font-size: 16px;
+}
+
+.copy-btn:hover {
+    background: rgba(255,255,255,0.2);
 }
 
 /* Form Styles */
@@ -347,6 +474,15 @@ body {
     color: #00d4ff;
 }
 
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 12px;
+    color: #556688;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
 /* Responsive */
 @media (max-width: 400px) {
     .stats-grid {
@@ -361,5 +497,17 @@ body {
     
     .stat-card {
         padding: 12px;
+    }
+
+    .fields-grid {
+        gap: 10px;
+    }
+
+    .field-card {
+        padding: 12px;
+    }
+
+    .referral-link-box span {
+        font-size: 11px;
     }
 }
