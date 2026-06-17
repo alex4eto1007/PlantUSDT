@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from config.settings import Config
 from database.db_manager import DatabaseManager
@@ -24,6 +24,9 @@ deposit_scanner = DepositScanner()
 
 # Create tables
 db.create_tables()
+
+# Vercel URL for Mini App
+VERCEL_URL = "https://plantusdt.vercel.app"  # Change this to your actual Vercel URL
 
 # Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,15 +63,44 @@ Grow your USDT with 2% DAILY returns for 30 days!
 Share your referral link and earn 5% from your friends' deposits!
 
 Use /invest to get started!
-Use /dashboard to check your stats!"""
+Use /dashboard to check your stats!
+Use /app to open the Mini App!"""
         
-        await update.message.reply_text(welcome_text)
+        # WebApp button
+        keyboard = [
+            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))],
+            [InlineKeyboardButton("💰 Invest", callback_data="invest_amount")],
+            [InlineKeyboardButton("📊 Dashboard", callback_data="dashboard")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(welcome_text, reply_markup=reply_markup)
     else:
+        # WebApp button for existing users
+        keyboard = [
+            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))],
+            [InlineKeyboardButton("💰 Invest", callback_data="invest_amount")],
+            [InlineKeyboardButton("📊 Dashboard", callback_data="dashboard")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
             f"Welcome back, {user.first_name}! 🌱\n\n"
-            f"Use /invest to start or continue investing.\n"
-            f"Use /dashboard to check your stats."
+            f"Open the PlantUSDT App below:",
+            reply_markup=reply_markup
         )
+
+# App command - opens Mini App
+async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[
+        InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))
+    ]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🌱 Open the PlantUSDT Mini App:",
+        reply_markup=reply_markup
+    )
 
 # Invest command
 async def invest(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -83,7 +115,8 @@ async def invest(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💰 Invest USDT", callback_data="invest_amount")],
         [InlineKeyboardButton("📊 My Investments", callback_data="my_investments")],
         [InlineKeyboardButton("🏦 Withdraw", callback_data="withdraw")],
-        [InlineKeyboardButton("💳 Set Wallet", callback_data="set_wallet")]
+        [InlineKeyboardButton("💳 Set Wallet", callback_data="set_wallet")],
+        [InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -132,7 +165,10 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Use /invest to grow your USDT!"""
     
-    await update.message.reply_text(dashboard_text)
+    keyboard = [[InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(dashboard_text, reply_markup=reply_markup)
 
 # Deposit command
 async def deposit(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -163,7 +199,10 @@ async def deposit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Need help? Contact @{Config.ADMIN_USERNAME}"""
     
-    keyboard = [[InlineKeyboardButton("✅ I've Sent USDT", callback_data="check_deposit")]]
+    keyboard = [
+        [InlineKeyboardButton("✅ I've Sent USDT", callback_data="check_deposit")],
+        [InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(deposit_text, reply_markup=reply_markup, parse_mode='Markdown')
@@ -174,6 +213,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 📚 QUICK GUIDE:
 • /start - Start the bot
+• /app - Open Mini App
 • /invest - Make an investment
 • /dashboard - View your stats
 • /deposit - Get deposit address
@@ -196,7 +236,48 @@ Need help? Contact: @{Config.ADMIN_USERNAME}
 
 🚀 Start growing your USDT today!"""
     
-    await update.message.reply_text(help_text)
+    keyboard = [[InlineKeyboardButton("🌱 Open App", web_app=WebAppInfo(url=VERCEL_URL))]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(help_text, reply_markup=reply_markup)
+
+# Set wallet command
+async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    db_user = db.get_user(user.id)
+    
+    if not db_user:
+        await update.message.reply_text("Please use /start first to register!")
+        return
+    
+    if not context.args or len(context.args) == 0:
+        await update.message.reply_text(
+            "❌ Please provide your BSC wallet address.\n\n"
+            "Example: /setwallet 0x123456789...\n\n"
+            "You can find your address in your wallet app (SafePal, Trust Wallet, MetaMask, etc.)"
+        )
+        return
+    
+    wallet_address = context.args[0]
+    
+    if not wallet_address.startswith('0x') or len(wallet_address) != 42:
+        await update.message.reply_text(
+            "❌ Invalid wallet address!\n\n"
+            "A BSC wallet address should:\n"
+            "• Start with '0x'\n"
+            "• Be 42 characters long\n\n"
+            "Example: 0x1234567890abcdef1234567890abcdef12345678"
+        )
+        return
+    
+    db.update_wallet_address(db_user.id, wallet_address)
+    
+    await update.message.reply_text(
+        f"✅ Wallet address updated successfully!\n\n"
+        f"🏦 New address:\n`{wallet_address}`\n\n"
+        f"This address will be used for withdrawals.",
+        parse_mode='Markdown'
+    )
 
 # Callback query handler
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -248,47 +329,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Please wait a few moments. Your deposit will be detected automatically.\n"
             "If you just sent USDT, it should appear within 5-15 minutes."
         )
-
-# Set wallet command
-async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    db_user = db.get_user(user.id)
     
-    if not db_user:
-        await update.message.reply_text("Please use /start first to register!")
-        return
-    
-    # Check if address was provided
-    if not context.args or len(context.args) == 0:
-        await update.message.reply_text(
-            "❌ Please provide your BSC wallet address.\n\n"
-            "Example: /setwallet 0x123456789...\n\n"
-            "You can find your address in your wallet app (SafePal, Trust Wallet, MetaMask, etc.)"
-        )
-        return
-    
-    wallet_address = context.args[0]
-    
-    # Basic validation (starts with 0x and is 42 characters)
-    if not wallet_address.startswith('0x') or len(wallet_address) != 42:
-        await update.message.reply_text(
-            "❌ Invalid wallet address!\n\n"
-            "A BSC wallet address should:\n"
-            "• Start with '0x'\n"
-            "• Be 42 characters long\n\n"
-            "Example: 0x1234567890abcdef1234567890abcdef12345678"
-        )
-        return
-    
-    # Update wallet address
-    db.update_wallet_address(db_user.id, wallet_address)
-    
-    await update.message.reply_text(
-        f"✅ Wallet address updated successfully!\n\n"
-        f"🏦 New address:\n`{wallet_address}`\n\n"
-        f"This address will be used for withdrawals.",
-        parse_mode='Markdown'
-    )
+    elif query.data == "dashboard":
+        # Redirect to dashboard
+        await query.edit_message_text("📊 Opening dashboard...")
+        # The bot will handle this via the dashboard command
 
 def main():
     """Start the bot"""
@@ -298,6 +343,7 @@ def main():
         
         # Add handlers
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("app", app_command))
         application.add_handler(CommandHandler("invest", invest))
         application.add_handler(CommandHandler("dashboard", dashboard))
         application.add_handler(CommandHandler("deposit", deposit))
@@ -306,7 +352,8 @@ def main():
         application.add_handler(CallbackQueryHandler(callback_handler))
         
         # Start the bot
-        logger.info("Bot started! Press Ctrl+C to stop.")
+        logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
+        logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         application.run_polling(allowed_updates=Update.ALL_TYPES)
         
     except Exception as e:
