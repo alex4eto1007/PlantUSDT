@@ -15,6 +15,7 @@ def serve_file(path):
 
 @app.route('/api/user')
 def get_user():
+    # Sample user data - Replace with actual database later
     return jsonify({
         'success': True,
         'balance': 125.50,
@@ -49,6 +50,11 @@ def get_history():
         transactions = [tx for tx in transactions if tx['type'] == tx_type]
     
     return jsonify({'transactions': transactions})
+
+@app.route('/api/verify', methods=['POST'])
+def verify():
+    """Verify user identity from Telegram WebApp"""
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
