@@ -21,5 +21,22 @@ def user():
         'referrals': 3
     })
 
+@app.route('/api/check_deposit')
+def check_deposit():
+    return jsonify({'success': True})
+
+@app.route('/api/withdraw', methods=['POST'])
+def withdraw():
+    return jsonify({'success': True})
+
+@app.route('/api/history')
+def history():
+    return jsonify({
+        'transactions': [
+            {'type': 'deposit', 'amount': 50, 'status': 'completed', 'date': '2026-06-17'},
+            {'type': 'earnings', 'amount': 2, 'status': 'completed', 'date': '2026-06-16'}
+        ]
+    })
+
 if __name__ == '__main__':
     app.run()
