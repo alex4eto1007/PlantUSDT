@@ -1,13 +1,13 @@
 from flask import Flask, send_from_directory, jsonify, request
 import os
+import requests
 
 app = Flask(__name__, static_folder='webapp')
 
-# Project wallet - blocked from user use
-PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
+# Your VPS API URL
+VPS_API_URL = "http://167.233.132.127:5001"
 
-# In-memory storage for demo (wallets reset on restart)
-user_wallets = {}
+PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 @app.route('/')
 def index():
@@ -20,10 +20,15 @@ def serve(path):
 @app.route('/api/get_wallet', methods=['GET'])
 def get_wallet():
     telegram_id = request.args.get('telegram_id', '0')
-    return jsonify({
-        'success': True,
-        'wallet_address': user_wallets.get(telegram_id, '')
-    })
+    
+    try:
+        response = requests.get(f"{VPS_API_URL}/api/get_wallet?telegram_id={telegram_id}", timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+    except:
+        pass
+    
+    return jsonify({'success': True, 'wallet_address': ''})
 
 @app.route('/api/save_wallet', methods=['POST'])
 def save_wallet():
@@ -34,21 +39,14 @@ def save_wallet():
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'})
     
-    # If empty, disconnect
-    if not wallet_address:
-        user_wallets[telegram_id] = ''
-        return jsonify({'success': True, 'message': 'Wallet disconnected'})
+    try:
+        response = requests.post(f"{VPS_API_URL}/api/save_wallet", json=data, timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+    except:
+        pass
     
-    # Validate
-    if not wallet_address.startswith('0x') or len(wallet_address) != 42:
-        return jsonify({'success': False, 'message': 'Invalid wallet address'})
-    
-    # Block project wallet
-    if wallet_address.lower() == PROJECT_WALLET.lower():
-        return jsonify({'success': False, 'message': 'This is the project wallet. Please enter your own wallet address.'})
-    
-    user_wallets[telegram_id] = wallet_address
-    return jsonify({'success': True, 'message': 'Wallet saved successfully'})
+    return jsonify({'success': False, 'message': 'Could not connect to VPS API'})
 
 @app.route('/api/user', methods=['GET'])
 def get_user():
