@@ -20,14 +20,16 @@ class User(Base):
     total_deposited = Column(Float, default=0.0)
     referred_by = Column(Integer, ForeignKey("users.id"))
     referral_code = Column(String(20), unique=True, default=lambda: str(uuid.uuid4())[:8])
+    referral_earnings = Column(Float, default=0.0)  # Total earned from referrals
     is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)  # Admin flag
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_deposit_check = Column(DateTime, default=datetime.utcnow)
     
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")
+    referrals = relationship("User", backref="referrer", remote_side=[id])
 
 class Investment(Base):
     __tablename__ = "investments"

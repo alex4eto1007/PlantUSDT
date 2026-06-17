@@ -34,16 +34,28 @@ def is_admin(user_id: int) -> bool:
     user = db.get_user(user_id)
     return user and user.is_admin
 
-# Start command
+# ============================================
+# START COMMAND - WITH REFERRAL HANDLING
+# ============================================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     
     existing_user = db.get_user(user.id)
     if not existing_user:
+        referred_by = None
+        if context.args and len(context.args) > 0:
+            referral_code = context.args[0]
+            referrer = db.get_user_by_referral_code(referral_code)
+            if referrer:
+                referred_by = referrer.id
+                logger.info(f"User {user.id} referred by {referrer.telegram_id}")
+        
         db.create_user(
             telegram_id=user.id,
             username=user.username,
-            first_name=user.first_name
+            first_name=user.first_name,
+            referred_by=referred_by
         )
         
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
@@ -80,7 +92,10 @@ Use /app to open the Mini App!"""
             reply_markup=reply_markup
         )
 
-# App command - opens Mini App
+# ============================================
+# APP COMMAND
+# ============================================
+
 async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
         InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))
@@ -89,7 +104,10 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text("🌱 Open the PlantUSDT Mini App:", reply_markup=reply_markup)
 
-# Admin Commands
+# ============================================
+# ADMIN COMMANDS
+# ============================================
+
 async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_admin(user.id):
@@ -190,6 +208,10 @@ Example:
 💡 The transaction hash should be from sending USDT on BEP-20 (BSC) network."""
     
     await update.message.reply_text(help_text)
+
+# ============================================
+# MAIN FUNCTION
+# ============================================
 
 def main():
     """Start the bot"""

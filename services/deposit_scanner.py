@@ -50,6 +50,27 @@ class DepositScanner:
                             if processed:
                                 logger.info(f"Deposit processed for user {user.telegram_id}: {deposit['amount']} USDT")
                                 
+                                # ============================================
+                                # CREDIT REFERRAL BONUS
+                                # ============================================
+                                if user.referred_by:
+                                    referrer = self.db.get_user_by_id(user.referred_by)
+                                    if referrer:
+                                        bonus = deposit['amount'] * 0.05  # 5%
+                                        self.db.credit_referral_bonus(referrer.id, bonus)
+                                        logger.info(f"Referral bonus credited to {referrer.telegram_id}: ${bonus}")
+                                        
+                                        # Notify referrer
+                                        if bot:
+                                            await bot.send_message(
+                                                chat_id=referrer.telegram_id,
+                                                text=f"👥 **Referral Bonus!**\n\n"
+                                                     f"Your referral @{user.username or 'User'} deposited "
+                                                     f"${deposit['amount']:.2f} USDT!\n"
+                                                     f"You earned **${bonus:.2f} USDT** bonus! 🎉\n\n"
+                                                     f"Total referral earnings: **${referrer.referral_earnings:.2f}**"
+                                            )
+                                
                                 # Send notification to user
                                 if bot:
                                     await self.notify_user(bot, user, deposit)
