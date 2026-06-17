@@ -227,32 +227,66 @@ body {
     font-size: 24px;
 }
 
+/* Primary - Deposit */
 .primary {
     background: linear-gradient(135deg, #00d4ff, #0088ff);
     color: white;
 }
 
+.primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(0,212,255,0.4);
+}
+
+/* Success - Dashboard */
 .success {
-    background: linear-gradient(135deg, #00ff87, #00cc6a);
-    color: #0a0e1a;
-}
-
-.warning {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-    color: white;
-}
-
-.info {
     background: linear-gradient(135deg, #a29bfe, #6c5ce7);
     color: white;
 }
 
+.success:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(108,92,231,0.4);
+}
+
+/* Green Button - Withdraw */
+.green-btn {
+    background: linear-gradient(135deg, #00ff87, #00cc6a);
+    color: #0a0e1a;
+    font-weight: 700;
+}
+
+.green-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(0,255,135,0.4);
+}
+
+.green-btn:active {
+    transform: scale(0.95);
+}
+
+/* Info - Referral */
+.info {
+    background: linear-gradient(135deg, #00d4ff, #00ff87);
+    color: #0a0e1a;
+}
+
+.info:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(0,212,255,0.4);
+}
+
+/* Secondary - Back buttons */
 .secondary {
     background: rgba(255,255,255,0.1);
     color: white;
     border: 1px solid rgba(255,255,255,0.2);
     width: 100%;
     margin-top: 12px;
+}
+
+.secondary:hover {
+    background: rgba(255,255,255,0.2);
 }
 
 /* Info Cards */
