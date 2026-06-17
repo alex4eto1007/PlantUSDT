@@ -148,7 +148,7 @@ async function saveWallet() {
     }
     
     // Basic validation
-    if (!walletAddress.startswith('0x') || walletAddress.length !== 42) {
+    if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
         tg.showPopup({
             title: '❌ Invalid Address',
             message: 'Please enter a valid BSC wallet address (starts with 0x, 42 characters).',
@@ -537,10 +537,13 @@ function setupEventListeners() {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const amount = document.getElementById('withdrawAmount')?.value;
-            const address = document.getElementById('withdrawAddress')?.value;
+            const amountInput = document.getElementById('withdrawAmount');
+            const addressInput = document.getElementById('withdrawAddress');
             
-            if (!amount || amount < 2) {
+            const amount = amountInput?.value;
+            const address = addressInput?.value;
+            
+            if (!amount || parseFloat(amount) < 2) {
                 tg.showPopup({
                     title: '❌ Error',
                     message: 'Please enter at least $2 USDT.',
@@ -558,9 +561,6 @@ function setupEventListeners() {
                 return;
             }
             
-            // ============================================
-            // BLOCK WITHDRAWALS TO PROJECT WALLET
-            // ============================================
             if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
                 tg.showPopup({
                     title: '❌ Invalid Wallet',
@@ -572,12 +572,12 @@ function setupEventListeners() {
             
             const userId = tgUser?.id || '0';
             
-            // Show loading
-            tg.showPopup({
-                title: '⏳ Processing...',
-                message: 'Please wait...',
-                buttons: []
-            });
+            // Disable button
+            const submitBtn = document.querySelector('.withdraw-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Processing...';
+            }
             
             fetch('/api/withdraw', {
                 method: 'POST',
@@ -592,18 +592,20 @@ function setupEventListeners() {
             })
             .then(response => response.json())
             .then(data => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🌱 Request Withdrawal';
+                }
+                
                 if (data.success) {
                     tg.showPopup({
                         title: '✅ Success!',
                         message: data.message || 'Withdrawal request submitted successfully!',
                         buttons: [{type: 'ok'}]
                     });
-                    // Refresh balance
                     loadUserData();
+                    if (amountInput) amountInput.value = '';
                 } else {
-                    // ============================================
-                    // SHOW ERROR MESSAGE FROM API
-                    // ============================================
                     tg.showPopup({
                         title: '❌ Error',
                         message: data.message || 'Withdrawal failed. Please try again.',
@@ -613,6 +615,10 @@ function setupEventListeners() {
             })
             .catch(error => {
                 console.error('Error:', error);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🌱 Request Withdrawal';
+                }
                 tg.showPopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
