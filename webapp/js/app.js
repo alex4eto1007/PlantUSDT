@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load user data
     loadUserData();
     
-    // Check wallet connection
-    checkWalletConnection();
+    // Load saved wallet
+    loadSavedWallet();
     
     // Set up event listeners
     setupEventListeners();
@@ -123,6 +123,113 @@ function updateReferral(data) {
     }
     if (referralEarned) {
         referralEarned.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
+    }
+}
+
+// ============================================
+// SIMPLE WALLET SAVE FUNCTIONS
+// ============================================
+
+async function saveWallet() {
+    const userId = tgUser?.id || '0';
+    const walletInput = document.getElementById('walletInput');
+    const walletAddress = walletInput?.value.trim();
+    
+    if (!walletAddress) {
+        tg.showPopup({
+            title: '❌ Error',
+            message: 'Please enter a wallet address.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    // Basic validation
+    if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+        tg.showPopup({
+            title: '❌ Invalid Address',
+            message: 'Please enter a valid BSC wallet address (starts with 0x, 42 characters).',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/save_wallet', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                telegram_id: userId,
+                wallet_address: walletAddress
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            tg.showPopup({
+                title: '✅ Wallet Saved!',
+                message: `Wallet address saved: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+                buttons: [{type: 'ok'}]
+            });
+            updateWalletUI(walletAddress);
+        } else {
+            tg.showPopup({
+                title: '❌ Error',
+                message: data.message || 'Failed to save wallet.',
+                buttons: [{type: 'ok'}]
+            });
+        }
+    } catch (error) {
+        console.error('Error saving wallet:', error);
+        tg.showPopup({
+            title: '❌ Error',
+            message: 'Failed to save wallet. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+    }
+}
+
+function updateWalletUI(address) {
+    const statusText = document.getElementById('walletText');
+    const addressDisplay = document.getElementById('walletAddressDisplay');
+    const walletInput = document.getElementById('walletInput');
+    const saveBtn = document.querySelector('.wallet-input-group .action-btn');
+    
+    if (statusText) {
+        statusText.textContent = '✅ Wallet Connected';
+        statusText.className = 'connected';
+    }
+    if (addressDisplay) {
+        addressDisplay.textContent = `📍 ${address}`;
+        addressDisplay.style.display = 'block';
+    }
+    if (walletInput) {
+        walletInput.value = address;
+        walletInput.disabled = true;
+        walletInput.style.opacity = '0.6';
+    }
+    if (saveBtn) {
+        saveBtn.textContent = '✅ Saved';
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = '0.6';
+        saveBtn.style.cursor = 'default';
+    }
+}
+
+// Load saved wallet from server
+async function loadSavedWallet() {
+    const userId = tgUser?.id || '0';
+    try {
+        const response = await fetch(`/api/get_wallet?telegram_id=${userId}`);
+        const data = await response.json();
+        if (data.success && data.wallet_address) {
+            updateWalletUI(data.wallet_address);
+        }
+    } catch (error) {
+        console.error('Error loading wallet:', error);
     }
 }
 
@@ -347,110 +454,6 @@ function setupEventListeners() {
     }
 }
 
-// ============================================
-// WALLET CONNECT FUNCTIONS
-// ============================================
-
-async function connectWallet() {
-    const userId = tgUser?.id || '0';
-    
-    // Check if MetaMask is available
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            // Request account access
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const walletAddress = accounts[0];
-            
-            // Send wallet address to bot
-            const response = await fetch('/api/connect_wallet', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    telegram_id: userId,
-                    wallet_address: walletAddress
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                tg.showPopup({
-                    title: '✅ Wallet Connected!',
-                    message: `Wallet connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
-                    buttons: [{type: 'ok'}]
-                });
-                updateWalletUI(walletAddress);
-            } else {
-                tg.showPopup({
-                    title: '❌ Error',
-                    message: data.message || 'Failed to connect wallet.',
-                    buttons: [{type: 'ok'}]
-                });
-            }
-        } catch (error) {
-            if (error.code === 4001) {
-                tg.showPopup({
-                    title: '⚠️ User Rejected',
-                    message: 'Please approve the connection request.',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                console.error('Error connecting wallet:', error);
-                tg.showPopup({
-                    title: '❌ Error',
-                    message: 'Failed to connect wallet. Please try again.',
-                    buttons: [{type: 'ok'}]
-                });
-            }
-        }
-    } else {
-        // No MetaMask - show instruction
-        tg.showPopup({
-            title: '🔑 Wallet Not Found',
-            message: 'Please install MetaMask or Trust Wallet browser extension to connect your wallet.',
-            buttons: [{type: 'ok'}]
-        });
-    }
-}
-
-function updateWalletUI(address) {
-    const statusText = document.getElementById('walletText');
-    const statusIcon = document.querySelector('.wallet-icon');
-    const connectBtn = document.getElementById('connectWalletBtn');
-    const addressDisplay = document.getElementById('walletAddressDisplay');
-    
-    if (statusText) {
-        statusText.textContent = '✅ Wallet Connected';
-        statusText.className = 'connected';
-    }
-    if (addressDisplay) {
-        addressDisplay.textContent = `📍 ${address}`;
-        addressDisplay.style.display = 'block';
-    }
-    if (connectBtn) {
-        connectBtn.textContent = '✅ Connected';
-        connectBtn.disabled = true;
-        connectBtn.style.opacity = '0.6';
-        connectBtn.style.cursor = 'default';
-    }
-}
-
-// Check if wallet was previously connected
-async function checkWalletConnection() {
-    const userId = tgUser?.id || '0';
-    try {
-        const response = await fetch(`/api/get_wallet?telegram_id=${userId}`);
-        const data = await response.json();
-        if (data.success && data.wallet_address) {
-            updateWalletUI(data.wallet_address);
-        }
-    } catch (error) {
-        console.error('Error checking wallet:', error);
-    }
-}
-
 // Export for HTML
 window.navigateTo = navigateTo;
 window.goBack = goBack;
@@ -459,4 +462,4 @@ window.copyReferral = copyReferral;
 window.checkDeposit = checkDeposit;
 window.investField = investField;
 window.filterHistory = filterHistory;
-window.connectWallet = connectWallet;
+window.saveWallet = saveWallet;

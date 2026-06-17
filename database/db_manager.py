@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from config.settings import Config
 from database.models import Base, User, Investment, DailyPayout, Withdrawal, Deposit
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class DatabaseManager:
     def __init__(self):
@@ -35,6 +35,10 @@ class DatabaseManager:
     def get_all_users(self):
         with self.get_session() as session:
             return session.query(User).all()
+    
+    def get_admins(self):
+        with self.get_session() as session:
+            return session.query(User).filter_by(is_admin=True).all()
     
     def create_user(self, telegram_id: int, username: str, first_name: str, referred_by: int = None):
         with self.get_session() as session:
@@ -109,30 +113,50 @@ class DatabaseManager:
                 session.commit()
     
     # Investment operations
-    def create_investment(self, user_id: int, amount: float):
+    def create_investment(self, user_id: int, field_number: int, amount: float):
         with self.get_session() as session:
-            total_return = amount * (1 + 0.02 * 30)
+            # Check if field is already used
+            existing = session.query(Investment).filter_by(
+                user_id=user_id, 
+                field_number=field_number,
+                is_active=True
+            ).first()
+            if existing:
+                return None
+            
+            total_return = amount * 0.02 * 30  # 2% daily for 30 days
             investment = Investment(
                 user_id=user_id,
+                field_number=field_number,
                 amount=amount,
-                total_return=total_return
+                total_return=total_return,
+                end_date=datetime.utcnow() + timedelta(days=30)
             )
             session.add(investment)
             
             user = session.query(User).filter_by(id=user_id).first()
             if user:
                 user.total_invested += amount
+                user.balance -= amount  # Lock the principal
             
             session.commit()
             return investment
+    
+    def get_user_investments(self, user_id: int):
+        with self.get_session() as session:
+            return session.query(Investment).filter_by(user_id=user_id).all()
     
     def get_active_investments(self):
         with self.get_session() as session:
             return session.query(Investment).filter_by(is_active=True, is_completed=False).all()
     
-    def get_user_investments(self, user_id: int):
+    def get_investment_by_field(self, user_id: int, field_number: int):
         with self.get_session() as session:
-            return session.query(Investment).filter_by(user_id=user_id).all()
+            return session.query(Investment).filter_by(
+                user_id=user_id, 
+                field_number=field_number,
+                is_active=True
+            ).first()
     
     # Payout operations
     def record_payout(self, user_id: int, investment_id: int, amount: float, day_number: int):
@@ -152,6 +176,7 @@ class DatabaseManager:
                     investment.is_completed = True
                     investment.is_active = False
             
+            # Credit to balance (available for withdrawal)
             user = session.query(User).filter_by(id=user_id).first()
             if user:
                 user.balance += amount
@@ -159,6 +184,30 @@ class DatabaseManager:
             
             session.commit()
             return payout
+    
+    def return_principal(self, investment_id: int):
+        """Return the principal amount to user's balance when investment expires"""
+        with self.get_session() as session:
+            investment = session.query(Investment).filter_by(id=investment_id).first()
+            if not investment or investment.principal_returned:
+                return None
+            
+            user = session.query(User).filter_by(id=investment.user_id).first()
+            if user:
+                user.balance += investment.amount
+                investment.principal_returned = True
+                session.commit()
+                return investment
+            return None
+    
+    def get_expired_investments(self):
+        """Get investments that have ended but principal not returned"""
+        with self.get_session() as session:
+            return session.query(Investment).filter(
+                Investment.end_date <= datetime.utcnow(),
+                Investment.is_active == False,
+                Investment.principal_returned == False
+            ).all()
     
     # Withdrawal operations
     def create_withdrawal(self, user_id: int, amount: float, wallet_address: str):
@@ -198,3 +247,7 @@ class DatabaseManager:
     def get_pending_withdrawals(self):
         with self.get_session() as session:
             return session.query(Withdrawal).filter_by(status="pending").all()
+    
+    def get_withdrawal_by_id(self, withdrawal_id: int):
+        with self.get_session() as session:
+            return session.query(Withdrawal).filter_by(id=withdrawal_id).first()

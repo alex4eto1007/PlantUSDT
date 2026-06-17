@@ -13,7 +13,7 @@ class InvestmentService:
         return investment_amount * Config.DAILY_RATE
     
     def calculate_total_return(self, investment_amount: float) -> float:
-        return investment_amount * (1 + Config.DAILY_RATE * Config.INVESTMENT_DAYS)
+        return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
     
     def process_daily_payouts(self):
         """Process daily payouts for all active investments"""
@@ -46,10 +46,6 @@ class InvestmentService:
                         day_number=day_number
                     )
                     
-                    # Update investment end_date if not set
-                    if not investment.end_date:
-                        investment.end_date = investment.start_date + timedelta(days=Config.INVESTMENT_DAYS)
-                    
                     logger.info(f"Payout processed for investment {investment.id}: ${daily_amount}")
                     
                 except Exception as e:
@@ -58,3 +54,26 @@ class InvestmentService:
                     
         except Exception as e:
             logger.error(f"Error in process_daily_payouts: {e}")
+    
+    def process_expired_investments(self):
+        """Return principal for expired investments"""
+        try:
+            expired = self.db.get_expired_investments()
+            
+            if not expired:
+                logger.info("No expired investments found")
+                return
+            
+            logger.info(f"Processing {len(expired)} expired investments")
+            
+            for investment in expired:
+                try:
+                    result = self.db.return_principal(investment.id)
+                    if result:
+                        logger.info(f"Principal returned for investment {investment.id}: ${investment.amount}")
+                except Exception as e:
+                    logger.error(f"Error returning principal for investment {investment.id}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Error in process_expired_investments: {e}")

@@ -14,13 +14,14 @@ class User(Base):
     username = Column(String(100))
     first_name = Column(String(100))
     wallet_address = Column(String(100))
-    balance = Column(Float, default=0.0)
+    balance = Column(Float, default=0.0)  # Available balance (rewards + returned principal)
     total_invested = Column(Float, default=0.0)
     total_earned = Column(Float, default=0.0)
     total_deposited = Column(Float, default=0.0)
     referred_by = Column(Integer, ForeignKey("users.id"))
     referral_code = Column(String(20), unique=True, default=lambda: str(uuid.uuid4())[:8])
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)  # Admin flag
     created_at = Column(DateTime, default=datetime.utcnow)
     last_deposit_check = Column(DateTime, default=datetime.utcnow)
     
@@ -33,14 +34,16 @@ class Investment(Base):
     
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    field_number = Column(Integer, nullable=False)  # 1, 2, or 3
     amount = Column(Float, nullable=False)
-    daily_rate = Column(Float, default=0.02)
-    total_return = Column(Float)
-    paid_out = Column(Float, default=0.0)
+    daily_rate = Column(Float, default=0.02)  # 2%
+    total_return = Column(Float)  # Total expected return (rewards only)
+    paid_out = Column(Float, default=0.0)  # Rewards paid so far
     start_date = Column(DateTime, default=datetime.utcnow)
     end_date = Column(DateTime)
     is_active = Column(Boolean, default=True)
     is_completed = Column(Boolean, default=False)
+    principal_returned = Column(Boolean, default=False)  # Track if principal was returned
     
     user = relationship("User", back_populates="investments")
 
@@ -73,11 +76,11 @@ class Withdrawal(Base):
     
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    amount = Column(Float, nullable=False)
-    fee = Column(Float, default=0.0)
-    net_amount = Column(Float)
+    amount = Column(Float, nullable=False)  # Original amount requested
+    fee = Column(Float, default=0.0)  # 10% fee
+    net_amount = Column(Float)  # Amount after fee
     wallet_address = Column(String(100))
-    status = Column(String(20), default="pending")
+    status = Column(String(20), default="pending")  # pending, completed, failed
     tx_hash = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime)

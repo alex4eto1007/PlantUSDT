@@ -17,6 +17,8 @@ class Config:
     DAILY_RATE = 0.02  # 2%
     INVESTMENT_DAYS = 30
     REFERRAL_BONUS = 0.05  # 5%
+    MAX_FIELD_AMOUNT = 100  # Max USDT per field
+    MAX_TOTAL_INVESTMENT = 300  # 3 fields × $100
     
     # Withdrawal
     MIN_WITHDRAWAL = 2  # USDT

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=6">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -22,13 +22,16 @@
         <div class="wallet-section" id="walletSection">
             <div class="wallet-status" id="walletStatus">
                 <span class="wallet-icon">🔗</span>
-                <span id="walletText">Wallet not connected</span>
+                <span id="walletText" class="disconnected">Wallet not connected</span>
             </div>
-            <button class="action-btn primary" onclick="connectWallet()" id="connectWalletBtn" style="width: 100%;">
-                <span class="btn-icon">🔑</span>
-                Connect Wallet
-            </button>
-            <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #8899bb; margin-top: 8px; word-break: break-all;"></div>
+            <div class="wallet-input-group">
+                <input type="text" id="walletInput" placeholder="Enter your BSC wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
+                <button class="action-btn primary" onclick="saveWallet()" style="width: 100%; padding: 12px;">
+                    <span class="btn-icon">💾</span>
+                    Save Wallet
+                </button>
+            </div>
+            <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #00ff87; margin-top: 8px; word-break: break-all; padding: 8px 12px; background: rgba(0,255,135,0.05); border-radius: 6px; border: 1px solid rgba(0,255,135,0.1);"></div>
         </div>
 
         <!-- Quick Stats -->
@@ -138,7 +141,7 @@
         <!-- Investment Info -->
         <div class="info-card">
             <h3>💎 How It Works</h3>
-            <p>1. Connect your wallet</p>
+            <p>1. Enter your wallet address</p>
             <p>2. Deposit $5+ USDT (BEP-20)</p>
             <p>3. Choose a field and invest (max $100 per field)</p>
             <p>4. Earn 2% DAILY for 30 days</p>
