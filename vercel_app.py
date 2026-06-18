@@ -92,6 +92,11 @@ def get_user():
         url = f"{VPS_API_URL}/api/user?telegram_id={telegram_id}"
         with urllib.request.urlopen(url, timeout=5) as response:
             data = json.loads(response.read().decode())
+            # Ensure all fields are present
+            if 'investment_earnings' not in data:
+                data['investment_earnings'] = 0
+            if 'total_earnings' not in data:
+                data['total_earnings'] = data.get('referral_earned', 0) + data.get('investment_earnings', 0)
             return jsonify(data)
     except Exception as e:
         print(f"Error fetching user: {e}")
@@ -100,7 +105,9 @@ def get_user():
             'balance': 0,
             'fields': [],
             'referrals': 0,
-            'referral_earned': 0
+            'referral_earned': 0,
+            'investment_earnings': 0,
+            'total_earnings': 0
         })
 
 @app.route('/api/invest', methods=['POST'])
