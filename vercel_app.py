@@ -86,13 +86,22 @@ def get_referral_code():
 
 @app.route('/api/user', methods=['GET'])
 def get_user():
-    return jsonify({
-        'success': True,
-        'balance': 0,
-        'fields': [],
-        'referrals': 0,
-        'referral_earned': 0
-    })
+    telegram_id = request.args.get('telegram_id', '0')
+    
+    try:
+        url = f"{VPS_API_URL}/api/user?telegram_id={telegram_id}"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return jsonify(data)
+    except Exception as e:
+        print(f"Error fetching user: {e}")
+        return jsonify({
+            'success': True,
+            'balance': 0,
+            'fields': [],
+            'referrals': 0,
+            'referral_earned': 0
+        })
 
 @app.route('/api/invest', methods=['POST'])
 def invest():
@@ -104,12 +113,31 @@ def check_deposit():
 
 @app.route('/api/history', methods=['GET'])
 def get_history():
-    return jsonify({
-        'transactions': [
-            {'type': 'deposit', 'amount': 50.00, 'status': 'completed', 'date': '2026-06-17'},
-            {'type': 'earnings', 'amount': 2.00, 'status': 'completed', 'date': '2026-06-16'}
-        ]
-    })
+    try:
+        telegram_id = request.args.get('telegram_id', '0')
+        url = f"{VPS_API_URL}/api/real_history?telegram_id={telegram_id}"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return jsonify(data)
+    except:
+        return jsonify({
+            'transactions': [
+                {'type': 'deposit', 'amount': 50.00, 'status': 'completed', 'date': '2026-06-17'},
+                {'type': 'earnings', 'amount': 2.00, 'status': 'completed', 'date': '2026-06-16'}
+            ]
+        })
+
+@app.route('/api/real_history', methods=['GET'])
+def real_history():
+    telegram_id = request.args.get('telegram_id', '0')
+    
+    try:
+        url = f"{VPS_API_URL}/api/real_history?telegram_id={telegram_id}"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return jsonify(data)
+    except:
+        return jsonify({'transactions': []})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
