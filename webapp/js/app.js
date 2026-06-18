@@ -88,7 +88,7 @@ function updateFields(data) {
     }
 }
 
-function updateReferral(data) {
+async function updateReferral(data) {
     const referralLink = document.getElementById('referralLinkText');
     const referralCount = document.getElementById('referralCount');
     const referralEarned = document.getElementById('referralEarned');
@@ -98,8 +98,18 @@ function updateReferral(data) {
     if (referralLink) {
         if (isConnected) {
             const userId = tgUser?.id || '0';
-            referralLink.textContent = `https://t.me/PlantUSDT_bot?start=${userId}`;
-            referralLink.style.color = '#ccd6f0';
+            try {
+                const response = await fetch(`/api/get_referral_code?telegram_id=${userId}&t=${Date.now()}`);
+                const result = await response.json();
+                if (result.success && result.referral_code) {
+                    referralLink.textContent = `https://t.me/PlantUSDT_bot?start=${result.referral_code}`;
+                    referralLink.style.color = '#ccd6f0';
+                } else {
+                    referralLink.textContent = 'Error loading referral link';
+                }
+            } catch (error) {
+                referralLink.textContent = 'Error loading referral link';
+            }
         } else {
             referralLink.textContent = '⚠️ Save wallet to get referral link';
             referralLink.style.color = '#ff6b6b';
@@ -280,9 +290,10 @@ async function investField(fieldNumber) {
     } catch (error) { console.error('Error investing:', error); }
 }
 
-function copyReferral() {
+async function copyReferral() {
     const walletText = document.getElementById('walletText');
     const isConnected = walletText?.textContent.includes('Connected');
+    
     if (!isConnected) {
         tg.showPopup({
             title: '⚠️ Wallet Required',
@@ -291,13 +302,43 @@ function copyReferral() {
         });
         return;
     }
+    
     const userId = tgUser?.id || '0';
-    const link = `https://t.me/PlantUSDT_bot?start=${userId}`;
-    navigator.clipboard.writeText(link).then(() => {
-        tg.showPopup({title:'✅ Copied!', message:'Referral link copied! Share it with your friends.', buttons:[{type:'ok'}]});
-    }).catch(() => {
-        tg.showPopup({title:'📋 Referral Link', message:link, buttons:[{type:'ok'}]});
-    });
+    
+    try {
+        const response = await fetch(`/api/get_referral_code?telegram_id=${userId}&t=${Date.now()}`);
+        const data = await response.json();
+        
+        if (data.success && data.referral_code) {
+            const link = `https://t.me/PlantUSDT_bot?start=${data.referral_code}`;
+            navigator.clipboard.writeText(link).then(() => {
+                tg.showPopup({
+                    title: '✅ Copied!',
+                    message: 'Referral link copied! Share it with your friends.',
+                    buttons: [{type: 'ok'}]
+                });
+            }).catch(() => {
+                tg.showPopup({
+                    title: '📋 Referral Link',
+                    message: link,
+                    buttons: [{type: 'ok'}]
+                });
+            });
+        } else {
+            tg.showPopup({
+                title: '❌ Error',
+                message: 'Could not get referral code.',
+                buttons: [{type: 'ok'}]
+            });
+        }
+    } catch (error) {
+        console.error('Error getting referral code:', error);
+        tg.showPopup({
+            title: '❌ Error',
+            message: 'Failed to get referral link. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+    }
 }
 
 function copyAddress() {
