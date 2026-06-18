@@ -61,14 +61,15 @@ def get_user():
                 'total_return': inv.total_return,
                 'paid_out': inv.paid_out,
                 'start_date': inv.start_date.isoformat(),
-                'is_active': inv.is_active
+                'is_active': inv.is_active,
+                'next_payout_date': inv.next_payout_date.isoformat() if inv.next_payout_date else None
             })
     
     # Get referrals
     referrals = session.query(User).filter_by(referred_by=user.id).count()
     referral_earned = user.referral_earnings_all_time or 0
     investment_earnings = user.investment_earnings_all_time or 0
-    total_earnings = referral_earned + investment_earnings  # SUM OF BOTH
+    total_earnings = referral_earned + investment_earnings
     
     return jsonify({
         'success': True,
@@ -112,13 +113,17 @@ def invest():
         return jsonify({'success': False, 'message': f'Field #{field_number} is already planted'})
     
     from config.settings import Config
+    from datetime import datetime, timedelta
     total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
+    now = datetime.utcnow()
     
     investment = Investment(
         user_id=user.id,
         field_number=field_number,
         amount=amount,
-        total_return=total_return
+        total_return=total_return,
+        end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
+        next_payout_date=now + timedelta(hours=24)  # First payout in 24 hours
     )
     session.add(investment)
     
