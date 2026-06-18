@@ -429,11 +429,13 @@ function renderHistory(transactions) {
 }
 
 // ============================================
-// COUNTDOWN TIMER FUNCTIONS
+// COUNTDOWN TIMER FUNCTIONS - FORCED UTC
 // ============================================
 
 function updateFieldTimers() {
     const now = new Date();
+    // Get UTC time
+    const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
     
     for (let i = 1; i <= 3; i++) {
         const timerEl = document.getElementById(`field${i}Timer`);
@@ -442,7 +444,7 @@ function updateFieldTimers() {
         if (!timerEl || !statusEl) continue;
         
         if (!statusEl.textContent.includes('Active')) {
-            timerEl.textContent = '⏳ Payout: --:--:--';
+            timerEl.textContent = '⏳ Payout: --:--:-- UTC';
             timerEl.className = 'field-timer';
             continue;
         }
@@ -453,11 +455,12 @@ function updateFieldTimers() {
             continue;
         }
         
-        const nextPayout = new Date(fieldData.next_payout_date);
-        const timeLeft = nextPayout - now;
+        // Parse the UTC date from the API
+        const nextPayout = new Date(fieldData.next_payout_date + 'Z');
+        const timeLeft = nextPayout - utcNow;
         
         if (timeLeft <= 0) {
-            timerEl.textContent = '🟢 Ready for payout!';
+            timerEl.textContent = '🟢 Ready for payout! (UTC)';
             timerEl.className = 'field-timer ready';
         } else {
             const hours = Math.floor(timeLeft / (1000 * 60 * 60));
@@ -465,7 +468,7 @@ function updateFieldTimers() {
             const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
             
             const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            timerEl.textContent = `⏳ Next payout: ${timeString}`;
+            timerEl.textContent = `⏳ Next payout (UTC): ${timeString}`;
             timerEl.className = 'field-timer countdown';
         }
     }
