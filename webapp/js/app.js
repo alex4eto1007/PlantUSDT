@@ -94,6 +94,7 @@ function updateFields(data) {
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
             
+            // Store field data for timer
             window.fieldData[i] = {
                 next_payout_date: field.next_payout_date
             };

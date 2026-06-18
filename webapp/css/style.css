@@ -232,6 +232,42 @@ body {
     font-size: 13px;
 }
 
+/* ============================================
+   FIELD TIMER - ABOVE EACH FIELD
+   ============================================ */
+
+.field-timer {
+    font-size: 13px;
+    color: #00d4ff;
+    margin: 6px 0 10px 0;
+    padding: 6px 10px;
+    background: rgba(0,212,255,0.08);
+    border-radius: 6px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    border: 1px solid rgba(0,212,255,0.05);
+}
+
+.field-timer.countdown {
+    color: #00ff87;
+    background: rgba(0,255,135,0.08);
+    border-color: rgba(0,255,135,0.1);
+}
+
+.field-timer.ready {
+    color: #ff6b6b;
+    background: rgba(255,107,107,0.08);
+    border-color: rgba(255,107,107,0.1);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
 /* Actions Grid - BUTTONS */
 .actions-grid {
     display: grid;
@@ -844,5 +880,10 @@ body {
         flex-direction: column;
         gap: 4px;
         font-size: 12px;
+    }
+
+    .field-timer {
+        font-size: 11px;
+        padding: 4px 8px;
     }
 }
