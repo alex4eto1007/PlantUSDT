@@ -97,6 +97,11 @@ def get_user():
                 data['investment_earnings'] = 0
             if 'total_earnings' not in data:
                 data['total_earnings'] = data.get('referral_earned', 0) + data.get('investment_earnings', 0)
+            # Ensure fields array has next_payout_date
+            if 'fields' in data:
+                for field in data['fields']:
+                    if 'next_payout_date' not in field:
+                        field['next_payout_date'] = None
             return jsonify(data)
     except Exception as e:
         print(f"Error fetching user: {e}")
@@ -121,7 +126,7 @@ def invest():
             data=json.dumps(data).encode('utf-8'),
             headers={'Content-Type': 'application/json'}
         )
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:
             result = json.loads(response.read().decode())
             return jsonify(result)
     except Exception as e:
