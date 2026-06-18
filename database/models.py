@@ -24,9 +24,9 @@ class User(Base):
     total_deposited = Column(Float, default=0.0)
     
     # Earnings tracking
-    total_earnings_all_time = Column(Float, default=0.0)  # All-time earnings from all sources
-    investment_earnings_all_time = Column(Float, default=0.0)  # Earnings from own investments
-    referral_earnings_all_time = Column(Float, default=0.0)  # All-time referral earnings
+    total_earnings_all_time = Column(Float, default=0.0)
+    investment_earnings_all_time = Column(Float, default=0.0)
+    referral_earnings_all_time = Column(Float, default=0.0)
     
     # Referral system
     referred_by = Column(Integer, ForeignKey("users.id"))
@@ -55,10 +55,11 @@ class Investment(Base):
     daily_rate = Column(Float, default=0.02)
     total_return = Column(Float)
     paid_out = Column(Float, default=0.0)
-    referral_earnings_paid = Column(Float, default=0.0)  # Referral earnings paid to referrer
+    referral_earnings_paid = Column(Float, default=0.0)
     start_date = Column(DateTime, default=datetime.utcnow)
     end_date = Column(DateTime)
-    last_payout_date = Column(DateTime, nullable=True)  # Track last payout date
+    last_payout_date = Column(DateTime, nullable=True)
+    next_payout_date = Column(DateTime, nullable=True)  # 24 hours after investment or last payout
     is_active = Column(Boolean, default=True)
     is_completed = Column(Boolean, default=False)
     principal_returned = Column(Boolean, default=False)

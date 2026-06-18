@@ -3,6 +3,7 @@
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe?.user;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
+let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUserData();
     loadSavedWallet();
     setupEventListeners();
+    startCountdownTimer();
 });
 
 function navigateTo(page) {
@@ -46,19 +48,16 @@ function updateUI(data) {
         balanceEl.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
     }
     
-    // Update total earnings - SUM of investment + referral
     const totalEarningsEl = document.getElementById('totalEarnings');
     if (totalEarningsEl) {
         totalEarningsEl.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
     }
     
-    // Update investment earnings
     const investmentEarningsEl = document.getElementById('investmentEarnings');
     if (investmentEarningsEl) {
         investmentEarningsEl.textContent = `$${(data.investment_earnings || 0).toFixed(2)}`;
     }
     
-    // Update referral earnings
     const referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
     if (referralEarningsDisplayEl) {
         referralEarningsDisplayEl.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
@@ -67,6 +66,8 @@ function updateUI(data) {
 
 function updateFields(data) {
     const fields = data.fields || [];
+    window.fieldData = {};
+    
     for (let i = 1; i <= 3; i++) {
         const field = fields.find(f => f.field_number === i);
         const statusEl = document.getElementById(`field${i}Status`);
@@ -76,6 +77,8 @@ function updateFields(data) {
         const progressEl = document.getElementById(`field${i}Progress`);
         const cardEl = document.getElementById(`field${i}`);
         const btnEl = cardEl?.querySelector('.action-btn');
+        const timerEl = document.getElementById(`field${i}Timer`);
+        
         if (field) {
             const progress = field.paid_out / field.total_return * 100;
             const days = Math.floor((Date.now() - new Date(field.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -90,6 +93,10 @@ function updateFields(data) {
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
+            
+            window.fieldData[i] = {
+                next_payout_date: field.next_payout_date
+            };
         } else {
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
@@ -102,6 +109,7 @@ function updateFields(data) {
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
             btnEl.style.cursor = 'pointer';
+            window.fieldData[i] = null;
         }
     }
 }
@@ -140,6 +148,10 @@ async function updateReferral(data) {
         referralEarned.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
     }
 }
+
+// ============================================
+// WALLET FUNCTIONS
+// ============================================
 
 async function saveWallet() {
     const userId = tgUser?.id || '0';
@@ -287,12 +299,15 @@ async function setWallet() {
     }
 }
 
+// ============================================
+// INVESTMENT FUNCTIONS
+// ============================================
+
 async function investField(fieldNumber) {
     const userId = tgUser?.id || '0';
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
     
-    // Remove $ symbol and any spaces
     let cleanAmount = amount.replace('$', '').trim();
     const amountNum = parseFloat(cleanAmount);
     
@@ -318,7 +333,7 @@ async function copyReferral() {
     if (!isConnected) {
         tg.showPopup({
             title: '⚠️ Wallet Required',
-            message: 'You must save your wallet address first to get your referral link!\n\nPlease go to the main page and save your wallet address.',
+            message: 'You must save your wallet address first to get your referral link!',
             buttons: [{type: 'ok'}]
         });
         return;
@@ -330,7 +345,7 @@ async function copyReferral() {
         if (data.success && data.referral_code) {
             const link = `https://t.me/PlantUSDT_bot?start=${data.referral_code}`;
             navigator.clipboard.writeText(link).then(() => {
-                tg.showPopup({title:'✅ Copied!', message:'Referral link copied! Share it with your friends.', buttons:[{type:'ok'}]});
+                tg.showPopup({title:'✅ Copied!', message:'Referral link copied!', buttons:[{type:'ok'}]});
             }).catch(() => {
                 tg.showPopup({title:'📋 Referral Link', message:link, buttons:[{type:'ok'}]});
             });
@@ -339,7 +354,7 @@ async function copyReferral() {
         }
     } catch (error) {
         console.error('Error getting referral code:', error);
-        tg.showPopup({title:'❌ Error', message:'Failed to get referral link. Please try again.', buttons:[{type:'ok'}]});
+        tg.showPopup({title:'❌ Error', message:'Failed to get referral link.', buttons:[{type:'ok'}]});
     }
 }
 
@@ -364,13 +379,17 @@ async function checkDeposit() {
                 statusDiv.innerHTML = '✅ Deposit detected! Balance updated.';
                 loadUserData();
             } else {
-                statusDiv.innerHTML = '⏳ No new deposits found. Please wait 5-15 minutes.';
+                statusDiv.innerHTML = '⏳ No new deposits found.';
             }
         } catch (error) {
-            statusDiv.innerHTML = '❌ Error checking deposits. Please try again.';
+            statusDiv.innerHTML = '❌ Error checking deposits.';
         }
     }
 }
+
+// ============================================
+// HISTORY FUNCTIONS
+// ============================================
 
 function filterHistory(type) {
     document.querySelectorAll('.filter-btn').forEach(btn => { btn.classList.remove('active'); });
@@ -393,7 +412,6 @@ function filterHistory(type) {
         })
         .catch(error => {
             historyList.innerHTML = '<p class="empty-state">Error loading history.</p>';
-            console.error('Error:', error);
         });
 }
 
@@ -408,6 +426,68 @@ function renderHistory(transactions) {
     });
     historyList.innerHTML = html;
 }
+
+// ============================================
+// COUNTDOWN TIMER FUNCTIONS
+// ============================================
+
+function updateFieldTimers() {
+    const now = new Date();
+    
+    for (let i = 1; i <= 3; i++) {
+        const timerEl = document.getElementById(`field${i}Timer`);
+        const statusEl = document.getElementById(`field${i}Status`);
+        
+        if (!timerEl || !statusEl) continue;
+        
+        if (!statusEl.textContent.includes('Active')) {
+            timerEl.textContent = '⏳ Payout: --:--:--';
+            timerEl.className = 'field-timer';
+            continue;
+        }
+        
+        const fieldData = window.fieldData ? window.fieldData[i] : null;
+        if (!fieldData || !fieldData.next_payout_date) {
+            timerEl.textContent = '⏳ Calculating...';
+            continue;
+        }
+        
+        const nextPayout = new Date(fieldData.next_payout_date);
+        const timeLeft = nextPayout - now;
+        
+        if (timeLeft <= 0) {
+            timerEl.textContent = '🟢 Ready for payout!';
+            timerEl.className = 'field-timer ready';
+        } else {
+            const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            timerEl.textContent = `⏳ Next payout: ${timeString}`;
+            timerEl.className = 'field-timer countdown';
+        }
+    }
+}
+
+function startCountdownTimer() {
+    updateFieldTimers();
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    timerInterval = setInterval(updateFieldTimers, 1000);
+}
+
+function stopCountdownTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// ============================================
+// WITHDRAW FORM
+// ============================================
 
 function setupEventListeners() {
     const withdrawForm = document.getElementById('withdrawForm');
@@ -453,6 +533,10 @@ function setupEventListeners() {
         });
     }
 }
+
+// ============================================
+// EXPORTS
+// ============================================
 
 window.navigateTo = navigateTo;
 window.goBack = goBack;

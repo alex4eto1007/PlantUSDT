@@ -16,7 +16,7 @@ class InvestmentService:
         return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
     
     def process_referral_earnings(self, investment):
-        """Process referral earnings for the referrer (Level 1)"""
+        """Process referral earnings for the referrer (Level 1 and Level 2)"""
         try:
             user = self.db.get_user_by_id(investment.user_id)
             if not user or not user.referred_by:
@@ -27,9 +27,9 @@ class InvestmentService:
                 return 0
             
             daily_payout = self.calculate_daily_payout(investment.amount)
-            referral_bonus = daily_payout * 0.05  # 5% of daily earnings
+            referral_bonus = daily_payout * 0.05
             
-            # Credit to referrer
+            # Credit Level 1 referrer
             referrer.balance += referral_bonus
             referrer.total_earned += referral_bonus
             referrer.referral_earnings_all_time += referral_bonus
@@ -48,7 +48,7 @@ class InvestmentService:
             if referrer.referred_by:
                 level2_referrer = self.db.get_user_by_id(referrer.referred_by)
                 if level2_referrer:
-                    level2_bonus = referral_bonus * 0.05  # 5% of Level 1 bonus
+                    level2_bonus = referral_bonus * 0.05
                     level2_referrer.balance += level2_bonus
                     level2_referrer.total_earned += level2_bonus
                     level2_referrer.referral_earnings_all_time += level2_bonus
@@ -62,8 +62,42 @@ class InvestmentService:
             logger.error(f"Error processing referral earnings: {e}")
             return 0
     
+    def create_investment(self, user_id: int, field_number: int, amount: float):
+        """Create a new investment with 24-hour payout timer"""
+        with self.db.get_session() as session:
+            existing = session.query(Investment).filter_by(
+                user_id=user_id, 
+                field_number=field_number,
+                is_active=True
+            ).first()
+            if existing:
+                return None
+            
+            from config.settings import Config
+            total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
+            now = datetime.utcnow()
+            
+            investment = Investment(
+                user_id=user_id,
+                field_number=field_number,
+                amount=amount,
+                total_return=total_return,
+                end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
+                next_payout_date=now + timedelta(hours=24)  # First payout in 24 hours
+            )
+            session.add(investment)
+            
+            user = session.query(User).filter_by(id=user_id).first()
+            if user:
+                user.total_invested += amount
+                user.balance -= amount
+            
+            session.commit()
+            logger.info(f"Investment created: Field {field_number}, ${amount}, next payout at {investment.next_payout_date}")
+            return investment
+    
     def process_daily_payouts(self):
-        """Process daily payouts for all active investments - ONE PER DAY MAX"""
+        """Process daily payouts - 24 hours after investment or last payout"""
         try:
             investments = self.db.get_active_investments()
             
@@ -72,27 +106,26 @@ class InvestmentService:
                 return
             
             logger.info(f"Processing payouts for {len(investments)} investments")
-            today = datetime.utcnow().date()
+            now = datetime.utcnow()
             
             for investment in investments:
                 try:
                     # Check if investment is still active
-                    if investment.end_date and datetime.utcnow() > investment.end_date:
+                    if investment.end_date and now > investment.end_date:
                         investment.is_active = False
                         investment.is_completed = True
                         continue
                     
                     # ============================================
-                    # PREVENT DOUBLE PAYOUTS
+                    # CHECK IF NEXT PAYOUT IS DUE (24 hours after last payout)
                     # ============================================
-                    last_payout = investment.last_payout_date
-                    if last_payout and last_payout.date() == today:
-                        logger.info(f"Investment {investment.id} already paid today, skipping")
+                    if investment.next_payout_date and now < investment.next_payout_date:
+                        logger.debug(f"Investment {investment.id} next payout at {investment.next_payout_date}, skipping")
                         continue
                     
                     # Calculate daily payout
                     daily_amount = self.calculate_daily_payout(investment.amount)
-                    day_number = (datetime.utcnow() - investment.start_date).days + 1
+                    day_number = (now - investment.start_date).days + 1
                     
                     # Record payout to user
                     self.db.record_payout(
@@ -103,9 +136,9 @@ class InvestmentService:
                     )
                     
                     # ============================================
-                    # UPDATE LAST PAYOUT DATE
+                    # UPDATE NEXT PAYOUT DATE (24 hours from now)
                     # ============================================
-                    investment.last_payout_date = datetime.utcnow()
+                    investment.next_payout_date = now + timedelta(hours=24)
                     session = self.db.get_session()
                     session.commit()
                     
@@ -120,7 +153,7 @@ class InvestmentService:
                     # Process referral earnings
                     self.process_referral_earnings(investment)
                     
-                    logger.info(f"Payout processed for investment {investment.id}: ${daily_amount}")
+                    logger.info(f"Payout processed for investment {investment.id}: ${daily_amount}, next payout at {investment.next_payout_date}")
                     
                 except Exception as e:
                     logger.error(f"Error processing payout for investment {investment.id}: {e}")
