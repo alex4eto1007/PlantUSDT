@@ -429,13 +429,13 @@ function renderHistory(transactions) {
 }
 
 // ============================================
-// COUNTDOWN TIMER FUNCTIONS - FORCED UTC
+// COUNTDOWN TIMER FUNCTIONS - FIXED UTC
 // ============================================
 
 function updateFieldTimers() {
     const now = new Date();
-    // Get UTC time
-    const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+    // Get UTC time using proper method
+    const utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
     
     for (let i = 1; i <= 3; i++) {
         const timerEl = document.getElementById(`field${i}Timer`);
@@ -456,7 +456,7 @@ function updateFieldTimers() {
         }
         
         // Parse the UTC date from the API
-        const nextPayout = new Date(fieldData.next_payout_date + 'Z');
+        const nextPayout = new Date(fieldData.next_payout_date + 'Z').getTime();
         const timeLeft = nextPayout - utcNow;
         
         if (timeLeft <= 0) {
