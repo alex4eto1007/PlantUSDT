@@ -291,7 +291,11 @@ async function investField(fieldNumber) {
     const userId = tgUser?.id || '0';
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
-    const amountNum = parseFloat(amount);
+    
+    // Remove $ symbol and any spaces
+    let cleanAmount = amount.replace('$', '').trim();
+    const amountNum = parseFloat(cleanAmount);
+    
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
         tg.showPopup({title:'❌ Invalid Amount', message:'Please enter between $5 and $100.', buttons:[{type:'ok'}]});
         return;
