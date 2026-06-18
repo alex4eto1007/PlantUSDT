@@ -55,6 +55,7 @@ def get_user():
     fields = []
     for inv in investments:
         if inv.is_active or not inv.is_completed:
+            next_payout = inv.next_payout_date
             fields.append({
                 'field_number': inv.field_number,
                 'amount': inv.amount,
@@ -62,7 +63,7 @@ def get_user():
                 'paid_out': inv.paid_out,
                 'start_date': inv.start_date.isoformat(),
                 'is_active': inv.is_active,
-                'next_payout_date': inv.next_payout_date.isoformat() if inv.next_payout_date else None
+                'next_payout_date': next_payout.isoformat() if next_payout else None
             })
     
     # Get referrals
