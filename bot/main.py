@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config.settings import Config
 from database.db_manager import DatabaseManager
+from database.models import User
 from services.investment import InvestmentService
 from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
@@ -110,16 +111,29 @@ Use /app to open the Mini App!"""
                     await update.message.reply_text("❌ You cannot refer yourself!")
                     return
 
-                # Apply referral
-                existing_user.referred_by = referrer.id
-                existing_user.referred_at = now
-                existing_user.can_be_referred = False
-
-                # Credit bonus to referrer
-                db.credit_referral_bonus(referrer.id, 5.0)  # $5 bonus for successful referral
-
+                # ============================================
+                # APPLY REFERRAL - FIXED WITH SESSION
+                # ============================================
                 session = db.get_session()
-                session.commit()
+                
+                # Get fresh user objects in this session
+                user_obj = session.query(User).filter_by(telegram_id=user.id).first()
+                referrer_obj = session.query(User).filter_by(id=referrer.id).first()
+                
+                if user_obj and referrer_obj:
+                    user_obj.referred_by = referrer.id
+                    user_obj.referred_at = now
+                    user_obj.can_be_referred = False
+                    
+                    # Credit bonus to referrer
+                    referrer_obj.balance += 5.0
+                    referrer_obj.referral_earnings += 5.0
+                    
+                    session.commit()
+                    logger.info(f"Referral saved: {user.id} referred by {referrer.id}")
+                else:
+                    logger.error(f"Could not find user or referrer in session")
+                    session.rollback()
 
                 await update.message.reply_text(
                     f"✅ You have been successfully referred by @{referrer.username or 'User'}! 🎉\n\n"
