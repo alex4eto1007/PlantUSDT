@@ -63,7 +63,7 @@ class InvestmentService:
             return 0
     
     def process_daily_payouts(self):
-        """Process daily payouts for all active investments"""
+        """Process daily payouts for all active investments - ONE PER DAY MAX"""
         try:
             investments = self.db.get_active_investments()
             
@@ -72,14 +72,25 @@ class InvestmentService:
                 return
             
             logger.info(f"Processing payouts for {len(investments)} investments")
+            today = datetime.utcnow().date()
             
             for investment in investments:
                 try:
+                    # Check if investment is still active
                     if investment.end_date and datetime.utcnow() > investment.end_date:
                         investment.is_active = False
                         investment.is_completed = True
                         continue
                     
+                    # ============================================
+                    # PREVENT DOUBLE PAYOUTS
+                    # ============================================
+                    last_payout = investment.last_payout_date
+                    if last_payout and last_payout.date() == today:
+                        logger.info(f"Investment {investment.id} already paid today, skipping")
+                        continue
+                    
+                    # Calculate daily payout
                     daily_amount = self.calculate_daily_payout(investment.amount)
                     day_number = (datetime.utcnow() - investment.start_date).days + 1
                     
@@ -92,8 +103,13 @@ class InvestmentService:
                     )
                     
                     # ============================================
-                    # TRACK INVESTMENT EARNINGS
+                    # UPDATE LAST PAYOUT DATE
                     # ============================================
+                    investment.last_payout_date = datetime.utcnow()
+                    session = self.db.get_session()
+                    session.commit()
+                    
+                    # Track investment earnings
                     user = self.db.get_user_by_id(investment.user_id)
                     if user:
                         user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + daily_amount
@@ -101,9 +117,7 @@ class InvestmentService:
                         session = self.db.get_session()
                         session.commit()
                     
-                    # ============================================
-                    # PROCESS REFERRAL EARNINGS (Level 1 and Level 2)
-                    # ============================================
+                    # Process referral earnings
                     self.process_referral_earnings(investment)
                     
                     logger.info(f"Payout processed for investment {investment.id}: ${daily_amount}")

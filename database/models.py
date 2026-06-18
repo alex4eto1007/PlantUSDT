@@ -58,6 +58,7 @@ class Investment(Base):
     referral_earnings_paid = Column(Float, default=0.0)  # Referral earnings paid to referrer
     start_date = Column(DateTime, default=datetime.utcnow)
     end_date = Column(DateTime)
+    last_payout_date = Column(DateTime, nullable=True)  # Track last payout date
     is_active = Column(Boolean, default=True)
     is_completed = Column(Boolean, default=False)
     principal_returned = Column(Boolean, default=False)
