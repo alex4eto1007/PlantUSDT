@@ -112,7 +112,21 @@ def get_user():
 
 @app.route('/api/invest', methods=['POST'])
 def invest():
-    return jsonify({'success': False, 'message': 'Please use the bot for investments'})
+    data = request.json
+    
+    try:
+        url = f"{VPS_API_URL}/api/invest"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(data).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            result = json.loads(response.read().decode())
+            return jsonify(result)
+    except Exception as e:
+        print(f"Error investing: {e}")
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/check_deposit', methods=['GET'])
 def check_deposit():
