@@ -46,7 +46,7 @@ function updateUI(data) {
         balanceEl.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
     }
     
-    // Update total earnings
+    // Update total earnings - SUM of investment + referral
     const totalEarningsEl = document.getElementById('totalEarnings');
     if (totalEarningsEl) {
         totalEarningsEl.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;

@@ -68,7 +68,7 @@ def get_user():
     referrals = session.query(User).filter_by(referred_by=user.id).count()
     referral_earned = user.referral_earnings_all_time or 0
     investment_earnings = user.investment_earnings_all_time or 0
-    total_earnings = referral_earned + investment_earnings
+    total_earnings = referral_earned + investment_earnings  # SUM OF BOTH
     
     return jsonify({
         'success': True,
