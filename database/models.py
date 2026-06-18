@@ -22,9 +22,14 @@ class User(Base):
     total_invested = Column(Float, default=0.0)
     total_earned = Column(Float, default=0.0)
     total_deposited = Column(Float, default=0.0)
+    
+    # Referral system
     referred_by = Column(Integer, ForeignKey("users.id"))
     referral_code = Column(String(20), unique=True, default=generate_unique_code)
     referral_earnings = Column(Float, default=0.0)
+    can_be_referred = Column(Boolean, default=True)  # Can this user accept a referral?
+    referred_at = Column(DateTime, nullable=True)    # When were they referred?
+    
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

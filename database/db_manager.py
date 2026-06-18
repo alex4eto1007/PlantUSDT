@@ -58,7 +58,8 @@ class DatabaseManager:
                 username=username,
                 first_name=first_name,
                 referred_by=referred_by,
-                referral_code=new_code
+                referral_code=new_code,
+                can_be_referred=False  # New users already have a referral
             )
             session.add(user)
             session.commit()
@@ -298,6 +299,18 @@ class DatabaseManager:
             if user:
                 user.balance += amount
                 user.referral_earnings += amount
+                session.commit()
+                return user
+            return None
+    
+    def reset_user_referral(self, user_id: int):
+        """Admin function to reset a user's referral status"""
+        with self.get_session() as session:
+            user = session.query(User).filter_by(id=user_id).first()
+            if user:
+                user.referred_by = None
+                user.referred_at = None
+                user.can_be_referred = True
                 session.commit()
                 return user
             return None

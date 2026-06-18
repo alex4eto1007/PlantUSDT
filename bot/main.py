@@ -8,6 +8,7 @@ from services.deposit_scanner import DepositScanner
 from services.scheduler import SchedulerService
 import logging
 import asyncio
+from datetime import datetime
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -40,16 +41,24 @@ def is_admin(user_id: int) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    now = datetime.utcnow()
+    
+    logger.info(f"START COMMAND - User: {user.id}, Args: {context.args}")
     
     existing_user = db.get_user(user.id)
+    
     if not existing_user:
+        # NEW USER - Create account with referral
         referred_by = None
         if context.args and len(context.args) > 0:
             referral_code = context.args[0]
+            logger.info(f"New user - Referral code received: {referral_code}")
             referrer = db.get_user_by_referral_code(referral_code)
             if referrer:
                 referred_by = referrer.id
-                logger.info(f"User {user.id} referred by {referrer.telegram_id}")
+                logger.info(f"New user {user.id} referred by {referrer.telegram_id}")
+            else:
+                logger.info(f"Referral code {referral_code} not found")
         
         db.create_user(
             telegram_id=user.id,
@@ -81,16 +90,76 @@ Use /app to open the Mini App!"""
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(welcome_text, reply_markup=reply_markup)
-    else:
-        keyboard = [
-            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        return
+    
+    # ============================================
+    # EXISTING USER - Check if they can accept a referral
+    # ============================================
+    if context.args and len(context.args) > 0 and existing_user.can_be_referred and existing_user.referred_by is None:
+        referral_code = context.args[0]
+        logger.info(f"Existing user {user.id} trying to accept referral: {referral_code}")
         
-        await update.message.reply_text(
-            f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:",
-            reply_markup=reply_markup
-        )
+        # Check if user is within 3-day window
+        days_since_creation = (now - existing_user.created_at).days
+        
+        if days_since_creation <= 3:
+            referrer = db.get_user_by_referral_code(referral_code)
+            if referrer and referrer.id != existing_user.id:
+                # Check if referrer is trying to refer themselves
+                if referrer.id == existing_user.id:
+                    await update.message.reply_text("❌ You cannot refer yourself!")
+                    return
+                
+                # Apply referral
+                existing_user.referred_by = referrer.id
+                existing_user.referred_at = now
+                existing_user.can_be_referred = False
+                
+                # Credit bonus to referrer
+                db.credit_referral_bonus(referrer.id, 5.0)  # $5 bonus for successful referral
+                
+                session = db.get_session()
+                session.commit()
+                
+                await update.message.reply_text(
+                    f"✅ You have been successfully referred by @{referrer.username or 'User'}! 🎉\n\n"
+                    f"They earned a $5 bonus!\n"
+                    f"Welcome to the PlantUSDT community! 🌱"
+                )
+                
+                # Notify referrer
+                try:
+                    await context.bot.send_message(
+                        chat_id=referrer.telegram_id,
+                        text=f"🎉 **Referral Accepted!**\n\n"
+                             f"@{existing_user.username or 'User'} accepted your referral!\n"
+                             f"You earned **$5.00 USDT** bonus! 💰"
+                    )
+                except Exception as e:
+                    logger.error(f"Error notifying referrer: {e}")
+                
+                return
+            else:
+                await update.message.reply_text("❌ Invalid referral code or referrer not found.")
+                return
+        else:
+            await update.message.reply_text(
+                f"❌ Sorry, you can only accept a referral within 3 days of creating your account.\n\n"
+                f"Your account was created on {existing_user.created_at.strftime('%d/%m/%Y')}.\n"
+                f"You are {days_since_creation} days old."
+            )
+            return
+    
+    # Regular welcome back message
+    keyboard = [
+        [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:",
+        reply_markup=reply_markup
+    )
 
 # ============================================
 # APP COMMAND
@@ -200,14 +269,47 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 /pending - View all pending withdrawals
 /complete_payout <id> <tx_hash> - Mark a payout as completed
+/reset_referral <user_id> - Reset a user's referral status
 
 Example:
 /pending
 /complete_payout 1 0xabc123...
+/reset_referral 123456789
 
 💡 The transaction hash should be from sending USDT on BEP-20 (BSC) network."""
     
     await update.message.reply_text(help_text)
+
+async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+    
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "❌ Usage: /reset_referral <user_id>\n\n"
+            "Example: /reset_referral 123456789\n\n"
+            "This will allow the user to accept a new referral."
+        )
+        return
+    
+    try:
+        target_user_id = int(context.args[0])
+        target_user = db.get_user(target_user_id)
+        
+        if not target_user:
+            await update.message.reply_text(f"❌ User {target_user_id} not found.")
+            return
+        
+        db.reset_user_referral(target_user.id)
+        
+        await update.message.reply_text(
+            f"✅ Referral reset for @{target_user.username or 'User'}!\n\n"
+            f"They can now accept a new referral."
+        )
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID.")
 
 # ============================================
 # MAIN FUNCTION
@@ -229,6 +331,7 @@ def main():
         application.add_handler(CommandHandler("pending", pending_withdrawals))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
         application.add_handler(CommandHandler("adminhelp", admin_help))
+        application.add_handler(CommandHandler("reset_referral", reset_referral))
         
         # Start deposit scanner in background
         async def start_deposit_scanner():
