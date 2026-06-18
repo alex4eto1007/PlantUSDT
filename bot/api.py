@@ -67,9 +67,6 @@ def withdraw():
     data = request.json
     telegram_id = data.get('telegram_id')
     
-    # ============================================
-    # CONVERT AMOUNT TO FLOAT - FIXED
-    # ============================================
     try:
         amount = float(data.get('amount', 0))
     except (TypeError, ValueError):
@@ -90,9 +87,7 @@ def withdraw():
     if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
-    # ============================================
-    # CHECK BALANCE
-    # ============================================
+    # Check balance
     if user.balance < amount:
         return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'})
     
@@ -120,6 +115,24 @@ def withdraw():
     session.commit()
     
     return jsonify({'success': True, 'message': 'Withdrawal request submitted'})
+
+@app.route('/api/get_referral_code', methods=['GET'])
+def get_referral_code():
+    telegram_id = request.args.get('telegram_id', '0')
+    
+    if telegram_id == '0':
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    session = db.get_session()
+    user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    return jsonify({
+        'success': True,
+        'referral_code': user.referral_code
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
