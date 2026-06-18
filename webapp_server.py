@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__, static_folder='webapp')
 
 from database.db_manager import DatabaseManager
-from database.models import User, Investment, Withdrawal
+from database.models import User, Investment, Withdrawal, Deposit, DailyPayout
 
 db = DatabaseManager()
 
@@ -46,6 +46,7 @@ def get_user():
             'referral_earned': 0
         })
     
+    # Get investments
     investments = session.query(Investment).filter_by(user_id=user.id).all()
     fields = []
     for inv in investments:
@@ -59,14 +60,16 @@ def get_user():
                 'is_active': inv.is_active
             })
     
+    # Get referral data
     referrals = session.query(User).filter_by(referred_by=user.id).count()
+    referral_earned = user.referral_earnings or 0
     
     return jsonify({
         'success': True,
         'balance': user.balance,
         'fields': fields,
         'referrals': referrals,
-        'referral_earned': 0
+        'referral_earned': referral_earned
     })
 
 @app.route('/api/invest', methods=['POST'])
@@ -144,9 +147,6 @@ def withdraw():
     if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
-    # ============================================
-    # CHECK BALANCE
-    # ============================================
     if user.balance < amount:
         return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'})
     
@@ -172,18 +172,53 @@ def withdraw():
     
     return jsonify({'success': True, 'message': 'Withdrawal request submitted'})
 
-@app.route('/api/history', methods=['GET'])
-def get_history():
+@app.route('/api/real_history', methods=['GET'])
+def get_real_history():
     telegram_id = request.args.get('telegram_id', '0')
-    tx_type = request.args.get('type', 'all')
     
-    transactions = [
-        {'type': 'deposit', 'amount': 50.00, 'status': 'completed', 'date': '2026-06-17'},
-        {'type': 'earnings', 'amount': 2.00, 'status': 'completed', 'date': '2026-06-16'}
-    ]
+    if telegram_id == '0':
+        return jsonify({'success': False, 'message': 'User not found'})
     
-    if tx_type != 'all':
-        transactions = [tx for tx in transactions if tx['type'] == tx_type]
+    session = db.get_session()
+    user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    transactions = []
+    
+    # Get deposits
+    deposits = session.query(Deposit).filter_by(user_id=user.id).all()
+    for d in deposits:
+        transactions.append({
+            'type': 'deposit',
+            'amount': d.amount,
+            'status': 'completed',
+            'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Get earnings (daily payouts)
+    payouts = session.query(DailyPayout).filter_by(user_id=user.id).all()
+    for p in payouts:
+        transactions.append({
+            'type': 'earnings',
+            'amount': p.amount,
+            'status': 'completed',
+            'date': p.paid_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Get withdrawals
+    withdrawals = session.query(Withdrawal).filter_by(user_id=user.id).all()
+    for w in withdrawals:
+        transactions.append({
+            'type': 'withdraw',
+            'amount': w.amount,
+            'status': w.status,
+            'date': w.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Sort by date (newest first)
+    transactions.sort(key=lambda x: x['date'], reverse=True)
     
     return jsonify({'transactions': transactions})
 
