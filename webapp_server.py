@@ -60,7 +60,7 @@ def get_user():
                 'is_active': inv.is_active
             })
     
-    # Get referral data
+    # Get referrals
     referrals = session.query(User).filter_by(referred_by=user.id).count()
     referral_earned = user.referral_earnings or 0
     
@@ -273,6 +273,24 @@ def get_wallet():
     return jsonify({
         'success': True,
         'wallet_address': user.wallet_address or ''
+    })
+
+@app.route('/api/get_referral_code', methods=['GET'])
+def get_referral_code():
+    telegram_id = request.args.get('telegram_id', '0')
+    
+    if telegram_id == '0':
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    session = db.get_session()
+    user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    return jsonify({
+        'success': True,
+        'referral_code': user.referral_code
     })
 
 if __name__ == '__main__':
