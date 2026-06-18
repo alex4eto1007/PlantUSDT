@@ -53,6 +53,46 @@ body {
     color: #00ff87;
 }
 
+/* Total Earnings Section */
+.earnings-section {
+    margin-bottom: 20px;
+}
+
+.earnings-card {
+    background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,255,135,0.1));
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(0,212,255,0.2);
+    text-align: center;
+}
+
+.earnings-label {
+    font-size: 14px;
+    color: #8899bb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.earnings-amount {
+    font-size: 32px;
+    font-weight: bold;
+    color: #00ff87;
+    padding: 8px 0;
+}
+
+.earnings-details {
+    display: flex;
+    justify-content: space-around;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+    color: #ccd6f0;
+}
+
+.earnings-details strong {
+    color: #00d4ff;
+}
+
 /* Stats Grid */
 .stats-grid {
     display: grid;
@@ -284,6 +324,50 @@ body {
     background: rgba(255,255,255,0.2);
 }
 
+/* Wallet Section */
+.wallet-section {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(0,212,255,0.15);
+}
+
+.wallet-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+}
+
+.wallet-icon {
+    font-size: 20px;
+}
+
+.wallet-status .connected {
+    color: #00ff87;
+    font-weight: bold;
+}
+
+.wallet-status .disconnected {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.wallet-address {
+    font-size: 12px;
+    color: #8899bb;
+    word-break: break-all;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    border: 1px solid rgba(0,255,135,0.1);
+}
+
 /* Info Cards */
 .info-card {
     background: rgba(255,255,255,0.05);
@@ -512,9 +596,9 @@ body {
     border-top: 1px solid rgba(255,255,255,0.05);
 }
 
-/* ======================================== */
-/* WITHDRAWAL SECTION - GREEN THEME         */
-/* ======================================== */
+/* ============================================
+   WITHDRAWAL SECTION - GREEN THEME
+   ============================================ */
 
 .withdraw-info {
     margin-bottom: 20px;
@@ -716,53 +800,6 @@ body {
     box-shadow: 0 2px 10px rgba(0,255,135,0.2);
 }
 
-/* ======================================== */
-/* WALLET CONNECT SECTION                    */
-/* ======================================== */
-
-.wallet-section {
-    background: rgba(255,255,255,0.05);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(0,212,255,0.15);
-}
-
-.wallet-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.03);
-}
-
-.wallet-icon {
-    font-size: 20px;
-}
-
-.wallet-status .connected {
-    color: #00ff87;
-    font-weight: bold;
-}
-
-.wallet-status .disconnected {
-    color: #ff6b6b;
-    font-weight: bold;
-}
-
-.wallet-address {
-    font-size: 12px;
-    color: #8899bb;
-    word-break: break-all;
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 6px;
-    border: 1px solid rgba(0,255,135,0.1);
-}
-
 /* Responsive */
 @media (max-width: 400px) {
     .stats-grid {
@@ -796,6 +833,16 @@ body {
     }
 
     .fee-summary .fee-row {
+        font-size: 12px;
+    }
+
+    .earnings-amount {
+        font-size: 24px;
+    }
+
+    .earnings-details {
+        flex-direction: column;
+        gap: 4px;
         font-size: 12px;
     }
 }

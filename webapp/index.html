@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=10">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -18,26 +18,16 @@
             </div>
         </div>
 
-        <!-- Wallet Connect Section -->
-        <div class="wallet-section" id="walletSection">
-            <div class="wallet-status" id="walletStatus">
-                <span class="wallet-icon">🔗</span>
-                <span id="walletText" class="disconnected">Wallet not connected</span>
-            </div>
-            <div class="wallet-input-group">
-                <input type="text" id="walletInput" placeholder="Enter your BSC wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
-                <div style="display: flex; gap: 8px;">
-                    <button class="action-btn primary" onclick="saveWallet()" id="saveWalletBtn" style="flex: 1; padding: 12px;">
-                        <span class="btn-icon">💾</span>
-                        Save Wallet
-                    </button>
-                    <button class="action-btn warning" onclick="disconnectWallet()" id="disconnectWalletBtn" style="display: none; flex: 1; padding: 12px; background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important; color: white !important;">
-                        <span class="btn-icon">🔓</span>
-                        Disconnect
-                    </button>
+        <!-- Total Earnings Display -->
+        <div class="earnings-section">
+            <div class="earnings-card">
+                <div class="earnings-label">💰 Total Earnings</div>
+                <div class="earnings-amount" id="totalEarnings">$0.00</div>
+                <div class="earnings-details">
+                    <span>From Investments: <strong id="investmentEarnings">$0.00</strong></span>
+                    <span>From Referrals: <strong id="referralEarningsDisplay">$0.00</strong></span>
                 </div>
             </div>
-            <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #00ff87; margin-top: 8px; word-break: break-all; padding: 8px 12px; background: rgba(0,255,135,0.05); border-radius: 6px; border: 1px solid rgba(0,255,135,0.1);"></div>
         </div>
 
         <!-- Quick Stats -->
@@ -62,6 +52,28 @@
                 <div class="stat-label">Min Withdraw</div>
                 <div class="stat-value">$2</div>
             </div>
+        </div>
+
+        <!-- Wallet Connect Section -->
+        <div class="wallet-section" id="walletSection">
+            <div class="wallet-status" id="walletStatus">
+                <span class="wallet-icon">🔗</span>
+                <span id="walletText" class="disconnected">Wallet not connected</span>
+            </div>
+            <div class="wallet-input-group">
+                <input type="text" id="walletInput" placeholder="Enter your BSC wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
+                <div style="display: flex; gap: 8px;">
+                    <button class="action-btn primary" onclick="saveWallet()" id="saveWalletBtn" style="flex: 1; padding: 12px;">
+                        <span class="btn-icon">💾</span>
+                        Save Wallet
+                    </button>
+                    <button class="action-btn warning" onclick="disconnectWallet()" id="disconnectWalletBtn" style="display: none; flex: 1; padding: 12px; background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important; color: white !important;">
+                        <span class="btn-icon">🔓</span>
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+            <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #00ff87; margin-top: 8px; word-break: break-all; padding: 8px 12px; background: rgba(0,255,135,0.05); border-radius: 6px; border: 1px solid rgba(0,255,135,0.1);"></div>
         </div>
 
         <!-- 3 Planting Fields -->
@@ -133,7 +145,7 @@
         <!-- Referral Section -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
-            <p>Earn 5% from your referrals' deposits!</p>
+            <p>Earn 5% of your referrals' daily earnings!</p>
             <div class="referral-link-box" id="referralLinkBox">
                 <span id="referralLinkText">Loading referral link...</span>
                 <button class="copy-btn" onclick="copyReferral()">📋</button>
@@ -153,6 +165,7 @@
             <p>4. Earn 2% DAILY for 30 days</p>
             <p>5. After 30 days, your $100 is returned to balance</p>
             <p>6. Withdraw anytime (min $2, 10% fee)</p>
+            <p>7. Refer friends and earn 5% of their daily earnings!</p>
         </div>
 
         <!-- Footer -->

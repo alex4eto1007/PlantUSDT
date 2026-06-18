@@ -22,13 +22,15 @@ class User(Base):
     total_invested = Column(Float, default=0.0)
     total_earned = Column(Float, default=0.0)
     total_deposited = Column(Float, default=0.0)
+    total_earnings_all_time = Column(Float, default=0.0)  # All-time earnings from all sources
+    referral_earnings_all_time = Column(Float, default=0.0)  # All-time referral earnings
     
     # Referral system
     referred_by = Column(Integer, ForeignKey("users.id"))
     referral_code = Column(String(20), unique=True, default=generate_unique_code)
     referral_earnings = Column(Float, default=0.0)
-    can_be_referred = Column(Boolean, default=True)  # Can this user accept a referral?
-    referred_at = Column(DateTime, nullable=True)    # When were they referred?
+    can_be_referred = Column(Boolean, default=True)
+    referred_at = Column(DateTime, nullable=True)
     
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
@@ -50,6 +52,7 @@ class Investment(Base):
     daily_rate = Column(Float, default=0.02)
     total_return = Column(Float)
     paid_out = Column(Float, default=0.0)
+    referral_earnings_paid = Column(Float, default=0.0)  # Referral earnings paid to referrer
     start_date = Column(DateTime, default=datetime.utcnow)
     end_date = Column(DateTime)
     is_active = Column(Boolean, default=True)

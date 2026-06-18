@@ -31,7 +31,8 @@ def get_user():
             'balance': 0,
             'fields': [],
             'referrals': 0,
-            'referral_earned': 0
+            'referral_earned': 0,
+            'total_earnings': 0
         })
     
     session = db.get_session()
@@ -43,7 +44,8 @@ def get_user():
             'balance': 0,
             'fields': [],
             'referrals': 0,
-            'referral_earned': 0
+            'referral_earned': 0,
+            'total_earnings': 0
         })
     
     # Get investments
@@ -62,14 +64,16 @@ def get_user():
     
     # Get referrals
     referrals = session.query(User).filter_by(referred_by=user.id).count()
-    referral_earned = user.referral_earnings or 0
+    referral_earned = user.referral_earnings_all_time or 0
+    total_earnings = user.total_earnings_all_time or 0
     
     return jsonify({
         'success': True,
         'balance': user.balance,
         'fields': fields,
         'referrals': referrals,
-        'referral_earned': referral_earned
+        'referral_earned': referral_earned,
+        'total_earnings': total_earnings
     })
 
 @app.route('/api/invest', methods=['POST'])

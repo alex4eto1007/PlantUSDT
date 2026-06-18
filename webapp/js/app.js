@@ -45,6 +45,25 @@ function updateUI(data) {
     if (balanceEl) {
         balanceEl.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
     }
+    
+    // Update total earnings
+    const totalEarningsEl = document.getElementById('totalEarnings');
+    if (totalEarningsEl) {
+        totalEarningsEl.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
+    }
+    
+    // Update investment earnings (total earnings - referral earnings)
+    const investmentEarningsEl = document.getElementById('investmentEarnings');
+    if (investmentEarningsEl) {
+        const investmentEarnings = (data.total_earnings || 0) - (data.referral_earned || 0);
+        investmentEarningsEl.textContent = `$${investmentEarnings.toFixed(2)}`;
+    }
+    
+    // Update referral earnings
+    const referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
+    if (referralEarningsDisplayEl) {
+        referralEarningsDisplayEl.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
+    }
 }
 
 function updateFields(data) {
@@ -293,7 +312,6 @@ async function investField(fieldNumber) {
 async function copyReferral() {
     const walletText = document.getElementById('walletText');
     const isConnected = walletText?.textContent.includes('Connected');
-    
     if (!isConnected) {
         tg.showPopup({
             title: '⚠️ Wallet Required',
@@ -302,42 +320,23 @@ async function copyReferral() {
         });
         return;
     }
-    
     const userId = tgUser?.id || '0';
-    
     try {
         const response = await fetch(`/api/get_referral_code?telegram_id=${userId}&t=${Date.now()}`);
         const data = await response.json();
-        
         if (data.success && data.referral_code) {
             const link = `https://t.me/PlantUSDT_bot?start=${data.referral_code}`;
             navigator.clipboard.writeText(link).then(() => {
-                tg.showPopup({
-                    title: '✅ Copied!',
-                    message: 'Referral link copied! Share it with your friends.',
-                    buttons: [{type: 'ok'}]
-                });
+                tg.showPopup({title:'✅ Copied!', message:'Referral link copied! Share it with your friends.', buttons:[{type:'ok'}]});
             }).catch(() => {
-                tg.showPopup({
-                    title: '📋 Referral Link',
-                    message: link,
-                    buttons: [{type: 'ok'}]
-                });
+                tg.showPopup({title:'📋 Referral Link', message:link, buttons:[{type:'ok'}]});
             });
         } else {
-            tg.showPopup({
-                title: '❌ Error',
-                message: 'Could not get referral code.',
-                buttons: [{type: 'ok'}]
-            });
+            tg.showPopup({title:'❌ Error', message:'Could not get referral code.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
         console.error('Error getting referral code:', error);
-        tg.showPopup({
-            title: '❌ Error',
-            message: 'Failed to get referral link. Please try again.',
-            buttons: [{type: 'ok'}]
-        });
+        tg.showPopup({title:'❌ Error', message:'Failed to get referral link. Please try again.', buttons:[{type:'ok'}]});
     }
 }
 

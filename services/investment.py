@@ -15,6 +15,42 @@ class InvestmentService:
     def calculate_total_return(self, investment_amount: float) -> float:
         return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
     
+    def process_referral_earnings(self, investment):
+        """Process referral earnings for the referrer when a referral earns daily rewards"""
+        try:
+            # Get the user who made this investment
+            user = self.db.get_user_by_id(investment.user_id)
+            if not user or not user.referred_by:
+                return 0
+            
+            # Get the referrer
+            referrer = self.db.get_user_by_id(user.referred_by)
+            if not referrer:
+                return 0
+            
+            # Calculate 5% of the daily payout
+            daily_payout = self.calculate_daily_payout(investment.amount)
+            referral_bonus = daily_payout * 0.05  # 5% of daily earnings
+            
+            # Credit to referrer
+            referrer.balance += referral_bonus
+            referrer.total_earned += referral_bonus
+            referrer.referral_earnings_all_time += referral_bonus
+            referrer.total_earnings_all_time += referral_bonus
+            
+            # Track referral earnings paid
+            investment.referral_earnings_paid += referral_bonus
+            
+            session = self.db.get_session()
+            session.commit()
+            
+            logger.info(f"Referral bonus credited to {referrer.telegram_id}: ${referral_bonus} from {user.telegram_id}")
+            
+            return referral_bonus
+        except Exception as e:
+            logger.error(f"Error processing referral earnings: {e}")
+            return 0
+    
     def process_daily_payouts(self):
         """Process daily payouts for all active investments"""
         try:
@@ -37,7 +73,7 @@ class InvestmentService:
                     # Calculate daily payout
                     daily_amount = self.calculate_daily_payout(investment.amount)
                     
-                    # Record payout
+                    # Record payout to user
                     day_number = (datetime.utcnow() - investment.start_date).days + 1
                     self.db.record_payout(
                         user_id=investment.user_id,
@@ -45,6 +81,11 @@ class InvestmentService:
                         amount=daily_amount,
                         day_number=day_number
                     )
+                    
+                    # ============================================
+                    # PROCESS REFERRAL EARNINGS
+                    # ============================================
+                    self.process_referral_earnings(investment)
                     
                     logger.info(f"Payout processed for investment {investment.id}: ${daily_amount}")
                     
