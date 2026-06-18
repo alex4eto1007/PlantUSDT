@@ -42,11 +42,11 @@ def is_admin(user_id: int) -> bool:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     now = datetime.utcnow()
-    
+
     logger.info(f"START COMMAND - User: {user.id}, Args: {context.args}")
-    
+
     existing_user = db.get_user(user.id)
-    
+
     if not existing_user:
         # NEW USER - Create account with referral
         referred_by = None
@@ -59,21 +59,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"New user {user.id} referred by {referrer.telegram_id}")
             else:
                 logger.info(f"Referral code {referral_code} not found")
-        
+
         db.create_user(
             telegram_id=user.id,
             username=user.username,
             first_name=user.first_name,
             referred_by=referred_by
         )
-        
+
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
 
 Grow your USDT with 2% DAILY returns for 30 days!
 
 💰 INVESTMENT DETAILS:
 • 📈 Daily return: 2%
-• ⏱️ Duration: 30 days  
+• ⏱️ Duration: 30 days
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
 • 🔒 Platform fee: 10% on withdrawals
@@ -83,25 +83,25 @@ Grow your USDT with 2% DAILY returns for 30 days!
 Share your referral link and earn 5% from your friends' deposits!
 
 Use /app to open the Mini App!"""
-        
+
         keyboard = [
             [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await update.message.reply_text(welcome_text, reply_markup=reply_markup)
         return
-    
+
     # ============================================
     # EXISTING USER - Check if they can accept a referral
     # ============================================
     if context.args and len(context.args) > 0 and existing_user.can_be_referred and existing_user.referred_by is None:
         referral_code = context.args[0]
         logger.info(f"Existing user {user.id} trying to accept referral: {referral_code}")
-        
+
         # Check if user is within 3-day window
         days_since_creation = (now - existing_user.created_at).days
-        
+
         if days_since_creation <= 3:
             referrer = db.get_user_by_referral_code(referral_code)
             if referrer and referrer.id != existing_user.id:
@@ -109,24 +109,24 @@ Use /app to open the Mini App!"""
                 if referrer.id == existing_user.id:
                     await update.message.reply_text("❌ You cannot refer yourself!")
                     return
-                
+
                 # Apply referral
                 existing_user.referred_by = referrer.id
                 existing_user.referred_at = now
                 existing_user.can_be_referred = False
-                
+
                 # Credit bonus to referrer
                 db.credit_referral_bonus(referrer.id, 5.0)  # $5 bonus for successful referral
-                
+
                 session = db.get_session()
                 session.commit()
-                
+
                 await update.message.reply_text(
                     f"✅ You have been successfully referred by @{referrer.username or 'User'}! 🎉\n\n"
                     f"They earned a $5 bonus!\n"
                     f"Welcome to the PlantUSDT community! 🌱"
                 )
-                
+
                 # Notify referrer
                 try:
                     await context.bot.send_message(
@@ -137,7 +137,7 @@ Use /app to open the Mini App!"""
                     )
                 except Exception as e:
                     logger.error(f"Error notifying referrer: {e}")
-                
+
                 return
             else:
                 await update.message.reply_text("❌ Invalid referral code or referrer not found.")
@@ -149,13 +149,13 @@ Use /app to open the Mini App!"""
                 f"You are {days_since_creation} days old."
             )
             return
-    
+
     # Regular welcome back message
     keyboard = [
         [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await update.message.reply_text(
         f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:",
         reply_markup=reply_markup
@@ -170,7 +170,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await update.message.reply_text("🌱 Open the PlantUSDT Mini App:", reply_markup=reply_markup)
 
 # ============================================
@@ -182,13 +182,13 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
-    
+
     pending = db.get_pending_withdrawals()
-    
+
     if not pending:
         await update.message.reply_text("📋 No pending withdrawals.")
         return
-    
+
     text = "📋 PENDING WITHDRAWALS\n\n"
     for w in pending:
         user_obj = db.get_user_by_id(w.user_id)
@@ -202,7 +202,7 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
         text += f"Status: ⏳ Pending\n"
         text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
-    
+
     await update.message.reply_text(text)
 
 async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -210,30 +210,30 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
-    
+
     if len(context.args) < 2:
         await update.message.reply_text(
             "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
             "Example: /complete_payout 1 0xabc123..."
         )
         return
-    
+
     try:
         withdrawal_id = int(context.args[0])
         tx_hash = context.args[1]
     except ValueError:
         await update.message.reply_text("❌ Invalid withdrawal ID. Please provide a valid number.")
         return
-    
+
     withdrawal = db.get_withdrawal_by_id(withdrawal_id)
     if not withdrawal:
         await update.message.reply_text(f"❌ Withdrawal ID {withdrawal_id} not found.")
         return
-    
+
     if withdrawal.status != "pending":
         await update.message.reply_text(f"❌ Withdrawal {withdrawal_id} is already {withdrawal.status}.")
         return
-    
+
     updated = db.update_withdrawal_status(withdrawal_id, "completed", tx_hash)
     if updated:
         await update.message.reply_text(
@@ -242,7 +242,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
             f"🔗 TX: {tx_hash}"
         )
-        
+
         user_obj = db.get_user_by_id(withdrawal.user_id)
         if user_obj:
             try:
@@ -264,7 +264,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
-    
+
     help_text = """👑 ADMIN COMMANDS
 
 /pending - View all pending withdrawals
@@ -277,7 +277,7 @@ Example:
 /reset_referral 123456789
 
 💡 The transaction hash should be from sending USDT on BEP-20 (BSC) network."""
-    
+
     await update.message.reply_text(help_text)
 
 async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -285,7 +285,7 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
-    
+
     if len(context.args) < 1:
         await update.message.reply_text(
             "❌ Usage: /reset_referral <user_id>\n\n"
@@ -293,17 +293,17 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "This will allow the user to accept a new referral."
         )
         return
-    
+
     try:
         target_user_id = int(context.args[0])
         target_user = db.get_user(target_user_id)
-        
+
         if not target_user:
             await update.message.reply_text(f"❌ User {target_user_id} not found.")
             return
-        
+
         db.reset_user_referral(target_user.id)
-        
+
         await update.message.reply_text(
             f"✅ Referral reset for @{target_user.username or 'User'}!\n\n"
             f"They can now accept a new referral."
@@ -320,19 +320,19 @@ def main():
     try:
         # Start scheduler
         scheduler.start()
-        
+
         application = Application.builder().token(Config.BOT_TOKEN).build()
-        
+
         # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
-        
+
         # Admin commands
         application.add_handler(CommandHandler("pending", pending_withdrawals))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
         application.add_handler(CommandHandler("adminhelp", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
-        
+
         # Start deposit scanner in background
         async def start_deposit_scanner():
             while True:
@@ -341,18 +341,18 @@ def main():
                 except Exception as e:
                     logger.error(f"Error in deposit scanner loop: {e}")
                 await asyncio.sleep(300)  # Wait 5 minutes
-        
+
         # Run the scanner in background
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
-        
+
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running (checks every 5 minutes)")
-        
+
         application.run_polling(allowed_updates=Update.ALL_TYPES)
-        
+
     except Exception as e:
         logger.error(f"Error starting bot: {e}")
 
