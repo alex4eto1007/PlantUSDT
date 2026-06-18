@@ -55,9 +55,6 @@ def save_wallet():
     
     return jsonify({'success': False, 'message': 'Could not connect to VPS API'})
 
-# ============================================
-# FORWARD WITHDRAW TO VPS API
-# ============================================
 @app.route('/api/withdraw', methods=['POST'])
 def withdraw():
     data = request.json
@@ -74,6 +71,18 @@ def withdraw():
             return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/get_referral_code', methods=['GET'])
+def get_referral_code():
+    telegram_id = request.args.get('telegram_id', '0')
+    
+    try:
+        url = f"{VPS_API_URL}/api/get_referral_code?telegram_id={telegram_id}"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return jsonify(data)
+    except:
+        return jsonify({'success': False, 'message': 'Could not fetch referral code'})
 
 @app.route('/api/user', methods=['GET'])
 def get_user():
