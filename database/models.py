@@ -22,7 +22,10 @@ class User(Base):
     total_invested = Column(Float, default=0.0)
     total_earned = Column(Float, default=0.0)
     total_deposited = Column(Float, default=0.0)
+    
+    # Earnings tracking
     total_earnings_all_time = Column(Float, default=0.0)  # All-time earnings from all sources
+    investment_earnings_all_time = Column(Float, default=0.0)  # Earnings from own investments
     referral_earnings_all_time = Column(Float, default=0.0)  # All-time referral earnings
     
     # Referral system

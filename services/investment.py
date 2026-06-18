@@ -16,19 +16,16 @@ class InvestmentService:
         return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
     
     def process_referral_earnings(self, investment):
-        """Process referral earnings for the referrer when a referral earns daily rewards"""
+        """Process referral earnings for the referrer (Level 1)"""
         try:
-            # Get the user who made this investment
             user = self.db.get_user_by_id(investment.user_id)
             if not user or not user.referred_by:
                 return 0
             
-            # Get the referrer
             referrer = self.db.get_user_by_id(user.referred_by)
             if not referrer:
                 return 0
             
-            # Calculate 5% of the daily payout
             daily_payout = self.calculate_daily_payout(investment.amount)
             referral_bonus = daily_payout * 0.05  # 5% of daily earnings
             
@@ -38,13 +35,27 @@ class InvestmentService:
             referrer.referral_earnings_all_time += referral_bonus
             referrer.total_earnings_all_time += referral_bonus
             
-            # Track referral earnings paid
             investment.referral_earnings_paid += referral_bonus
             
             session = self.db.get_session()
             session.commit()
             
-            logger.info(f"Referral bonus credited to {referrer.telegram_id}: ${referral_bonus} from {user.telegram_id}")
+            logger.info(f"Level 1 referral bonus: {referrer.telegram_id} got ${referral_bonus} from {user.telegram_id}")
+            
+            # ============================================
+            # LEVEL 2: Referrer's referrer also gets 5% of this referral bonus
+            # ============================================
+            if referrer.referred_by:
+                level2_referrer = self.db.get_user_by_id(referrer.referred_by)
+                if level2_referrer:
+                    level2_bonus = referral_bonus * 0.05  # 5% of Level 1 bonus
+                    level2_referrer.balance += level2_bonus
+                    level2_referrer.total_earned += level2_bonus
+                    level2_referrer.referral_earnings_all_time += level2_bonus
+                    level2_referrer.total_earnings_all_time += level2_bonus
+                    session = self.db.get_session()
+                    session.commit()
+                    logger.info(f"Level 2 referral bonus: {level2_referrer.telegram_id} got ${level2_bonus} from {user.telegram_id}")
             
             return referral_bonus
         except Exception as e:
@@ -64,17 +75,15 @@ class InvestmentService:
             
             for investment in investments:
                 try:
-                    # Check if investment is still active
                     if investment.end_date and datetime.utcnow() > investment.end_date:
                         investment.is_active = False
                         investment.is_completed = True
                         continue
                     
-                    # Calculate daily payout
                     daily_amount = self.calculate_daily_payout(investment.amount)
+                    day_number = (datetime.utcnow() - investment.start_date).days + 1
                     
                     # Record payout to user
-                    day_number = (datetime.utcnow() - investment.start_date).days + 1
                     self.db.record_payout(
                         user_id=investment.user_id,
                         investment_id=investment.id,
@@ -83,7 +92,17 @@ class InvestmentService:
                     )
                     
                     # ============================================
-                    # PROCESS REFERRAL EARNINGS
+                    # TRACK INVESTMENT EARNINGS
+                    # ============================================
+                    user = self.db.get_user_by_id(investment.user_id)
+                    if user:
+                        user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + daily_amount
+                        user.total_earnings_all_time = (user.total_earnings_all_time or 0) + daily_amount
+                        session = self.db.get_session()
+                        session.commit()
+                    
+                    # ============================================
+                    # PROCESS REFERRAL EARNINGS (Level 1 and Level 2)
                     # ============================================
                     self.process_referral_earnings(investment)
                     

@@ -52,11 +52,10 @@ function updateUI(data) {
         totalEarningsEl.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
     }
     
-    // Update investment earnings (total earnings - referral earnings)
+    // Update investment earnings
     const investmentEarningsEl = document.getElementById('investmentEarnings');
     if (investmentEarningsEl) {
-        const investmentEarnings = (data.total_earnings || 0) - (data.referral_earned || 0);
-        investmentEarningsEl.textContent = `$${investmentEarnings.toFixed(2)}`;
+        investmentEarningsEl.textContent = `$${(data.investment_earnings || 0).toFixed(2)}`;
     }
     
     // Update referral earnings

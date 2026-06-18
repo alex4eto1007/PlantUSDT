@@ -32,6 +32,7 @@ def get_user():
             'fields': [],
             'referrals': 0,
             'referral_earned': 0,
+            'investment_earnings': 0,
             'total_earnings': 0
         })
     
@@ -45,6 +46,7 @@ def get_user():
             'fields': [],
             'referrals': 0,
             'referral_earned': 0,
+            'investment_earnings': 0,
             'total_earnings': 0
         })
     
@@ -65,7 +67,8 @@ def get_user():
     # Get referrals
     referrals = session.query(User).filter_by(referred_by=user.id).count()
     referral_earned = user.referral_earnings_all_time or 0
-    total_earnings = user.total_earnings_all_time or 0
+    investment_earnings = user.investment_earnings_all_time or 0
+    total_earnings = referral_earned + investment_earnings
     
     return jsonify({
         'success': True,
@@ -73,6 +76,7 @@ def get_user():
         'fields': fields,
         'referrals': referrals,
         'referral_earned': referral_earned,
+        'investment_earnings': investment_earnings,
         'total_earnings': total_earnings
     })
 
