@@ -144,7 +144,9 @@ def get_user():
             'balance': 0,
             'fields': [],
             'referrals': 0,
-            'referral_earned': 0
+            'referral_earned': 0,
+            'investment_earnings': 0,
+            'total_earnings': 0
         })
     
     session = db.get_session()
@@ -156,7 +158,9 @@ def get_user():
             'balance': 0,
             'fields': [],
             'referrals': 0,
-            'referral_earned': 0
+            'referral_earned': 0,
+            'investment_earnings': 0,
+            'total_earnings': 0
         })
     
     # Get investments
@@ -175,14 +179,18 @@ def get_user():
     
     # Get referrals
     referrals = session.query(User).filter_by(referred_by=user.id).count()
-    referral_earned = user.referral_earnings or 0
+    referral_earned = user.referral_earnings_all_time or 0
+    investment_earnings = user.investment_earnings_all_time or 0
+    total_earnings = referral_earned + investment_earnings
     
     return jsonify({
         'success': True,
         'balance': user.balance,
         'fields': fields,
         'referrals': referrals,
-        'referral_earned': referral_earned
+        'referral_earned': referral_earned,
+        'investment_earnings': investment_earnings,
+        'total_earnings': total_earnings
     })
 
 @app.route('/api/real_history', methods=['GET'])
@@ -234,6 +242,58 @@ def get_real_history():
     transactions.sort(key=lambda x: x['date'], reverse=True)
     
     return jsonify({'transactions': transactions})
+
+@app.route('/api/invest', methods=['POST'])
+def invest():
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    field_number = data.get('field_number')
+    amount = data.get('amount')
+    
+    if not telegram_id or not field_number or not amount:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    if user.balance < amount:
+        return jsonify({'success': False, 'message': 'Insufficient balance'})
+    
+    if amount < 5 or amount > 100:
+        return jsonify({'success': False, 'message': 'Amount must be between $5 and $100'})
+    
+    existing = session.query(Investment).filter_by(
+        user_id=user.id,
+        field_number=field_number,
+        is_active=True
+    ).first()
+    
+    if existing:
+        return jsonify({'success': False, 'message': f'Field #{field_number} is already planted'})
+    
+    from config.settings import Config
+    total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
+    
+    investment = Investment(
+        user_id=user.id,
+        field_number=field_number,
+        amount=amount,
+        total_return=total_return
+    )
+    session.add(investment)
+    
+    user.balance -= amount
+    user.total_invested += amount
+    
+    session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Successfully invested ${amount} in Field #{field_number}'
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
