@@ -90,7 +90,7 @@ def get_user():
     
     try:
         url = f"{VPS_API_URL}/api/user?telegram_id={telegram_id}"
-        with urllib.request.urlopen(url, timeout=5) as response:
+        with urllib.request.urlopen(url, timeout=10) as response:
             data = json.loads(response.read().decode())
             # Ensure all fields are present
             if 'investment_earnings' not in data:
