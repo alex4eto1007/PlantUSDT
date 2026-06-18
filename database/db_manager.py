@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from config.settings import Config
 from database.models import Base, User, Investment, DailyPayout, Withdrawal, Deposit
 from datetime import datetime, timedelta
+import uuid
 
 class DatabaseManager:
     def __init__(self):
@@ -45,11 +46,19 @@ class DatabaseManager:
     
     def create_user(self, telegram_id: int, username: str, first_name: str, referred_by: int = None):
         with self.get_session() as session:
+            # Generate unique referral code
+            while True:
+                new_code = str(uuid.uuid4())[:8]
+                existing = session.query(User).filter_by(referral_code=new_code).first()
+                if not existing:
+                    break
+            
             user = User(
                 telegram_id=telegram_id,
                 username=username,
                 first_name=first_name,
-                referred_by=referred_by
+                referred_by=referred_by,
+                referral_code=new_code
             )
             session.add(user)
             session.commit()
@@ -124,7 +133,6 @@ class DatabaseManager:
     
     def create_investment(self, user_id: int, field_number: int, amount: float):
         with self.get_session() as session:
-            # Check if field is already used
             existing = session.query(Investment).filter_by(
                 user_id=user_id, 
                 field_number=field_number,
@@ -148,7 +156,7 @@ class DatabaseManager:
             user = session.query(User).filter_by(id=user_id).first()
             if user:
                 user.total_invested += amount
-                user.balance -= amount  # Lock the principal
+                user.balance -= amount
             
             session.commit()
             return investment
@@ -170,7 +178,6 @@ class DatabaseManager:
             ).first()
     
     def get_expired_investments(self):
-        """Get investments that have ended but principal not returned"""
         with self.get_session() as session:
             return session.query(Investment).filter(
                 Investment.end_date <= datetime.utcnow(),
@@ -179,7 +186,6 @@ class DatabaseManager:
             ).all()
     
     def return_principal(self, investment_id: int):
-        """Return the principal amount to user's balance when investment expires"""
         with self.get_session() as session:
             investment = session.query(Investment).filter_by(id=investment_id).first()
             if not investment or investment.principal_returned:
@@ -214,7 +220,6 @@ class DatabaseManager:
                     investment.is_completed = True
                     investment.is_active = False
             
-            # Credit to balance (available for withdrawal)
             user = session.query(User).filter_by(id=user_id).first()
             if user:
                 user.balance += amount
