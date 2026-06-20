@@ -415,20 +415,53 @@ function filterHistory(type) {
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     const userId = tgUser?.id || '0';
     
-    let url = `${API_BASE}/api/real_history?telegram_id=${userId}`;
+    // Fetch both regular history and investments
+    let url1 = `${API_BASE}/api/real_history?telegram_id=${userId}`;
+    let url2 = `${API_BASE}/api/investments?telegram_id=${userId}`;
+    
     if (type === 'investments') {
-        url = `${API_BASE}/api/investments/${userId}`;
+        // Only fetch investments
+        fetch(url2)
+            .then(response => response.json())
+            .then(data => {
+                if (data.transactions && data.transactions.length > 0) {
+                    renderHistory(data.transactions);
+                } else {
+                    historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
+                }
+            })
+            .catch(error => {
+                historyList.innerHTML = '<p class="empty-state">Error loading history.</p>';
+            });
+        return;
     }
     
-    fetch(url)
-        .then(response => response.json())
+    // For 'all' or specific types, fetch both and combine
+    Promise.all([fetch(url1), fetch(url2)])
+        .then(responses => Promise.all(responses.map(r => r.json())))
         .then(data => {
-            if (data.transactions && data.transactions.length > 0) {
-                let filtered = data.transactions;
-                if (type !== 'all' && type !== 'investments') {
-                    filtered = data.transactions.filter(tx => tx.type === type);
-                }
-                renderHistory(filtered);
+            let allTransactions = [];
+            
+            // Add regular transactions (deposits, withdrawals, earnings)
+            if (data[0].transactions && data[0].transactions.length > 0) {
+                allTransactions = allTransactions.concat(data[0].transactions);
+            }
+            
+            // Add investments
+            if (data[1].transactions && data[1].transactions.length > 0) {
+                allTransactions = allTransactions.concat(data[1].transactions);
+            }
+            
+            // Filter by type if not 'all'
+            if (type !== 'all') {
+                allTransactions = allTransactions.filter(tx => tx.type === type);
+            }
+            
+            // Sort by date (newest first)
+            allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            if (allTransactions.length > 0) {
+                renderHistory(allTransactions);
             } else {
                 historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
             }
@@ -445,11 +478,15 @@ function renderHistory(transactions) {
         let icon = tx.type === 'deposit' ? '📥' : tx.type === 'withdraw' ? '📤' : tx.type === 'investment' ? '🌱' : '💰';
         const status = tx.status || 'completed';
         const date = new Date(tx.date).toLocaleDateString();
+        let displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+        
+        // Format amount with field number for investments
         let amountDisplay = `$${tx.amount.toFixed(2)}`;
-        if (tx.type === 'investment') {
+        if (tx.type === 'investment' && tx.field) {
             amountDisplay = `$${tx.amount.toFixed(2)} (Field ${tx.field})`;
         }
-        html += '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-details"><div class="history-type">' + tx.type.charAt(0).toUpperCase() + tx.type.slice(1) + '</div><div class="history-date">' + date + '</div></div><div class="history-amount ' + status + '">' + amountDisplay + '</div></div>';
+        
+        html += '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-details"><div class="history-type">' + displayText + '</div><div class="history-date">' + date + '</div></div><div class="history-amount ' + status + '">' + amountDisplay + '</div></div>';
     });
     historyList.innerHTML = html;
 }
