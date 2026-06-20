@@ -417,7 +417,7 @@ function filterHistory(type) {
     
     let url = `${API_BASE}/api/real_history?telegram_id=${userId}`;
     if (type === 'investments') {
-        url = `${API_BASE}/api/investments?telegram_id=${userId}`;
+        url = `${API_BASE}/api/investments/${userId}`;
     }
     
     fetch(url)
