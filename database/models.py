@@ -28,6 +28,9 @@ class User(Base):
     investment_earnings_all_time = Column(Float, default=0.0)
     referral_earnings_all_time = Column(Float, default=0.0)
     
+    # Referral deposit earnings (new)
+    referral_deposit_earnings = Column(Float, default=0.0)
+    
     # Referral system
     referred_by = Column(Integer, ForeignKey("users.id"))
     referral_code = Column(String(20), unique=True, default=generate_unique_code)
