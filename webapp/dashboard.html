@@ -11,48 +11,57 @@
     <div class="container">
         <div class="header">
             <button class="back-btn" onclick="goBack()">←</button>
-            <h1>📊 Dashboard</h1>
+            <h1 style="color: #00ff87; font-size: 20px;">📊 Dashboard</h1>
         </div>
 
-        <div class="dashboard-stats">
-            <div class="stat-card large">
-                <div class="stat-label">💰 Balance</div>
-                <div class="stat-value large" id="dashBalance">$0.00</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-label">Balance</div>
+                <div class="stat-value" id="dashBalance">$0.00</div>
             </div>
-            <div class="stat-row">
-                <div class="stat-card small">
-                    <div class="stat-label">📈 Invested</div>
-                    <div class="stat-value" id="dashInvested">$0.00</div>
-                </div>
-                <div class="stat-card small">
-                    <div class="stat-label">💵 Earned</div>
-                    <div class="stat-value" id="dashEarned">$0.00</div>
-                </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌱</div>
+                <div class="stat-label">Invested</div>
+                <div class="stat-value" id="dashInvested">$0.00</div>
             </div>
-            <div class="stat-row">
-                <div class="stat-card small">
-                    <div class="stat-label">💳 Deposited</div>
-                    <div class="stat-value" id="dashDeposited">$0.00</div>
-                </div>
-                <div class="stat-card small">
-                    <div class="stat-label">🔄 Referrals</div>
-                    <div class="stat-value" id="dashReferrals">0</div>
-                </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-label">Earned</div>
+                <div class="stat-value" id="dashEarned">$0.00</div>
             </div>
-        </div>
-
-        <div class="investments-section">
-            <h3>💼 Your Investments</h3>
-            <div id="investmentsList">
-                <p class="empty-state">No investments yet. Start with /deposit!</p>
+            <div class="stat-card">
+                <div class="stat-icon">💳</div>
+                <div class="stat-label">Deposited</div>
+                <div class="stat-value" id="dashDeposited">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-label">Referrals</div>
+                <div class="stat-value" id="dashReferrals">0</div>
             </div>
         </div>
 
-        <div class="actions-grid">
-            <button class="action-btn primary" onclick="navigateTo('deposit')">💳 Deposit</button>
-            <button class="action-btn success" onclick="navigateTo('invest')">💰 Invest</button>
-            <button class="action-btn warning" onclick="navigateTo('withdraw')">🏦 Withdraw</button>
-            <button class="action-btn info" onclick="navigateTo('history')">📜 History</button>
+        <div class="info-card">
+            <h3>🌱 Your Investments</h3>
+            <div id="investmentList">
+                <p class="empty-state">No investments yet.</p>
+            </div>
+        </div>
+
+        <div class="actions-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <button class="action-btn" onclick="navigateTo('deposit')" style="background: linear-gradient(135deg, #00d4ff, #0088ff) !important; color: #ffffff !important;">
+                <span class="btn-icon">💳</span>
+                Deposit
+            </button>
+            <button class="action-btn" onclick="navigateTo('withdraw')" style="background: linear-gradient(135deg, #00ff87, #00cc6a) !important; color: #ffffff !important;">
+                <span class="btn-icon">🏦</span>
+                Withdraw
+            </button>
+            <button class="action-btn" onclick="navigateTo('history')" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7) !important; color: #ffffff !important;">
+                <span class="btn-icon">📜</span>
+                History
+            </button>
         </div>
     </div>
 
