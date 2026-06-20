@@ -3,7 +3,7 @@
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe?.user;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
-const API_BASE = 'https://167.233.132.127';
+const API_BASE = 'https://plantusdt.ddns.net';
 let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
