@@ -694,7 +694,6 @@ body {
 
 /* ============================================
    DEPOSIT / WITHDRAW PAGES
-   (Add these if you have separate pages)
    ============================================ */
 
 .deposit-address-box {
@@ -902,25 +901,219 @@ body {
 }
 
 /* ============================================
-   BACK BUTTON
+   BACK BUTTON - FIXED SIZE
    ============================================ */
 
 .back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(0, 0, 0, 0.3);
-    color: #8892b0;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-bottom: 16px;
+    font-size: 28px !important;
+    padding: 8px 16px !important;
+    cursor: pointer !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    color: #ccd6f0 !important;
+    transition: all 0.3s ease !important;
+    line-height: 1 !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .back-btn:hover {
-    border-color: rgba(0, 255, 135, 0.2);
-    color: #ccd6f0;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(0, 255, 135, 0.2) !important;
+}
+
+/* Header with back button */
+.header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.header h1 {
+    margin: 0 !important;
+}
+
+/* ============================================
+   FIX: WHITE TEXT BOXES (Withdraw Page)
+   ============================================ */
+
+/* All input fields */
+input, textarea, select {
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #ccd6f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    transition: all 0.3s ease !important;
+    outline: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Input focus state */
+input:focus, textarea:focus, select:focus {
+    border-color: #00ff87 !important;
+    box-shadow: 0 0 20px rgba(0, 255, 135, 0.05) !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Input placeholder text */
+input::placeholder, textarea::placeholder {
+    color: #495670 !important;
+    opacity: 0.8 !important;
+}
+
+/* Disabled inputs */
+input:disabled, textarea:disabled, select:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Form groups */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    color: #8892b0 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    margin-bottom: 6px !important;
+}
+
+/* Withdraw form specific */
+#withdrawForm input {
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #ccd6f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+#withdrawForm input:focus {
+    border-color: #00ff87 !important;
+}
+
+/* Set wallet button */
+.set-wallet-btn {
+    background: rgba(0, 255, 135, 0.1) !important;
+    color: #00ff87 !important;
+    border: 1px solid rgba(0, 255, 135, 0.2) !important;
+    border-radius: 6px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    margin-top: 8px !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+}
+
+.set-wallet-btn:hover {
+    background: rgba(0, 255, 135, 0.2) !important;
+}
+
+/* Fee summary */
+.fee-summary {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    margin: 16px 0 !important;
+}
+
+.fee-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    padding: 4px 0 !important;
+    font-size: 14px !important;
+    color: #8892b0 !important;
+}
+
+.fee-row.total {
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding-top: 8px !important;
+    margin-top: 4px !important;
+    font-weight: 700 !important;
+    color: #ccd6f0 !important;
+}
+
+.fee-row .amount {
+    color: #ccd6f0 !important;
+}
+
+.fee-row .fee-amount {
+    color: #ff6b6b !important;
+}
+
+.fee-row .net {
+    color: #00ff87 !important;
+    font-size: 16px !important;
+}
+
+/* Withdraw button */
+.withdraw-btn {
+    width: 100% !important;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: linear-gradient(135deg, #00ff87, #00cc6a) !important;
+    color: #0a0e17 !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    margin-top: 8px !important;
+}
+
+.withdraw-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 20px rgba(0, 255, 135, 0.2) !important;
+}
+
+.withdraw-btn:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* ============================================
+   BACK ARROW SIZE (Global Fix)
+   ============================================ */
+
+.back-btn {
+    font-size: 28px !important;
+    padding: 8px 16px !important;
+    cursor: pointer !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    color: #ccd6f0 !important;
+    transition: all 0.3s ease !important;
+    line-height: 1 !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(0, 255, 135, 0.2) !important;
+}
+
+/* Header with back button */
+.header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.header h1 {
+    margin: 0 !important;
 }
