@@ -36,9 +36,55 @@ async function loadUserData() {
             updateUI(data);
             updateFields(data);
             updateReferral(data);
+            await updateReferralStats(userId); // New: fetch detailed referral stats
         }
     } catch (error) {
         console.error('Error loading user data:', error);
+    }
+}
+
+async function updateReferralStats(userId) {
+    try {
+        const response = await fetch(`/api/referral_stats/${userId}`);
+        const data = await response.json();
+        if (data.success) {
+            // Update referral display with Level 1 and Level 2
+            const referralCount = document.getElementById('referralCount');
+            const referralEarned = document.getElementById('referralEarned');
+            const referralLinkText = document.getElementById('referralLinkText');
+            
+            if (referralCount) {
+                referralCount.textContent = data.total_referrals || 0;
+            }
+            if (referralEarned) {
+                referralEarned.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
+            }
+            
+            // Show detailed referral stats in the referral section
+            const referralDetails = document.getElementById('referralDetails');
+            if (referralDetails) {
+                referralDetails.innerHTML = `
+                    <div class="referral-detail-row">
+                        <span>Level 1 Referrals:</span>
+                        <strong>${data.level1_count}</strong>
+                    </div>
+                    <div class="referral-detail-row">
+                        <span>Level 1 Earnings:</span>
+                        <strong>$${(data.level1_earnings || 0).toFixed(2)}</strong>
+                    </div>
+                    <div class="referral-detail-row">
+                        <span>Level 2 Referrals:</span>
+                        <strong>${data.level2_count}</strong>
+                    </div>
+                    <div class="referral-detail-row">
+                        <span>Level 2 Earnings:</span>
+                        <strong>$${(data.level2_earnings || 0).toFixed(2)}</strong>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading referral stats:', error);
     }
 }
 
@@ -117,8 +163,6 @@ function updateFields(data) {
 
 async function updateReferral(data) {
     const referralLink = document.getElementById('referralLinkText');
-    const referralCount = document.getElementById('referralCount');
-    const referralEarned = document.getElementById('referralEarned');
     const walletText = document.getElementById('walletText');
     const isConnected = walletText?.textContent.includes('Connected');
     
@@ -141,12 +185,6 @@ async function updateReferral(data) {
             referralLink.textContent = '⚠️ Save wallet to get referral link';
             referralLink.style.color = '#ff6b6b';
         }
-    }
-    if (referralCount) {
-        referralCount.textContent = data.referrals || 0;
-    }
-    if (referralEarned) {
-        referralEarned.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
     }
 }
 

@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.db_manager import DatabaseManager
 from database.models import User, Withdrawal, Investment, Deposit, DailyPayout
+from sqlalchemy import func
 
 app = Flask(__name__)
 CORS(app)
@@ -134,6 +135,52 @@ def get_referral_code():
         'referral_code': user.referral_code
     })
 
+@app.route('/api/referral_stats/<int:telegram_id>', methods=['GET'])
+def get_referral_stats(telegram_id):
+    """Get complete referral statistics including Level 1 and Level 2"""
+    try:
+        session = db.get_session()
+        
+        # Get user
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'User not found'
+            })
+        
+        # Level 1 referrals (direct)
+        level1_refs = session.query(User).filter_by(referred_by=user.id).all()
+        level1_count = len(level1_refs)
+        level1_earnings = sum(r.referral_earnings_all_time or 0 for r in level1_refs)
+        
+        # Level 2 referrals (referrals of referrals)
+        level2_count = 0
+        level2_earnings = 0
+        for ref in level1_refs:
+            level2_refs = session.query(User).filter_by(referred_by=ref.id).all()
+            level2_count += len(level2_refs)
+            # Level 2 gets 5% of Level 1's earnings
+            for l2 in level2_refs:
+                level2_earnings += (l2.referral_earnings_all_time or 0) * 0.05
+        
+        total_referral_earnings = level1_earnings + level2_earnings
+        
+        return jsonify({
+            'success': True,
+            'level1_count': level1_count,
+            'level1_earnings': level1_earnings,
+            'level2_count': level2_count,
+            'level2_earnings': level2_earnings,
+            'total_referrals': level1_count + level2_count,
+            'total_earnings': total_referral_earnings
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
+
 @app.route('/api/user', methods=['GET'])
 def get_user():
     telegram_id = request.args.get('telegram_id', '0')
@@ -146,7 +193,9 @@ def get_user():
             'referrals': 0,
             'referral_earned': 0,
             'investment_earnings': 0,
-            'total_earnings': 0
+            'total_earnings': 0,
+            'level1_count': 0,
+            'level2_count': 0
         })
     
     session = db.get_session()
@@ -160,7 +209,9 @@ def get_user():
             'referrals': 0,
             'referral_earned': 0,
             'investment_earnings': 0,
-            'total_earnings': 0
+            'total_earnings': 0,
+            'level1_count': 0,
+            'level2_count': 0
         })
     
     # Get investments
@@ -168,17 +219,27 @@ def get_user():
     fields = []
     for inv in investments:
         if inv.is_active or not inv.is_completed:
+            next_payout = inv.next_payout_date
             fields.append({
                 'field_number': inv.field_number,
                 'amount': inv.amount,
                 'total_return': inv.total_return,
                 'paid_out': inv.paid_out,
                 'start_date': inv.start_date.isoformat(),
-                'is_active': inv.is_active
+                'is_active': inv.is_active,
+                'next_payout_date': next_payout.isoformat() if next_payout else None
             })
     
-    # Get referrals
-    referrals = session.query(User).filter_by(referred_by=user.id).count()
+    # Get referrals (level 1 only for display)
+    level1_refs = session.query(User).filter_by(referred_by=user.id).all()
+    level1_count = len(level1_refs)
+    
+    # Get level 2 count
+    level2_count = 0
+    for ref in level1_refs:
+        level2_refs = session.query(User).filter_by(referred_by=ref.id).all()
+        level2_count += len(level2_refs)
+    
     referral_earned = user.referral_earnings_all_time or 0
     investment_earnings = user.investment_earnings_all_time or 0
     total_earnings = referral_earned + investment_earnings
@@ -187,10 +248,12 @@ def get_user():
         'success': True,
         'balance': user.balance,
         'fields': fields,
-        'referrals': referrals,
+        'referrals': level1_count,  # Keep for backward compatibility
         'referral_earned': referral_earned,
         'investment_earnings': investment_earnings,
-        'total_earnings': total_earnings
+        'total_earnings': total_earnings,
+        'level1_count': level1_count,
+        'level2_count': level2_count
     })
 
 @app.route('/api/real_history', methods=['GET'])
@@ -275,13 +338,17 @@ def invest():
         return jsonify({'success': False, 'message': f'Field #{field_number} is already planted'})
     
     from config.settings import Config
+    from datetime import datetime, timedelta
     total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
+    now = datetime.utcnow()
     
     investment = Investment(
         user_id=user.id,
         field_number=field_number,
         amount=amount,
-        total_return=total_return
+        total_return=total_return,
+        end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
+        next_payout_date=now + timedelta(hours=24)
     )
     session.add(investment)
     

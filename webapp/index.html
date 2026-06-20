@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/style.css?v=11">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -85,7 +85,7 @@
                 <div class="field-status" id="field1Status">Available</div>
                 <div class="field-amount" id="field1Amount">$0.00</div>
                 <!-- TIMER ABOVE THE FIELD -->
-                <div class="field-timer" id="field1Timer">⏳ Payout: --:--:--</div>
+                <div class="field-timer" id="field1Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field1Progress" style="width: 0%"></div>
                 </div>
@@ -102,7 +102,7 @@
                 <div class="field-status" id="field2Status">Available</div>
                 <div class="field-amount" id="field2Amount">$0.00</div>
                 <!-- TIMER ABOVE THE FIELD -->
-                <div class="field-timer" id="field2Timer">⏳ Payout: --:--:--</div>
+                <div class="field-timer" id="field2Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field2Progress" style="width: 0%"></div>
                 </div>
@@ -119,7 +119,7 @@
                 <div class="field-status" id="field3Status">Available</div>
                 <div class="field-amount" id="field3Amount">$0.00</div>
                 <!-- TIMER ABOVE THE FIELD -->
-                <div class="field-timer" id="field3Timer">⏳ Payout: --:--:--</div>
+                <div class="field-timer" id="field3Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field3Progress" style="width: 0%"></div>
                 </div>
@@ -160,8 +160,28 @@
                 <button class="copy-btn" onclick="copyReferral()">📋</button>
             </div>
             <div class="referral-stats">
-                <span>Referrals: <strong id="referralCount">0</strong></span>
-                <span>Earned: <strong id="referralEarned">$0.00</strong></span>
+                <span>Total Referrals: <strong id="referralCount">0</strong></span>
+                <span>Total Earned: <strong id="referralEarned">$0.00</strong></span>
+            </div>
+            
+            <!-- NEW: Detailed referral breakdown - Level 1 & Level 2 -->
+            <div class="referral-details" id="referralDetails">
+                <div class="referral-detail-row">
+                    <span>👤 Level 1 Referrals:</span>
+                    <strong id="level1Count">0</strong>
+                </div>
+                <div class="referral-detail-row">
+                    <span>💰 Level 1 Earnings:</span>
+                    <strong id="level1Earnings">$0.00</strong>
+                </div>
+                <div class="referral-detail-row">
+                    <span>👥 Level 2 Referrals:</span>
+                    <strong id="level2Count">0</strong>
+                </div>
+                <div class="referral-detail-row">
+                    <span>💰 Level 2 Earnings:</span>
+                    <strong id="level2Earnings">$0.00</strong>
+                </div>
             </div>
         </div>
 
@@ -184,6 +204,6 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=11"></script>
 </body>
 </html>
