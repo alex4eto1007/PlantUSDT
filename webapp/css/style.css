@@ -380,12 +380,12 @@ body {
 }
 
 /* ============================================
-   ACTIONS GRID
+   ACTIONS GRID - 3 COLUMNS
    ============================================ */
 
 .actions-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-bottom: 20px;
 }
@@ -504,7 +504,7 @@ body {
 }
 
 /* ============================================
-   REFERRAL DETAILS - LEVEL 1 & LEVEL 2
+   REFERRAL DETAILS - LEVEL 1
    ============================================ */
 
 .referral-details {
@@ -546,11 +546,6 @@ body {
 .level-badge.level-1 {
     background: rgba(0, 255, 135, 0.15);
     color: #00ff87;
-}
-
-.level-badge.level-2 {
-    background: rgba(0, 212, 255, 0.15);
-    color: #00d4ff;
 }
 
 /* ============================================
@@ -617,7 +612,7 @@ body {
     }
     
     .actions-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
     }
     
     .header {
@@ -1079,41 +1074,4 @@ input:disabled, textarea:disabled, select:disabled {
     opacity: 0.6 !important;
     cursor: not-allowed !important;
     transform: none !important;
-}
-
-/* ============================================
-   BACK ARROW SIZE (Global Fix)
-   ============================================ */
-
-.back-btn {
-    font-size: 28px !important;
-    padding: 8px 16px !important;
-    cursor: pointer !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 8px !important;
-    color: #ccd6f0 !important;
-    transition: all 0.3s ease !important;
-    line-height: 1 !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.back-btn:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(0, 255, 135, 0.2) !important;
-}
-
-/* Header with back button */
-.header {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
-
-.header h1 {
-    margin: 0 !important;
 }
