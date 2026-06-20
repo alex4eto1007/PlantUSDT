@@ -281,6 +281,32 @@ def get_real_history():
     
     return jsonify({'transactions': transactions})
 
+@app.route('/api/investments/<int:telegram_id>', methods=['GET'])
+def get_investments(telegram_id):
+    """Get investment history for a user"""
+    try:
+        session = db.get_session()
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        investments = session.query(Investment).filter_by(user_id=user.id).all()
+        transactions = []
+        for inv in investments:
+            transactions.append({
+                'type': 'investment',
+                'amount': inv.amount,
+                'status': 'active' if inv.is_active else 'completed',
+                'date': inv.start_date.strftime('%Y-%m-%d %H:%M'),
+                'field': inv.field_number,
+                'paid_out': inv.paid_out,
+                'total_return': inv.total_return
+            })
+        
+        return jsonify({'transactions': transactions})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/invest', methods=['POST'])
 def invest():
     data = request.json

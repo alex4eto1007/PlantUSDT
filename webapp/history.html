@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📜 History - PlantUSDT</title>
+    <title>📜 Transaction History - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -19,13 +19,16 @@
             <button class="filter-btn" onclick="filterHistory('deposits')">Deposits</button>
             <button class="filter-btn" onclick="filterHistory('withdrawals')">Withdrawals</button>
             <button class="filter-btn" onclick="filterHistory('earnings')">Earnings</button>
+            <button class="filter-btn" onclick="filterHistory('investments')">Investments</button>
         </div>
 
         <div id="historyList">
-            <p class="empty-state">No transactions yet.</p>
+            <p class="empty-state">No transactions found.</p>
         </div>
 
-        <button class="action-btn secondary" onclick="navigateTo('dashboard')">📊 Back to Dashboard</button>
+        <button class="action-btn secondary" onclick="navigateTo('dashboard')" style="width: 100%; margin-top: 16px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            📊 Back to Dashboard
+        </button>
     </div>
 
     <script src="js/app.js"></script>
