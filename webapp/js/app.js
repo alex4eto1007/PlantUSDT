@@ -417,7 +417,7 @@ function filterHistory(type) {
     
     // Fetch both regular history and investments
     let url1 = `${API_BASE}/api/real_history?telegram_id=${userId}`;
-    let url2 = `${API_BASE}/api/investments?telegram_id=${userId}`;
+    let url2 = `${API_BASE}/api/investments/${userId}`;
     
     if (type === 'investments') {
         // Only fetch investments
