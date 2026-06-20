@@ -17,7 +17,7 @@ class InvestmentService:
         return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
     
     def process_referral_earnings(self, investment):
-        """Process referral earnings for the referrer (Level 1 and Level 2)"""
+        """Process referral earnings based on deposits (5% of deposit amount)"""
         try:
             session = self.db.get_session()
             
@@ -26,42 +26,23 @@ class InvestmentService:
             if not user or not user.referred_by:
                 return 0
             
-            # Level 1: Direct referrer
+            # Get the referrer
             referrer = session.query(User).filter_by(id=user.referred_by).first()
             if not referrer:
                 return 0
             
-            daily_payout = self.calculate_daily_payout(investment.amount)
-            referral_bonus = daily_payout * 0.05  # 5% of daily earnings
+            # Calculate referral bonus based on deposit (investment amount)
+            referral_bonus = investment.amount * 0.05  # 5% of deposit
             
-            # Credit Level 1 referrer
+            # Credit the referrer
             referrer.balance += referral_bonus
             referrer.total_earned += referral_bonus
             referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or 0) + referral_bonus
+            referrer.referral_deposit_earnings = (referrer.referral_deposit_earnings or 0) + referral_bonus
             referrer.total_earnings_all_time = (referrer.total_earnings_all_time or 0) + referral_bonus
             
-            # Track referral earnings paid on the investment
-            investment.referral_earnings_paid = (investment.referral_earnings_paid or 0) + referral_bonus
-            
             session.commit()
-            
-            logger.info(f"Level 1 referral bonus: {referrer.telegram_id} got ${referral_bonus:.2f} from {user.telegram_id}")
-            
-            # ============================================
-            # LEVEL 2: Referrer's referrer also gets 5% of this referral bonus
-            # ============================================
-            if referrer.referred_by:
-                level2_referrer = session.query(User).filter_by(id=referrer.referred_by).first()
-                if level2_referrer:
-                    level2_bonus = referral_bonus * 0.05  # 5% of Level 1 bonus
-                    
-                    level2_referrer.balance += level2_bonus
-                    level2_referrer.total_earned += level2_bonus
-                    level2_referrer.referral_earnings_all_time = (level2_referrer.referral_earnings_all_time or 0) + level2_bonus
-                    level2_referrer.total_earnings_all_time = (level2_referrer.total_earnings_all_time or 0) + level2_bonus
-                    
-                    session.commit()
-                    logger.info(f"Level 2 referral bonus: {level2_referrer.telegram_id} got ${level2_bonus:.2f} from {user.telegram_id}")
+            logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount}")
             
             return referral_bonus
             
@@ -183,7 +164,7 @@ class InvestmentService:
                     
                     session.commit()
                     
-                    # Process referral earnings (Level 1 and Level 2)
+                    # Process referral earnings (single level only)
                     self.process_referral_earnings(investment)
                     
                     logger.info(f"Payout processed for investment {investment.id}: ${daily_amount:.2f}, next payout at {investment.next_payout_date}")

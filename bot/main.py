@@ -95,15 +95,16 @@ Use /app to open the Mini App!"""
 
     # ============================================
     # EXISTING USER - Check if they can accept a referral
+    # 3-MINUTE WINDOW (CHANGED FROM 3 DAYS)
     # ============================================
     if context.args and len(context.args) > 0 and existing_user.can_be_referred and existing_user.referred_by is None:
         referral_code = context.args[0]
         logger.info(f"Existing user {user.id} trying to accept referral: {referral_code}")
 
-        # Check if user is within 3-day window
-        days_since_creation = (now - existing_user.created_at).days
+        # Check if user is within 3-minute window (changed from 3 days)
+        seconds_since_creation = (now - existing_user.created_at).total_seconds()
 
-        if days_since_creation <= 3:
+        if seconds_since_creation <= 180:  # 3 minutes = 180 seconds
             referrer = db.get_user_by_referral_code(referral_code)
             if referrer and referrer.id != existing_user.id:
                 # Check if referrer is trying to refer themselves
@@ -112,23 +113,22 @@ Use /app to open the Mini App!"""
                     return
 
                 # ============================================
-                # APPLY REFERRAL - FIXED WITH SESSION
+                # APPLY REFERRAL - NO BONUS (REMOVED $5)
                 # ============================================
                 session = db.get_session()
-                
+
                 # Get fresh user objects in this session
                 user_obj = session.query(User).filter_by(telegram_id=user.id).first()
                 referrer_obj = session.query(User).filter_by(id=referrer.id).first()
-                
+
                 if user_obj and referrer_obj:
                     user_obj.referred_by = referrer.id
                     user_obj.referred_at = now
                     user_obj.can_be_referred = False
-                    
-                    # Credit bonus to referrer
-                    referrer_obj.balance += 5.0
-                    referrer_obj.referral_earnings += 5.0
-                    
+
+                    # NO BONUS - Removed the $5 bonus
+                    # Referral earnings will come from deposits (5%)
+
                     session.commit()
                     logger.info(f"Referral saved: {user.id} referred by {referrer.id}")
                 else:
@@ -136,18 +136,18 @@ Use /app to open the Mini App!"""
                     session.rollback()
 
                 await update.message.reply_text(
-                    f"✅ You have been successfully referred by @{referrer.username or 'User'}! 🎉\n\n"
-                    f"They earned a $5 bonus!\n"
-                    f"Welcome to the PlantUSDT community! 🌱"
+                    f"✅ You have been successfully referred by @{referrer_obj.username or 'User'}! 🎉\n\n"
+                    f"Welcome to the PlantUSDT community! 🌱\n\n"
+                    f"💡 Your referrer will earn 5% from your future deposits!"
                 )
 
-                # Notify referrer
+                # Notify referrer (no bonus notification)
                 try:
                     await context.bot.send_message(
                         chat_id=referrer.telegram_id,
-                        text=f"🎉 **Referral Accepted!**\n\n"
+                        text=f"🎉 **New Referral!**\n\n"
                              f"@{existing_user.username or 'User'} accepted your referral!\n"
-                             f"You earned **$5.00 USDT** bonus! 💰"
+                             f"💡 You will earn 5% from their future deposits!"
                     )
                 except Exception as e:
                     logger.error(f"Error notifying referrer: {e}")
@@ -158,9 +158,10 @@ Use /app to open the Mini App!"""
                 return
         else:
             await update.message.reply_text(
-                f"❌ Sorry, you can only accept a referral within 3 days of creating your account.\n\n"
-                f"Your account was created on {existing_user.created_at.strftime('%d/%m/%Y')}.\n"
-                f"You are {days_since_creation} days old."
+                f"❌ Sorry, you can only accept a referral within 3 minutes of creating your account.\n\n"
+                f"Your account was created on {existing_user.created_at.strftime('%d/%m/%Y %H:%M:%S')} UTC.\n"
+                f"You are {int(seconds_since_creation)} seconds old.\n"
+                f"The referral window is only 3 minutes."
             )
             return
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=12">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -84,7 +84,6 @@
                 <div class="field-number">🌾 Field #1</div>
                 <div class="field-status" id="field1Status">Available</div>
                 <div class="field-amount" id="field1Amount">$0.00</div>
-                <!-- TIMER ABOVE THE FIELD -->
                 <div class="field-timer" id="field1Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field1Progress" style="width: 0%"></div>
@@ -101,7 +100,6 @@
                 <div class="field-number">🌾 Field #2</div>
                 <div class="field-status" id="field2Status">Available</div>
                 <div class="field-amount" id="field2Amount">$0.00</div>
-                <!-- TIMER ABOVE THE FIELD -->
                 <div class="field-timer" id="field2Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field2Progress" style="width: 0%"></div>
@@ -118,7 +116,6 @@
                 <div class="field-number">🌾 Field #3</div>
                 <div class="field-status" id="field3Status">Available</div>
                 <div class="field-amount" id="field3Amount">$0.00</div>
-                <!-- TIMER ABOVE THE FIELD -->
                 <div class="field-timer" id="field3Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field3Progress" style="width: 0%"></div>
@@ -154,7 +151,7 @@
         <!-- Referral Section -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
-            <p>Earn 5% of your referrals' daily earnings!</p>
+            <p>Earn 5% of your referrals' deposits!</p>
             <div class="referral-link-box" id="referralLinkBox">
                 <span id="referralLinkText">Loading referral link...</span>
                 <button class="copy-btn" onclick="copyReferral()">📋</button>
@@ -164,23 +161,14 @@
                 <span>Total Earned: <strong id="referralEarned">$0.00</strong></span>
             </div>
             
-            <!-- NEW: Detailed referral breakdown - Level 1 & Level 2 -->
-            <div class="referral-details" id="referralDetails">
+            <div class="referral-details">
                 <div class="referral-detail-row">
-                    <span>👤 Level 1 Referrals:</span>
+                    <span>👤 Referrals:</span>
                     <strong id="level1Count">0</strong>
                 </div>
                 <div class="referral-detail-row">
-                    <span>💰 Level 1 Earnings:</span>
+                    <span>💰 Earnings from deposits:</span>
                     <strong id="level1Earnings">$0.00</strong>
-                </div>
-                <div class="referral-detail-row">
-                    <span>👥 Level 2 Referrals:</span>
-                    <strong id="level2Count">0</strong>
-                </div>
-                <div class="referral-detail-row">
-                    <span>💰 Level 2 Earnings:</span>
-                    <strong id="level2Earnings">$0.00</strong>
                 </div>
             </div>
         </div>
@@ -194,7 +182,7 @@
             <p>4. Earn 2% DAILY for 30 days</p>
             <p>5. After 30 days, your $100 is returned to balance</p>
             <p>6. Withdraw anytime (min $2, 10% fee)</p>
-            <p>7. Refer friends and earn 5% of their daily earnings!</p>
+            <p>7. Refer friends and earn 5% of their deposits!</p>
         </div>
 
         <!-- Footer -->
@@ -204,6 +192,6 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=11"></script>
+    <script src="js/app.js?v=12"></script>
 </body>
 </html>

@@ -137,49 +137,27 @@ def get_referral_code():
 
 @app.route('/api/referral_stats/<int:telegram_id>', methods=['GET'])
 def get_referral_stats(telegram_id):
-    """Get complete referral statistics including Level 1 and Level 2"""
+    """Get referral statistics - single level only"""
     try:
         session = db.get_session()
-        
-        # Get user
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
-            return jsonify({
-                'success': False,
-                'message': 'User not found'
-            })
+            return jsonify({'success': False, 'message': 'User not found'})
         
-        # Level 1 referrals (direct)
+        # Level 1 referrals only (no multi-tier)
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
-        level1_earnings = sum(r.referral_earnings_all_time or 0 for r in level1_refs)
-        
-        # Level 2 referrals (referrals of referrals)
-        level2_count = 0
-        level2_earnings = 0
-        for ref in level1_refs:
-            level2_refs = session.query(User).filter_by(referred_by=ref.id).all()
-            level2_count += len(level2_refs)
-            # Level 2 gets 5% of Level 1's earnings
-            for l2 in level2_refs:
-                level2_earnings += (l2.referral_earnings_all_time or 0) * 0.05
-        
-        total_referral_earnings = level1_earnings + level2_earnings
+        level1_earnings = sum(r.referral_deposit_earnings or 0 for r in level1_refs)
         
         return jsonify({
             'success': True,
             'level1_count': level1_count,
             'level1_earnings': level1_earnings,
-            'level2_count': level2_count,
-            'level2_earnings': level2_earnings,
-            'total_referrals': level1_count + level2_count,
-            'total_earnings': total_referral_earnings
+            'total_referrals': level1_count,
+            'total_earnings': level1_earnings
         })
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        })
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/user', methods=['GET'])
 def get_user():
@@ -234,11 +212,8 @@ def get_user():
     level1_refs = session.query(User).filter_by(referred_by=user.id).all()
     level1_count = len(level1_refs)
     
-    # Get level 2 count
+    # Get level 2 count (keeping for backward compatibility, but will always be 0)
     level2_count = 0
-    for ref in level1_refs:
-        level2_refs = session.query(User).filter_by(referred_by=ref.id).all()
-        level2_count += len(level2_refs)
     
     referral_earned = user.referral_earnings_all_time or 0
     investment_earnings = user.investment_earnings_all_time or 0
@@ -248,7 +223,7 @@ def get_user():
         'success': True,
         'balance': user.balance,
         'fields': fields,
-        'referrals': level1_count,  # Keep for backward compatibility
+        'referrals': level1_count,
         'referral_earned': referral_earned,
         'investment_earnings': investment_earnings,
         'total_earnings': total_earnings,

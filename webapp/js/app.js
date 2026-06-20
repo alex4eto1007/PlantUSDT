@@ -49,31 +49,14 @@ async function updateReferralStats(userId) {
         const response = await fetch(`${API_BASE}/api/referral_stats/${userId}`);
         const data = await response.json();
         if (data.success) {
-            const referralCount = document.getElementById('referralCount');
-            const referralEarned = document.getElementById('referralEarned');
-            const level1Count = document.getElementById('level1Count');
-            const level1Earnings = document.getElementById('level1Earnings');
-            const level2Count = document.getElementById('level2Count');
-            const level2Earnings = document.getElementById('level2Earnings');
+            document.getElementById('referralCount').textContent = data.total_referrals || 0;
+            document.getElementById('referralEarned').textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
+            document.getElementById('level1Count').textContent = data.level1_count || 0;
+            document.getElementById('level1Earnings').textContent = `$${(data.level1_earnings || 0).toFixed(2)}`;
             
-            if (referralCount) {
-                referralCount.textContent = data.total_referrals || 0;
-            }
-            if (referralEarned) {
-                referralEarned.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
-            }
-            if (level1Count) {
-                level1Count.textContent = data.level1_count || 0;
-            }
-            if (level1Earnings) {
-                level1Earnings.textContent = `$${(data.level1_earnings || 0).toFixed(2)}`;
-            }
-            if (level2Count) {
-                level2Count.textContent = data.level2_count || 0;
-            }
-            if (level2Earnings) {
-                level2Earnings.textContent = `$${(data.level2_earnings || 0).toFixed(2)}`;
-            }
+            // Hide Level 2 section if it exists
+            const level2Section = document.getElementById('level2Section');
+            if (level2Section) level2Section.style.display = 'none';
         }
     } catch (error) {
         console.error('Error loading referral stats:', error);
