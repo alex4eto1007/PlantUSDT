@@ -21,16 +21,19 @@ class InvestmentService:
     async def process_referral_earnings(self, investment):
         """Process referral earnings based on deposits (5% of deposit amount)"""
         try:
+            logger.info(f"🔔 REFERRAL DEBUG: process_referral_earnings called for investment {investment.id}")
             session = self.db.get_session()
 
             # Get the user who made the investment
             user = session.query(User).filter_by(id=investment.user_id).first()
             if not user or not user.referred_by:
+                logger.info(f"🔔 REFERRAL DEBUG: User {investment.user_id} has no referrer")
                 return 0
 
             # Get the referrer
             referrer = session.query(User).filter_by(id=user.referred_by).first()
             if not referrer:
+                logger.info(f"🔔 REFERRAL DEBUG: Referrer not found for user {investment.user_id}")
                 return 0
 
             # Calculate referral bonus based on deposit (investment amount)
@@ -47,9 +50,11 @@ class InvestmentService:
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount}")
 
             # --- SEND TELEGRAM NOTIFICATION VIA API ---
+            logger.info(f"🔔 REFERRAL DEBUG: Attempting to send notification to {referrer.telegram_id}")
             try:
                 async def send_notification():
                     try:
+                        logger.info(f"🔔 REFERRAL DEBUG: Inside send_notification function")
                         bot_token = Config.BOT_TOKEN
                         username = user.username or user.first_name or "User"
                         total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
@@ -70,8 +75,10 @@ class InvestmentService:
                             "parse_mode": "Markdown"
                         }
                         
+                        logger.info(f"🔔 REFERRAL DEBUG: Sending to URL: {url[:50]}...")
                         async with aiohttp.ClientSession() as http_session:
                             async with http_session.post(url, json=payload) as response:
+                                logger.info(f"🔔 REFERRAL DEBUG: Response status: {response.status}")
                                 if response.status == 200:
                                     logger.info(f"✅ Referral notification sent to {referrer.telegram_id}")
                                 else:
@@ -79,16 +86,24 @@ class InvestmentService:
                                     logger.error(f"❌ API returned {response.status}: {response_text}")
                     except Exception as e:
                         logger.error(f"❌ Error sending notification: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
                 
+                logger.info(f"🔔 REFERRAL DEBUG: Creating task for send_notification")
                 asyncio.create_task(send_notification())
+                logger.info(f"🔔 REFERRAL DEBUG: Task created successfully")
             except Exception as e:
                 logger.error(f"❌ Error in notification setup: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
             # --- END NOTIFICATION ---
 
             return referral_bonus
 
         except Exception as e:
             logger.error(f"Error processing referral earnings: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             session.rollback()
             return 0
         finally:
