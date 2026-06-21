@@ -503,7 +503,12 @@ function renderHistory(transactions) {
                    tx.type === 'withdraw' ? '📤' : 
                    tx.type === 'investment' ? '🌱' : '💰';
         var status = tx.status || 'completed';
-        var date = new Date(tx.date).toLocaleDateString();
+        // Format date properly with UTC to avoid timezone issues
+        var date = new Date(tx.date + ' UTC').toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         
         var amountDisplay = '$' + tx.amount.toFixed(2);
