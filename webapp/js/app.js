@@ -423,49 +423,53 @@ function filterHistory(type) {
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
     var url2 = API_BASE + '/api/investments/' + userId;
     
-    if (type === 'investments') {
-        fetch(url2)
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                if (data.transactions && data.transactions.length > 0) {
-                    renderHistory(data.transactions);
-                } else {
-                    historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
-                }
-            })
-            .catch(function(error) {
-                historyList.innerHTML = '<p class="empty-state">Error loading history.</p>';
-            });
-        return;
-    }
-    
+    // Fetch both APIs
     Promise.all([fetch(url1), fetch(url2)])
-        .then(function(responses) { return Promise.all(responses.map(function(r) { return r.json(); })); })
+        .then(function(responses) { 
+            return Promise.all(responses.map(function(r) { return r.json(); })); 
+        })
         .then(function(data) {
             var allTransactions = [];
             
+            // Add regular transactions (deposits, withdrawals, earnings)
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
             
+            // Add investments
             if (data[1].transactions && data[1].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
             
-            if (type !== 'all') {
-                allTransactions = allTransactions.filter(function(tx) { return tx.type === type; });
-            }
-            
-            allTransactions.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-            
-            if (allTransactions.length > 0) {
-                renderHistory(allTransactions);
-            } else {
+            // If no transactions at all
+            if (allTransactions.length === 0) {
                 historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
+                return;
             }
+            
+            // Filter by type if not 'all'
+            if (type !== 'all') {
+                allTransactions = allTransactions.filter(function(tx) { 
+                    return tx.type === type; 
+                });
+            }
+            
+            // If filtered result is empty
+            if (allTransactions.length === 0) {
+                historyList.innerHTML = '<p class="empty-state">No ' + type + ' transactions found.</p>';
+                return;
+            }
+            
+            // Sort by date (newest first)
+            allTransactions.sort(function(a, b) { 
+                return new Date(b.date) - new Date(a.date); 
+            });
+            
+            renderHistory(allTransactions);
         })
         .catch(function(error) {
-            historyList.innerHTML = '<p class="empty-state">Error loading history.</p>';
+            console.error('Error loading history:', error);
+            historyList.innerHTML = '<p class="empty-state">Error loading history. Please try again.</p>';
         });
 }
 
@@ -474,7 +478,9 @@ function renderHistory(transactions) {
     var html = '';
     for (var i = 0; i < transactions.length; i++) {
         var tx = transactions[i];
-        var icon = tx.type === 'deposit' ? '📥' : tx.type === 'withdraw' ? '📤' : tx.type === 'investment' ? '🌱' : '💰';
+        var icon = tx.type === 'deposit' ? '📥' : 
+                   tx.type === 'withdraw' ? '📤' : 
+                   tx.type === 'investment' ? '🌱' : '💰';
         var status = tx.status || 'completed';
         var date = new Date(tx.date).toLocaleDateString();
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
@@ -484,7 +490,20 @@ function renderHistory(transactions) {
             amountDisplay = '$' + tx.amount.toFixed(2) + ' (Field ' + tx.field + ')';
         }
         
-        html += '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-details"><div class="history-type">' + displayText + '</div><div class="history-date">' + date + '</div></div><div class="history-amount ' + status + '">' + amountDisplay + '</div></div>';
+        // Add status badge for pending withdrawals
+        var statusBadge = '';
+        if (tx.type === 'withdraw' && tx.status === 'pending') {
+            statusBadge = ' ⏳';
+        }
+        
+        html += '<div class="history-item">' +
+            '<div class="history-icon">' + icon + '</div>' +
+            '<div class="history-details">' +
+                '<div class="history-type">' + displayText + statusBadge + '</div>' +
+                '<div class="history-date">' + date + '</div>' +
+            '</div>' +
+            '<div class="history-amount ' + status + '">' + amountDisplay + '</div>' +
+        '</div>';
     }
     historyList.innerHTML = html;
 }
