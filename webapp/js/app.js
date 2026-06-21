@@ -450,7 +450,19 @@ function filterHistory(type) {
             // Filter by type if not 'all'
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) { 
-                    // Handle 'investments' tab - API returns 'investment' (singular)
+                    // Handle plural vs singular cases for deposits
+                    if (type === 'deposits') {
+                        return tx.type === 'deposit' || tx.type === 'deposits';
+                    }
+                    // Handle plural vs singular cases for withdrawals
+                    if (type === 'withdrawals') {
+                        return tx.type === 'withdraw' || tx.type === 'withdrawal' || tx.type === 'withdrawals';
+                    }
+                    // Handle plural vs singular cases for earnings
+                    if (type === 'earnings') {
+                        return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout';
+                    }
+                    // Handle plural vs singular cases for investments
                     if (type === 'investments') {
                         return tx.type === 'investment' || tx.type === 'investments';
                     }
@@ -460,7 +472,11 @@ function filterHistory(type) {
             
             // If filtered result is empty
             if (allTransactions.length === 0) {
-                var displayType = type === 'investments' ? 'investment' : type;
+                var displayType = type;
+                if (type === 'deposits') displayType = 'deposit';
+                if (type === 'withdrawals') displayType = 'withdrawal';
+                if (type === 'earnings') displayType = 'earning';
+                if (type === 'investments') displayType = 'investment';
                 historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found.</p>';
                 return;
             }
