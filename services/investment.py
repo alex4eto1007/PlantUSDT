@@ -48,8 +48,6 @@ class InvestmentService:
 
             # --- SEND TELEGRAM NOTIFICATION VIA API ---
             try:
-                from config.settings import Config
-                
                 async def send_notification():
                     try:
                         bot_token = Config.BOT_TOKEN
