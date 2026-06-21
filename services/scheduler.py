@@ -3,6 +3,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from services.investment import InvestmentService
 from datetime import datetime
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +32,10 @@ class SchedulerService:
         self.scheduler.start()
         logger.info("Scheduler started - checking for due payouts every 5 minutes")
 
-    def process_daily_payouts(self):
+    async def process_daily_payouts(self):
         try:
             logger.info("Checking for due payouts...")
-            self.investment_service.process_daily_payouts()
+            await self.investment_service.process_daily_payouts()
         except Exception as e:
             logger.error(f"Error processing daily payouts: {e}")
 
