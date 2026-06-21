@@ -71,7 +71,7 @@
 
         document.getElementById('loadingMessage').textContent = '📡 Fetching data for user: ' + userId;
 
-        fetch(`http://167.233.132.127:5001/api/user?telegram_id=${userId}`)
+        fetch(`https://plantusdt.ddns.net/api/user?telegram_id=${userId}`)
             .then(response => {
                 console.log('Response status:', response.status);
                 return response.json();
