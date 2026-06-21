@@ -486,6 +486,17 @@ function filterHistory(type) {
                 return new Date(b.date) - new Date(a.date); 
             });
             
+            // Add debug for dates
+            console.log('All transactions with dates:', allTransactions);
+            var debugEl = document.getElementById('debugDates');
+            if (debugEl) {
+                debugEl.innerHTML = '📅 Raw dates from API:<br>';
+                allTransactions.forEach(function(tx) {
+                    debugEl.innerHTML += tx.type + ': ' + tx.date + ' → ' + new Date(tx.date + ' UTC').toLocaleDateString('en-US', {year: 'numeric', month: '2-digit', day: '2-digit'}) + '<br>';
+                });
+                debugEl.style.display = 'block';
+            }
+            
             renderHistory(allTransactions);
         })
         .catch(function(error) {

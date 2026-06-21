@@ -14,6 +14,12 @@
             <h1>📜 Transaction History</h1>
         </div>
 
+        <!-- Debug Button -->
+        <button onclick="document.getElementById('debugDates').style.display='block'" style="background: rgba(255,0,0,0.1); border: 1px solid #ff6b6b; border-radius: 4px; padding: 4px 8px; color: #ff6b6b; font-size: 10px; cursor: pointer; margin-bottom: 8px; width: 100%;">🐛 Show Date Debug</button>
+
+        <!-- Debug Info -->
+        <div id="debugDates" style="background: #1a1a2e; padding: 10px; margin: 10px 0; border-radius: 8px; font-size: 12px; color: #00ff87; display: none; word-break: break-all; border: 1px solid rgba(0,255,135,0.2);"></div>
+
         <div class="history-filters">
             <button class="filter-btn active" onclick="filterHistory('all')">All</button>
             <button class="filter-btn" onclick="filterHistory('deposits')">Deposits</button>
@@ -31,6 +37,51 @@
         </button>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=16"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.tg = window.Telegram.WebApp;
+                window.tg.ready();
+                window.tg.expand();
+            }
+            
+            // Get user ID from Telegram
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            const userId = tgUser?.id || '0';
+            
+            // Load history when page loads
+            if (typeof filterHistory === 'function') {
+                // Override filterHistory to add debug
+                const originalFilter = filterHistory;
+                filterHistory = function(type) {
+                    // Call original filter first
+                    originalFilter(type);
+                    
+                    // Add debug after a delay
+                    setTimeout(function() {
+                        const historyList = document.getElementById('historyList');
+                        const debugEl = document.getElementById('debugDates');
+                        if (debugEl && historyList) {
+                            const items = historyList.querySelectorAll('.history-item');
+                            if (items.length > 0) {
+                                debugEl.innerHTML = '📅 Dates found: ' + items.length + ' transactions<br>';
+                                items.forEach(function(item) {
+                                    const dateEl = item.querySelector('.history-date');
+                                    if (dateEl) {
+                                        debugEl.innerHTML += '📆 ' + dateEl.textContent + '<br>';
+                                    }
+                                });
+                                debugEl.style.display = 'block';
+                            }
+                        }
+                    }, 1000);
+                };
+                
+                // Load initial data
+                filterHistory('all');
+            }
+        });
+    </script>
 </body>
 </html>
