@@ -546,6 +546,11 @@ function renderHistory(transactions) {
 }
 
 function updateFieldTimers() {
+    // Skip if we're on the history page (prevents date overwriting)
+    if (document.getElementById('historyList')) {
+        return;
+    }
+    
     var now = new Date();
     var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
     
