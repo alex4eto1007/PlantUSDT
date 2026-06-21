@@ -10,7 +10,18 @@ from database.models import User, Withdrawal, Investment, Deposit, DailyPayout
 from sqlalchemy import func
 
 app = Flask(__name__)
-CORS(app)  # Basic CORS - nginx will handle the headers
+
+# Configure CORS properly - single header with specific origins
+CORS(app, origins=["https://plant-usdt.vercel.app", "https://plantusdt.vercel.app"])
+
+# Add CORS headers to every response (single header)
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://plant-usdt.vercel.app')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 db = DatabaseManager()
 
