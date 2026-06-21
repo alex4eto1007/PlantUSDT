@@ -6,16 +6,11 @@
     <title>📊 Dashboard - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        .stat-value { font-size: 20px; }
-        .loading-text { color: #8892b0; font-size: 14px; text-align: center; padding: 20px; }
-        .error-text { color: #ff6b6b; font-size: 14px; text-align: center; padding: 20px; }
-    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="window.history.back()">←</button>
+            <button class="back-btn" onclick="window.location.href='index.html'">←</button>
             <h1 style="color: #00ff87; font-size: 20px;">📊 Dashboard</h1>
         </div>
 
@@ -60,17 +55,21 @@
     </div>
 
     <script>
+        // Initialize Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
+        // Get user data
         const user = tg.initDataUnsafe?.user;
         const userId = user?.id || '0';
 
         console.log('Dashboard loaded, userId:', userId);
 
+        // Show loading
         document.getElementById('loadingMessage').textContent = '📡 Fetching data for user: ' + userId;
 
+        // Fetch data
         fetch(`https://plantusdt.ddns.net/api/user?telegram_id=${userId}`)
             .then(response => {
                 console.log('Response status:', response.status);
@@ -79,10 +78,12 @@
             .then(data => {
                 console.log('API Response:', data);
                 
+                // Hide loading, show stats
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('dashboardStats').style.display = 'block';
 
                 if (data.success) {
+                    // Update stats
                     document.getElementById('dashBalance').textContent = '$' + (data.balance || 0).toFixed(2);
                     document.getElementById('dashInvested').textContent = '$' + (data.total_invested || 0).toFixed(2);
                     document.getElementById('dashEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);
