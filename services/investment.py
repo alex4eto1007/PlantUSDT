@@ -3,8 +3,7 @@ from database.db_manager import DatabaseManager
 from database.models import Investment, User, DailyPayout
 from config.settings import Config
 import logging
-import asyncio
-import aiohttp
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -52,48 +51,39 @@ class InvestmentService:
             # --- SEND TELEGRAM NOTIFICATION VIA API ---
             logger.info("🔔🔔🔔 ENTERING NOTIFICATION SECTION 🔔🔔🔔")
             try:
-                async def send_notification():
-                    try:
-                        logger.info(f"🔔 REFERRAL DEBUG: Inside send_notification function")
-                        bot_token = Config.BOT_TOKEN
-                        username = user.username or user.first_name or "User"
-                        total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
-                        
-                        message = (
-                            f"🎁 **Referral Bonus Received**\n\n"
-                            f"Your referral **@{username}** deposited **${investment.amount:.2f} USDT**\n\n"
-                            f"**+${referral_bonus:.2f} USDT** credited to your balance! (5% bonus)\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💰 Your balance: **${referrer.balance:.2f}**\n"
-                            f"👥 Total referrals: **{total_refs}**"
-                        )
-                        
-                        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-                        payload = {
-                            "chat_id": referrer.telegram_id,
-                            "text": message,
-                            "parse_mode": "Markdown"
-                        }
-                        
-                        logger.info(f"🔔 REFERRAL DEBUG: Sending to URL: {url[:50]}...")
-                        async with aiohttp.ClientSession() as http_session:
-                            async with http_session.post(url, json=payload) as response:
-                                logger.info(f"🔔 REFERRAL DEBUG: Response status: {response.status}")
-                                if response.status == 200:
-                                    logger.info(f"✅ Referral notification sent to {referrer.telegram_id}")
-                                else:
-                                    response_text = await response.text()
-                                    logger.error(f"❌ API returned {response.status}: {response_text}")
-                    except Exception as e:
-                        logger.error(f"❌ Error sending notification: {e}")
-                        import traceback
-                        logger.error(traceback.format_exc())
+                logger.info(f"🔔 REFERRAL DEBUG: Attempting to send notification to {referrer.telegram_id}")
                 
-                logger.info(f"🔔 REFERRAL DEBUG: Creating task for send_notification")
-                asyncio.create_task(send_notification())
-                logger.info(f"🔔 REFERRAL DEBUG: Task created successfully")
+                bot_token = Config.BOT_TOKEN
+                username = user.username or user.first_name or "User"
+                total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
+                
+                message = (
+                    f"🎁 **Referral Bonus Received**\n\n"
+                    f"Your referral **@{username}** deposited **${investment.amount:.2f} USDT**\n\n"
+                    f"**+${referral_bonus:.2f} USDT** credited to your balance! (5% bonus)\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"💰 Your balance: **${referrer.balance:.2f}**\n"
+                    f"👥 Total referrals: **{total_refs}**"
+                )
+                
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    "chat_id": referrer.telegram_id,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                }
+                
+                logger.info(f"🔔 REFERRAL DEBUG: Sending to URL: {url[:50]}...")
+                response = requests.post(url, json=payload, timeout=10)
+                logger.info(f"🔔 REFERRAL DEBUG: Response status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    logger.info(f"✅ Referral notification sent to {referrer.telegram_id}")
+                else:
+                    logger.error(f"❌ API returned {response.status_code}: {response.text}")
+                    
             except Exception as e:
-                logger.error(f"❌ Error in notification setup: {e}")
+                logger.error(f"❌ Error sending notification: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
             # --- END NOTIFICATION ---
