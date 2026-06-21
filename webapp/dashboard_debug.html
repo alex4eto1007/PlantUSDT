@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Debug</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { background: #0a0e17; color: #ccd6f0; padding: 20px; font-family: monospace; }
+        .stat { padding: 10px; margin: 5px 0; background: rgba(0,0,0,0.3); border-radius: 8px; }
+        .label { color: #8892b0; font-size: 12px; }
+        .value { color: #00ff87; font-size: 24px; font-weight: bold; }
+        .debug { background: rgba(255,0,0,0.1); border: 1px solid red; padding: 10px; margin-top: 20px; font-size: 11px; color: #ff6b6b; word-break: break-all; }
+        .success { color: #00ff87; }
+        .error { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Dashboard Debug</h1>
+    
+    <div id="status" class="debug">Initializing...</div>
+    
+    <div class="stat">
+        <div class="label">💰 Balance</div>
+        <div class="value" id="debugBalance">$0.00</div>
+    </div>
+    <div class="stat">
+        <div class="label">🌱 Invested</div>
+        <div class="value" id="debugInvested">$0.00</div>
+    </div>
+    <div class="stat">
+        <div class="label">📈 Earned</div>
+        <div class="value" id="debugEarned">$0.00</div>
+    </div>
+    <div class="stat">
+        <div class="label">💳 Deposited</div>
+        <div class="value" id="debugDeposited">$0.00</div>
+    </div>
+    <div class="stat">
+        <div class="label">👥 Referrals</div>
+        <div class="value" id="debugReferrals">0</div>
+    </div>
+
+    <div id="debugLog" class="debug"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const status = document.getElementById('status');
+            const log = document.getElementById('debugLog');
+            
+            // Get user from Telegram
+            let tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            
+            let tgUser = tg.initDataUnsafe?.user;
+            let userId = tgUser?.id || '0';
+            
+            log.textContent = `1️⃣ User ID: ${userId}\n`;
+            log.textContent += `2️⃣ User data: ${JSON.stringify(tgUser, null, 2)}\n`;
+            
+            status.textContent = `📡 Fetching data for user: ${userId}`;
+            
+            // Fetch data
+            fetch(`https://plantusdt.ddns.net/api/user?telegram_id=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    log.textContent += `3️⃣ API Response: ${JSON.stringify(data, null, 2)}\n`;
+                    log.textContent += `4️⃣ Success: ${data.success}\n`;
+                    
+                    if (data.success) {
+                        // Update stats
+                        document.getElementById('debugBalance').textContent = '$' + (data.balance || 0).toFixed(2);
+                        document.getElementById('debugInvested').textContent = '$' + (data.total_invested || 0).toFixed(2);
+                        document.getElementById('debugEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);
+                        document.getElementById('debugDeposited').textContent = '$' + (data.total_deposited || 0).toFixed(2);
+                        document.getElementById('debugReferrals').textContent = data.referrals || 0;
+                        
+                        status.textContent = '✅ Data loaded successfully!';
+                        status.className = 'debug success';
+                        
+                        log.textContent += `5️⃣ ✅ Dashboard updated!\n`;
+                        log.textContent += `   Balance: $${(data.balance || 0).toFixed(2)}\n`;
+                        log.textContent += `   Invested: $${(data.total_invested || 0).toFixed(2)}\n`;
+                        log.textContent += `   Earned: $${(data.total_earnings || 0).toFixed(2)}\n`;
+                        log.textContent += `   Deposited: $${(data.total_deposited || 0).toFixed(2)}\n`;
+                        log.textContent += `   Referrals: ${data.referrals || 0}`;
+                    } else {
+                        status.textContent = '❌ API returned success: false';
+                        status.className = 'debug error';
+                        log.textContent += `5️⃣ ❌ API error: ${data.message || 'Unknown'}`;
+                    }
+                })
+                .catch(error => {
+                    status.textContent = '❌ Network error: ' + error.message;
+                    status.className = 'debug error';
+                    log.textContent += `❌ Error: ${error.message}\n`;
+                    log.textContent += `Stack: ${error.stack}`;
+                });
+        });
+    </script>
+</body>
+</html>
