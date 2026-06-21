@@ -376,9 +376,33 @@ def main():
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
 
+        # ============================================
+        # SET PERSISTENT MENU BUTTON TO MINI APP
+        # ============================================
+        async def set_menu_button():
+            try:
+                await application.bot.set_chat_menu_button(
+                    chat_id=None,  # None = global setting for all chats
+                    menu_button={
+                        "type": "web_app",
+                        "text": "🌱 PlantUSDT",
+                        "web_app": {"url": VERCEL_URL}
+                    }
+                )
+                logger.info("✅ Menu button set to Mini App")
+            except Exception as e:
+                logger.error(f"❌ Error setting menu button: {e}")
+
+        # Add to the event loop
+        loop.create_task(set_menu_button())
+        # ============================================
+        # END MENU BUTTON SETUP
+        # ============================================
+
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running (checks every 5 minutes)")
+        logger.info("📌 Menu button set to: 🌱 PlantUSDT")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
