@@ -492,7 +492,7 @@ function filterHistory(type) {
             if (debugEl) {
                 debugEl.innerHTML = '📅 Raw dates from API:<br>';
                 allTransactions.forEach(function(tx) {
-                    debugEl.innerHTML += tx.type + ': ' + tx.date + ' → ' + new Date(tx.date + ' UTC').toLocaleDateString('en-US', {year: 'numeric', month: '2-digit', day: '2-digit'}) + '<br>';
+                    debugEl.innerHTML += tx.type + ': ' + tx.date + '<br>';
                 });
                 debugEl.style.display = 'block';
             }
@@ -514,12 +514,8 @@ function renderHistory(transactions) {
                    tx.type === 'withdraw' ? '📤' : 
                    tx.type === 'investment' ? '🌱' : '💰';
         var status = tx.status || 'completed';
-        // Format date properly with UTC to avoid timezone issues
-        var date = new Date(tx.date + ' UTC').toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
+        // Display raw date from API
+        var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         
         var amountDisplay = '$' + tx.amount.toFixed(2);
