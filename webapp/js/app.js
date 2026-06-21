@@ -460,7 +460,7 @@ function filterHistory(type) {
                     }
                     // Handle plural vs singular cases for earnings
                     if (type === 'earnings') {
-                        return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout';
+                        return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || tx.type === 'referral_earnings';
                     }
                     // Handle plural vs singular cases for investments
                     if (type === 'investments') {
@@ -486,17 +486,6 @@ function filterHistory(type) {
                 return new Date(b.date) - new Date(a.date); 
             });
             
-            // Add debug for dates
-            console.log('All transactions with dates:', allTransactions);
-            var debugEl = document.getElementById('debugDates');
-            if (debugEl) {
-                debugEl.innerHTML = '📅 Raw dates from API:<br>';
-                allTransactions.forEach(function(tx) {
-                    debugEl.innerHTML += tx.type + ': ' + tx.date + '<br>';
-                });
-                debugEl.style.display = 'block';
-            }
-            
             renderHistory(allTransactions);
         })
         .catch(function(error) {
@@ -512,11 +501,15 @@ function renderHistory(transactions) {
         var tx = transactions[i];
         var icon = tx.type === 'deposit' ? '📥' : 
                    tx.type === 'withdraw' ? '📤' : 
-                   tx.type === 'investment' ? '🌱' : '💰';
+                   tx.type === 'investment' ? '🌱' : 
+                   tx.type === 'referral_earnings' ? '🎁' : '💰';
         var status = tx.status || 'completed';
         // Display raw date from API
         var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+        if (tx.type === 'referral_earnings') {
+            displayText = 'Referral Bonus';
+        }
         
         var amountDisplay = '$' + tx.amount.toFixed(2);
         if (tx.type === 'investment' && tx.field) {
