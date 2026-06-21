@@ -165,7 +165,9 @@ def get_referral_stats(telegram_id):
         # Level 1 referrals only (no multi-tier)
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
-        level1_earnings = sum(r.referral_deposit_earnings or 0 for r in level1_refs)
+        
+        # Get earnings from the referrer's deposit earnings
+        level1_earnings = user.referral_deposit_earnings or 0
         
         return jsonify({
             'success': True,
