@@ -4,6 +4,7 @@ from database.models import Investment, User, DailyPayout
 from config.settings import Config
 import logging
 import asyncio
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +46,12 @@ class InvestmentService:
             session.commit()
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount}")
 
-            # --- SEND TELEGRAM NOTIFICATION ---
-            async def send_notification():
-                try:
-                    from bot.main import application
-                    if application and application.bot:
+            # --- SEND TELEGRAM NOTIFICATION VIA API ---
+            try:
+                async def send_notification():
+                    try:
+                        bot_token = Config.BOT_TOKEN
                         username = user.username or user.first_name or "User"
-                        # Count total referrals for the referrer
                         total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
                         
                         message = (
@@ -62,17 +62,28 @@ class InvestmentService:
                             f"💰 Your balance: **${referrer.balance:.2f}**\n"
                             f"👥 Total referrals: **{total_refs}**"
                         )
-                        await application.bot.send_message(
-                            chat_id=referrer.telegram_id,
-                            text=message,
-                            parse_mode='Markdown'
-                        )
-                        logger.info(f"Referral notification sent to {referrer.telegram_id}")
-                except Exception as e:
-                    logger.error(f"Error sending referral notification: {e}")
-
-            # Run the notification as a background task
-            asyncio.create_task(send_notification())
+                        
+                        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                        payload = {
+                            "chat_id": referrer.telegram_id,
+                            "text": message,
+                            "parse_mode": "Markdown"
+                        }
+                        
+                        async with aiohttp.ClientSession() as http_session:
+                            async with http_session.post(url, json=payload) as response:
+                                if response.status == 200:
+                                    logger.info(f"✅ Referral notification sent to {referrer.telegram_id}")
+                                else:
+                                    response_text = await response.text()
+                                    logger.error(f"❌ API returned {response.status}: {response_text}")
+                    except Exception as e:
+                        logger.error(f"❌ Error sending notification: {e}")
+                
+                # Run the notification as a background task
+                asyncio.create_task(send_notification())
+            except Exception as e:
+                logger.error(f"❌ Error in notification setup: {e}")
             # --- END NOTIFICATION ---
 
             return referral_bonus
