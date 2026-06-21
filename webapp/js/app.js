@@ -633,3 +633,5 @@ window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
 window.disconnectWallet = disconnectWallet;
 window.setWallet = setWallet;
+
+// Force rebuild - Sun Jun 21 08:30:32 AM UTC 2026
