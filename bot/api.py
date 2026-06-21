@@ -167,6 +167,8 @@ def get_user():
         return jsonify({
             'success': True,
             'balance': 0,
+            'total_invested': 0,
+            'total_deposited': 0,
             'fields': [],
             'referrals': 0,
             'referral_earned': 0,
@@ -183,6 +185,8 @@ def get_user():
         return jsonify({
             'success': True,
             'balance': 0,
+            'total_invested': 0,
+            'total_deposited': 0,
             'fields': [],
             'referrals': 0,
             'referral_earned': 0,
@@ -222,6 +226,8 @@ def get_user():
     return jsonify({
         'success': True,
         'balance': user.balance,
+        'total_invested': user.total_invested or 0,
+        'total_deposited': user.total_deposited or 0,
         'fields': fields,
         'referrals': level1_count,
         'referral_earned': referral_earned,
