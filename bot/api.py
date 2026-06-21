@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db_manager import DatabaseManager
 from database.models import User, Withdrawal, Investment, Deposit, DailyPayout
 from sqlalchemy import func
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -295,6 +296,17 @@ def get_real_history():
                 'status': 'completed',
                 'date': p.paid_at.strftime('%Y-%m-%d %H:%M')
             })
+        
+        # --- ADD REFERRAL EARNINGS ---
+        referral_earnings = user.referral_deposit_earnings or 0
+        if referral_earnings > 0:
+            transactions.append({
+                'type': 'referral_earnings',
+                'amount': referral_earnings,
+                'status': 'completed',
+                'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
+            })
+        # --- END REFERRAL EARNINGS ---
         
         # Get withdrawals
         withdrawals = session.query(Withdrawal).filter_by(user_id=user.id).all()
