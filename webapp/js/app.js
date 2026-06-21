@@ -3,7 +3,7 @@
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe?.user;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
-const API_BASE = 'https://plantusdt.ddns.net';
+const API_BASE = 'http://167.233.132.127:5001';
 let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -37,7 +37,7 @@ async function loadUserData() {
             updateUI(data);
             updateFields(data);
             updateReferral(data);
-            updateDashboardUI(data);  // ADDED: Update dashboard stats
+            updateDashboardUI(data);
             await updateReferralStats(userId);
         }
     } catch (error) {
@@ -55,7 +55,6 @@ async function updateReferralStats(userId) {
             document.getElementById('level1Count').textContent = data.level1_count || 0;
             document.getElementById('level1Earnings').textContent = `$${(data.level1_earnings || 0).toFixed(2)}`;
             
-            // Hide Level 2 section if it exists
             const level2Section = document.getElementById('level2Section');
             if (level2Section) level2Section.style.display = 'none';
         }
@@ -86,7 +85,6 @@ function updateUI(data) {
     }
 }
 
-// NEW: Dashboard UI Update Function
 function updateDashboardUI(data) {
     const dashBalance = document.getElementById('dashBalance');
     const dashInvested = document.getElementById('dashInvested');
@@ -177,10 +175,6 @@ async function updateReferral(data) {
         }
     }
 }
-
-// ============================================
-// WALLET FUNCTIONS
-// ============================================
 
 async function saveWallet() {
     const userId = tgUser?.id || '0';
@@ -328,10 +322,6 @@ async function setWallet() {
     }
 }
 
-// ============================================
-// INVESTMENT FUNCTIONS
-// ============================================
-
 async function investField(fieldNumber) {
     const userId = tgUser?.id || '0';
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
@@ -420,10 +410,6 @@ async function checkDeposit() {
     }
 }
 
-// ============================================
-// HISTORY FUNCTIONS
-// ============================================
-
 function filterHistory(type) {
     document.querySelectorAll('.filter-btn').forEach(btn => { btn.classList.remove('active'); });
     event.target.classList.add('active');
@@ -431,12 +417,10 @@ function filterHistory(type) {
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     const userId = tgUser?.id || '0';
     
-    // Fetch both regular history and investments
     let url1 = `${API_BASE}/api/real_history?telegram_id=${userId}`;
     let url2 = `${API_BASE}/api/investments/${userId}`;
     
     if (type === 'investments') {
-        // Only fetch investments
         fetch(url2)
             .then(response => response.json())
             .then(data => {
@@ -452,28 +436,23 @@ function filterHistory(type) {
         return;
     }
     
-    // For 'all' or specific types, fetch both and combine
     Promise.all([fetch(url1), fetch(url2)])
         .then(responses => Promise.all(responses.map(r => r.json())))
         .then(data => {
             let allTransactions = [];
             
-            // Add regular transactions (deposits, withdrawals, earnings)
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
             
-            // Add investments
             if (data[1].transactions && data[1].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
             
-            // Filter by type if not 'all'
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(tx => tx.type === type);
             }
             
-            // Sort by date (newest first)
             allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
             
             if (allTransactions.length > 0) {
@@ -496,7 +475,6 @@ function renderHistory(transactions) {
         const date = new Date(tx.date).toLocaleDateString();
         let displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         
-        // Format amount with field number for investments
         let amountDisplay = `$${tx.amount.toFixed(2)}`;
         if (tx.type === 'investment' && tx.field) {
             amountDisplay = `$${tx.amount.toFixed(2)} (Field ${tx.field})`;
@@ -506,10 +484,6 @@ function renderHistory(transactions) {
     });
     historyList.innerHTML = html;
 }
-
-// ============================================
-// COUNTDOWN TIMER FUNCTIONS - FIXED UTC
-// ============================================
 
 function updateFieldTimers() {
     const now = new Date();
@@ -566,10 +540,6 @@ function stopCountdownTimer() {
     }
 }
 
-// ============================================
-// WITHDRAW FORM
-// ============================================
-
 function setupEventListeners() {
     const withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
@@ -619,10 +589,6 @@ function setupEventListeners() {
     }
 }
 
-// ============================================
-// EXPORTS
-// ============================================
-
 window.navigateTo = navigateTo;
 window.goBack = goBack;
 window.copyAddress = copyAddress;
@@ -633,5 +599,3 @@ window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
 window.disconnectWallet = disconnectWallet;
 window.setWallet = setWallet;
-
-// Force rebuild - Sun Jun 21 08:30:32 AM UTC 2026
