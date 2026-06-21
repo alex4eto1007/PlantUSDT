@@ -37,6 +37,7 @@ async function loadUserData() {
             updateUI(data);
             updateFields(data);
             updateReferral(data);
+            updateDashboardUI(data);  // ADDED: Update dashboard stats
             await updateReferralStats(userId);
         }
     } catch (error) {
@@ -83,6 +84,21 @@ function updateUI(data) {
     if (referralEarningsDisplayEl) {
         referralEarningsDisplayEl.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
     }
+}
+
+// NEW: Dashboard UI Update Function
+function updateDashboardUI(data) {
+    const dashBalance = document.getElementById('dashBalance');
+    const dashInvested = document.getElementById('dashInvested');
+    const dashEarned = document.getElementById('dashEarned');
+    const dashDeposited = document.getElementById('dashDeposited');
+    const dashReferrals = document.getElementById('dashReferrals');
+
+    if (dashBalance) dashBalance.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
+    if (dashInvested) dashInvested.textContent = `$${(data.total_invested || 0).toFixed(2)}`;
+    if (dashEarned) dashEarned.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
+    if (dashDeposited) dashDeposited.textContent = `$${(data.total_deposited || 0).toFixed(2)}`;
+    if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
 }
 
 function updateFields(data) {
