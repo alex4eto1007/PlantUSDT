@@ -34,7 +34,7 @@ class InvestmentService:
                 return 0
 
             # Calculate referral bonus based on deposit (investment amount)
-            referral_bonus = investment.amount * 0.05  # 5% of deposit
+            referral_bonus = investment.amount * 0.05
 
             # Credit the referrer
             referrer.balance += referral_bonus
@@ -48,6 +48,8 @@ class InvestmentService:
 
             # --- SEND TELEGRAM NOTIFICATION VIA API ---
             try:
+                from config.settings import Config
+                
                 async def send_notification():
                     try:
                         bot_token = Config.BOT_TOKEN
@@ -80,7 +82,6 @@ class InvestmentService:
                     except Exception as e:
                         logger.error(f"❌ Error sending notification: {e}")
                 
-                # Run the notification as a background task
                 asyncio.create_task(send_notification())
             except Exception as e:
                 logger.error(f"❌ Error in notification setup: {e}")
@@ -119,7 +120,7 @@ class InvestmentService:
                 amount=amount,
                 total_return=total_return,
                 end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
-                next_payout_date=now + timedelta(hours=24)  # First payout in 24 hours
+                next_payout_date=now + timedelta(hours=24)
             )
             session.add(investment)
 
@@ -167,18 +168,15 @@ class InvestmentService:
                         logger.info(f"Investment {investment.id} expired and marked as completed")
                         continue
 
-                    # ============================================
-                    # CHECK IF NEXT PAYOUT IS DUE (24 hours after last payout)
-                    # ============================================
+                    # Check if next payout is due
                     if investment.next_payout_date and now < investment.next_payout_date:
-                        # Not yet time for payout
                         continue
 
                     # Calculate daily payout
                     daily_amount = self.calculate_daily_payout(investment.amount)
                     day_number = (now - investment.start_date).days + 1
 
-                    # Record payout to user
+                    # Record payout
                     payout = DailyPayout(
                         user_id=investment.user_id,
                         investment_id=investment.id,
@@ -190,10 +188,6 @@ class InvestmentService:
                     # Update investment
                     investment.paid_out = (investment.paid_out or 0) + daily_amount
                     investment.last_payout_date = now
-
-                    # ============================================
-                    # UPDATE NEXT PAYOUT DATE (24 hours from now)
-                    # ============================================
                     investment.next_payout_date = now + timedelta(hours=24)
 
                     # Credit user's balance
@@ -206,10 +200,10 @@ class InvestmentService:
 
                     session.commit()
 
-                    # Process referral earnings (single level only)
+                    # Process referral earnings
                     await self.process_referral_earnings(investment)
 
-                    logger.info(f"Payout processed for investment {investment.id}: ${daily_amount:.2f}, next payout at {investment.next_payout_date}")
+                    logger.info(f"Payout processed for investment {investment.id}: ${daily_amount:.2f}")
 
                 except Exception as e:
                     logger.error(f"Error processing payout for investment {investment.id}: {e}")
@@ -226,7 +220,6 @@ class InvestmentService:
         try:
             session = self.db.get_session()
 
-            # Get expired but not completed investments
             expired = session.query(Investment).filter(
                 Investment.end_date < datetime.utcnow(),
                 Investment.is_active == True,
@@ -241,12 +234,10 @@ class InvestmentService:
 
             for investment in expired:
                 try:
-                    # Mark as inactive and completed
                     investment.is_active = False
                     investment.is_completed = True
                     investment.principal_returned = True
 
-                    # Return principal to user's balance
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if user:
                         user.balance += investment.amount
