@@ -89,7 +89,7 @@ Share your referral link and earn 5% from your friends' deposits!
 Use /app to open the Mini App!"""
 
         keyboard = [
-            [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
+            [InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -170,7 +170,7 @@ Use /app to open the Mini App!"""
 
     # Regular welcome back message
     keyboard = [
-        [InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))]
+        [InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -180,16 +180,26 @@ Use /app to open the Mini App!"""
     )
 
 # ============================================
-# APP COMMAND
+# APP COMMAND - Direct Mini App Link
 # ============================================
 
 async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
-        InlineKeyboardButton("🌱 Open PlantUSDT App", web_app=WebAppInfo(url=VERCEL_URL))
+        InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("🌱 Open the PlantUSDT Mini App:", reply_markup=reply_markup)
+    await update.message.reply_text(
+        "🌱 **Open PlantUSDT Mini App**\n\n"
+        "Click the button below to:\n"
+        "💰 Check your balance\n"
+        "🌾 Invest in planting fields\n"
+        "📊 View your earnings\n"
+        "👥 Manage referrals\n\n"
+        "Start growing your USDT today! 🚀",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
 
 # ============================================
 # ADMIN COMMANDS
