@@ -450,13 +450,18 @@ function filterHistory(type) {
             // Filter by type if not 'all'
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) { 
+                    // Handle 'investments' tab - API returns 'investment' (singular)
+                    if (type === 'investments') {
+                        return tx.type === 'investment' || tx.type === 'investments';
+                    }
                     return tx.type === type; 
                 });
             }
             
             // If filtered result is empty
             if (allTransactions.length === 0) {
-                historyList.innerHTML = '<p class="empty-state">No ' + type + ' transactions found.</p>';
+                var displayType = type === 'investments' ? 'investment' : type;
+                historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found.</p>';
                 return;
             }
             
