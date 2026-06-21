@@ -18,6 +18,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Global application variable (for importing in other modules)
+application = None
+
 # Initialize services
 db = DatabaseManager()
 investment_service = InvestmentService()
@@ -332,6 +335,7 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Start the bot"""
+    global application
     try:
         # Start scheduler
         scheduler.start()
