@@ -20,8 +20,8 @@ class InvestmentService:
 
     async def process_referral_earnings(self, investment):
         """Process referral earnings based on deposits (5% of deposit amount)"""
+        logger.info("🔔🔔🔔 REFERRAL FUNCTION STARTED 🔔🔔🔔")
         try:
-            logger.info(f"🔔 REFERRAL DEBUG: process_referral_earnings called for investment {investment.id}")
             session = self.db.get_session()
 
             # Get the user who made the investment
@@ -50,7 +50,7 @@ class InvestmentService:
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount}")
 
             # --- SEND TELEGRAM NOTIFICATION VIA API ---
-            logger.info(f"🔔 REFERRAL DEBUG: Attempting to send notification to {referrer.telegram_id}")
+            logger.info("🔔🔔🔔 ENTERING NOTIFICATION SECTION 🔔🔔🔔")
             try:
                 async def send_notification():
                     try:
