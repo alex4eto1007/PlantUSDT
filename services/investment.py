@@ -16,7 +16,7 @@ class InvestmentService:
     def calculate_total_return(self, investment_amount: float) -> float:
         return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
 
-    def process_referral_earnings(self, investment):
+    async def process_referral_earnings(self, investment):
         """Process referral earnings based on deposits (5% of deposit amount)"""
         try:
             session = self.db.get_session()
@@ -124,7 +124,7 @@ class InvestmentService:
         finally:
             session.close()
 
-    def process_daily_payouts(self):
+    async def process_daily_payouts(self):
         """Process daily payouts - 24 hours after investment or last payout"""
         try:
             session = self.db.get_session()
@@ -191,7 +191,7 @@ class InvestmentService:
                     session.commit()
 
                     # Process referral earnings (single level only)
-                    self.process_referral_earnings(investment)
+                    await self.process_referral_earnings(investment)
 
                     logger.info(f"Payout processed for investment {investment.id}: ${daily_amount:.2f}, next payout at {investment.next_payout_date}")
 
