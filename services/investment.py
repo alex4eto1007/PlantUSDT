@@ -3,6 +3,7 @@ from database.db_manager import DatabaseManager
 from database.models import Investment, User, DailyPayout
 from config.settings import Config
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -45,29 +46,33 @@ class InvestmentService:
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount}")
 
             # --- SEND TELEGRAM NOTIFICATION ---
-            try:
-                from bot.main import application
-                if application and application.bot:
-                    username = user.username or user.first_name or "User"
-                    # Count total referrals for the referrer
-                    total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
-                    
-                    message = (
-                        f"🎁 **Referral Bonus Received**\n\n"
-                        f"Your referral **@{username}** deposited **${investment.amount:.2f} USDT**\n\n"
-                        f"**+${referral_bonus:.2f} USDT** credited to your balance! (5% bonus)\n"
-                        f"━━━━━━━━━━━━━━━━━━━━\n"
-                        f"💰 Your balance: **${referrer.balance:.2f}**\n"
-                        f"👥 Total referrals: **{total_refs}**"
-                    )
-                    await application.bot.send_message(
-                        chat_id=referrer.telegram_id,
-                        text=message,
-                        parse_mode='Markdown'
-                    )
-                    logger.info(f"Referral notification sent to {referrer.telegram_id}")
-            except Exception as e:
-                logger.error(f"Error sending referral notification: {e}")
+            async def send_notification():
+                try:
+                    from bot.main import application
+                    if application and application.bot:
+                        username = user.username or user.first_name or "User"
+                        # Count total referrals for the referrer
+                        total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
+                        
+                        message = (
+                            f"🎁 **Referral Bonus Received**\n\n"
+                            f"Your referral **@{username}** deposited **${investment.amount:.2f} USDT**\n\n"
+                            f"**+${referral_bonus:.2f} USDT** credited to your balance! (5% bonus)\n"
+                            f"━━━━━━━━━━━━━━━━━━━━\n"
+                            f"💰 Your balance: **${referrer.balance:.2f}**\n"
+                            f"👥 Total referrals: **{total_refs}**"
+                        )
+                        await application.bot.send_message(
+                            chat_id=referrer.telegram_id,
+                            text=message,
+                            parse_mode='Markdown'
+                        )
+                        logger.info(f"Referral notification sent to {referrer.telegram_id}")
+                except Exception as e:
+                    logger.error(f"Error sending referral notification: {e}")
+
+            # Run the notification as a background task
+            asyncio.create_task(send_notification())
             # --- END NOTIFICATION ---
 
             return referral_bonus
