@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📊 Dashboard - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js?v=13"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
@@ -50,6 +50,22 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=13"></script>
+    <script src="js/app.js?v=14"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Telegram WebApp
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.tg = window.Telegram.WebApp;
+                window.tg.ready();
+                window.tg.expand();
+            }
+            // Load user data
+            if (typeof loadUserData === 'function') {
+                loadUserData();
+            } else {
+                console.error('loadUserData function not found');
+            }
+        });
+    </script>
 </body>
 </html>
