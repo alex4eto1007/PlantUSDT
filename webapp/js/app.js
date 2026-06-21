@@ -1,9 +1,9 @@
 // PlantUSDT Mini App - JavaScript
 
 let tg = window.Telegram.WebApp;
-let tgUser = tg.initDataUnsafe?.user;
+let tgUser = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
-const API_BASE = .https://plantusdt.ddns.net.;
+const API_BASE = 'https://plantusdt.ddns.net';
 let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -30,7 +30,7 @@ function goBack() { window.history.back(); }
 
 async function loadUserData() {
     try {
-        const userId = tgUser?.id || '0';
+        const userId = tgUser ? tgUser.id : '0';
         const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
         const data = await response.json();
         if (data.success) {
@@ -51,11 +51,11 @@ async function updateReferralStats(userId) {
         const data = await response.json();
         if (data.success) {
             document.getElementById('referralCount').textContent = data.total_referrals || 0;
-            document.getElementById('referralEarned').textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
+            document.getElementById('referralEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);
             document.getElementById('level1Count').textContent = data.level1_count || 0;
-            document.getElementById('level1Earnings').textContent = `$${(data.level1_earnings || 0).toFixed(2)}`;
+            document.getElementById('level1Earnings').textContent = '$' + (data.level1_earnings || 0).toFixed(2);
             
-            const level2Section = document.getElementById('level2Section');
+            var level2Section = document.getElementById('level2Section');
             if (level2Section) level2Section.style.display = 'none';
         }
     } catch (error) {
@@ -64,65 +64,65 @@ async function updateReferralStats(userId) {
 }
 
 function updateUI(data) {
-    const balanceEl = document.getElementById('balance');
+    var balanceEl = document.getElementById('balance');
     if (balanceEl) {
-        balanceEl.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
+        balanceEl.textContent = '$' + (data.balance || 0).toFixed(2);
     }
     
-    const totalEarningsEl = document.getElementById('totalEarnings');
+    var totalEarningsEl = document.getElementById('totalEarnings');
     if (totalEarningsEl) {
-        totalEarningsEl.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
+        totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(2);
     }
     
-    const investmentEarningsEl = document.getElementById('investmentEarnings');
+    var investmentEarningsEl = document.getElementById('investmentEarnings');
     if (investmentEarningsEl) {
-        investmentEarningsEl.textContent = `$${(data.investment_earnings || 0).toFixed(2)}`;
+        investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(2);
     }
     
-    const referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
+    var referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
     if (referralEarningsDisplayEl) {
-        referralEarningsDisplayEl.textContent = `$${(data.referral_earned || 0).toFixed(2)}`;
+        referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(2);
     }
 }
 
 function updateDashboardUI(data) {
-    const dashBalance = document.getElementById('dashBalance');
-    const dashInvested = document.getElementById('dashInvested');
-    const dashEarned = document.getElementById('dashEarned');
-    const dashDeposited = document.getElementById('dashDeposited');
-    const dashReferrals = document.getElementById('dashReferrals');
+    var dashBalance = document.getElementById('dashBalance');
+    var dashInvested = document.getElementById('dashInvested');
+    var dashEarned = document.getElementById('dashEarned');
+    var dashDeposited = document.getElementById('dashDeposited');
+    var dashReferrals = document.getElementById('dashReferrals');
 
-    if (dashBalance) dashBalance.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
-    if (dashInvested) dashInvested.textContent = `$${(data.total_invested || 0).toFixed(2)}`;
-    if (dashEarned) dashEarned.textContent = `$${(data.total_earnings || 0).toFixed(2)}`;
-    if (dashDeposited) dashDeposited.textContent = `$${(data.total_deposited || 0).toFixed(2)}`;
+    if (dashBalance) dashBalance.textContent = '$' + (data.balance || 0).toFixed(2);
+    if (dashInvested) dashInvested.textContent = '$' + (data.total_invested || 0).toFixed(2);
+    if (dashEarned) dashEarned.textContent = '$' + (data.total_earnings || 0).toFixed(2);
+    if (dashDeposited) dashDeposited.textContent = '$' + (data.total_deposited || 0).toFixed(2);
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
 }
 
 function updateFields(data) {
-    const fields = data.fields || [];
+    var fields = data.fields || [];
     window.fieldData = {};
     
-    for (let i = 1; i <= 3; i++) {
-        const field = fields.find(f => f.field_number === i);
-        const statusEl = document.getElementById(`field${i}Status`);
-        const amountEl = document.getElementById(`field${i}Amount`);
-        const daysEl = document.getElementById(`field${i}Days`);
-        const earnedEl = document.getElementById(`field${i}Earned`);
-        const progressEl = document.getElementById(`field${i}Progress`);
-        const cardEl = document.getElementById(`field${i}`);
-        const btnEl = cardEl?.querySelector('.action-btn');
-        const timerEl = document.getElementById(`field${i}Timer`);
+    for (var i = 1; i <= 3; i++) {
+        var field = fields.find(function(f) { return f.field_number === i; });
+        var statusEl = document.getElementById('field' + i + 'Status');
+        var amountEl = document.getElementById('field' + i + 'Amount');
+        var daysEl = document.getElementById('field' + i + 'Days');
+        var earnedEl = document.getElementById('field' + i + 'Earned');
+        var progressEl = document.getElementById('field' + i + 'Progress');
+        var cardEl = document.getElementById('field' + i);
+        var btnEl = cardEl ? cardEl.querySelector('.action-btn') : null;
+        var timerEl = document.getElementById('field' + i + 'Timer');
         
         if (field) {
-            const progress = field.paid_out / field.total_return * 100;
-            const days = Math.floor((Date.now() - new Date(field.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            var progress = field.paid_out / field.total_return * 100;
+            var days = Math.floor((Date.now() - new Date(field.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
             statusEl.textContent = '🟢 Active';
             statusEl.className = 'field-status active';
-            amountEl.textContent = `$${field.amount.toFixed(2)}`;
-            daysEl.textContent = `${Math.min(days, 30)}/30`;
-            earnedEl.textContent = `$${field.paid_out.toFixed(2)}`;
-            progressEl.style.width = `${Math.min(progress, 100)}%`;
+            amountEl.textContent = '$' + field.amount.toFixed(2);
+            daysEl.textContent = Math.min(days, 30) + '/30';
+            earnedEl.textContent = '$' + field.paid_out.toFixed(2);
+            progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
             btnEl.textContent = '🌱 Active';
             btnEl.disabled = true;
@@ -150,18 +150,18 @@ function updateFields(data) {
 }
 
 async function updateReferral(data) {
-    const referralLink = document.getElementById('referralLinkText');
-    const walletText = document.getElementById('walletText');
-    const isConnected = walletText?.textContent.includes('Connected');
+    var referralLink = document.getElementById('referralLinkText');
+    var walletText = document.getElementById('walletText');
+    var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
     
     if (referralLink) {
         if (isConnected) {
-            const userId = tgUser?.id || '0';
+            var userId = tgUser ? tgUser.id : '0';
             try {
-                const response = await fetch(`${API_BASE}/api/get_referral_code?telegram_id=${userId}&t=${Date.now()}`);
-                const result = await response.json();
+                var response = await fetch(API_BASE + '/api/get_referral_code?telegram_id=' + userId + '&t=' + Date.now());
+                var result = await response.json();
                 if (result.success && result.referral_code) {
-                    referralLink.textContent = `https://t.me/PlantUSDT_bot?start=${result.referral_code}`;
+                    referralLink.textContent = 'https://t.me/PlantUSDT_bot?start=' + result.referral_code;
                     referralLink.style.color = '#ccd6f0';
                 } else {
                     referralLink.textContent = 'Error loading referral link';
@@ -177,9 +177,9 @@ async function updateReferral(data) {
 }
 
 async function saveWallet() {
-    const userId = tgUser?.id || '0';
-    const walletInput = document.getElementById('walletInput');
-    const walletAddress = walletInput?.value.trim();
+    var userId = tgUser ? tgUser.id : '0';
+    var walletInput = document.getElementById('walletInput');
+    var walletAddress = walletInput ? walletInput.value.trim() : '';
     if (!walletAddress) {
         tg.showPopup({title:'❌ Error', message:'Please enter a wallet address.', buttons:[{type:'ok'}]});
         return;
@@ -193,12 +193,12 @@ async function saveWallet() {
         return;
     }
     try {
-        const response = await fetch(`${API_BASE}/api/save_wallet`, {
+        var response = await fetch(API_BASE + '/api/save_wallet', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({telegram_id:userId, wallet_address:walletAddress})
         });
-        const data = await response.json();
+        var data = await response.json();
         if (data.success) {
             tg.showPopup({title:'✅ Wallet Saved!', message:'Wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
             updateWalletUI(walletAddress);
@@ -213,11 +213,11 @@ async function saveWallet() {
 }
 
 function updateWalletUI(address) {
-    const statusText = document.getElementById('walletText');
-    const addressDisplay = document.getElementById('walletAddressDisplay');
-    const walletInput = document.getElementById('walletInput');
-    const saveBtn = document.getElementById('saveWalletBtn');
-    const disconnectBtn = document.getElementById('disconnectWalletBtn');
+    var statusText = document.getElementById('walletText');
+    var addressDisplay = document.getElementById('walletAddressDisplay');
+    var walletInput = document.getElementById('walletInput');
+    var saveBtn = document.getElementById('saveWalletBtn');
+    var disconnectBtn = document.getElementById('disconnectWalletBtn');
     if (statusText) {
         statusText.textContent = '✅ Wallet Connected';
         statusText.className = 'connected';
@@ -237,11 +237,11 @@ function updateWalletUI(address) {
 }
 
 function resetWalletUI() {
-    const statusText = document.getElementById('walletText');
-    const addressDisplay = document.getElementById('walletAddressDisplay');
-    const walletInput = document.getElementById('walletInput');
-    const saveBtn = document.getElementById('saveWalletBtn');
-    const disconnectBtn = document.getElementById('disconnectWalletBtn');
+    var statusText = document.getElementById('walletText');
+    var addressDisplay = document.getElementById('walletAddressDisplay');
+    var walletInput = document.getElementById('walletInput');
+    var saveBtn = document.getElementById('saveWalletBtn');
+    var disconnectBtn = document.getElementById('disconnectWalletBtn');
     if (statusText) {
         statusText.textContent = 'Wallet not connected';
         statusText.className = 'disconnected';
@@ -258,7 +258,7 @@ function resetWalletUI() {
 }
 
 async function disconnectWallet() {
-    const userId = tgUser?.id || '0';
+    var userId = tgUser ? tgUser.id : '0';
     tg.showPopup({
         title:'🔓 Disconnect Wallet',
         message:'Are you sure you want to disconnect your wallet?',
@@ -269,12 +269,12 @@ async function disconnectWallet() {
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
-                const response = await fetch(`${API_BASE}/api/save_wallet`, {
+                var response = await fetch(API_BASE + '/api/save_wallet', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({telegram_id:userId, wallet_address:''})
                 });
-                const data = await response.json();
+                var data = await response.json();
                 if (data.success) {
                     resetWalletUI();
                     tg.showPopup({title:'✅ Disconnected', message:'Wallet disconnected.', buttons:[{type:'ok'}]});
@@ -290,10 +290,10 @@ async function disconnectWallet() {
 }
 
 async function loadSavedWallet() {
-    const userId = tgUser?.id || '0';
+    var userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/get_wallet?telegram_id=${userId}`);
-        const data = await response.json();
+        var response = await fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId);
+        var data = await response.json();
         if (data.success && data.wallet_address) {
             updateWalletUI(data.wallet_address);
         }
@@ -303,12 +303,12 @@ async function loadSavedWallet() {
 }
 
 async function setWallet() {
-    const userId = tgUser?.id || '0';
+    var userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/get_wallet?telegram_id=${userId}`);
-        const data = await response.json();
+        var response = await fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId);
+        var data = await response.json();
         if (data.success && data.wallet_address) {
-            const withdrawAddress = document.getElementById('withdrawAddress');
+            var withdrawAddress = document.getElementById('withdrawAddress');
             if (withdrawAddress) {
                 withdrawAddress.value = data.wallet_address;
                 tg.showPopup({title:'✅ Wallet Loaded!', message:'Wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
@@ -323,24 +323,24 @@ async function setWallet() {
 }
 
 async function investField(fieldNumber) {
-    const userId = tgUser?.id || '0';
-    const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
+    var userId = tgUser ? tgUser.id : '0';
+    var amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
     
-    let cleanAmount = amount.replace('$', '').trim();
-    const amountNum = parseFloat(cleanAmount);
+    var cleanAmount = amount.replace('$', '').trim();
+    var amountNum = parseFloat(cleanAmount);
     
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
         tg.showPopup({title:'❌ Invalid Amount', message:'Please enter between $5 and $100.', buttons:[{type:'ok'}]});
         return;
     }
     try {
-        const response = await fetch(`${API_BASE}/api/invest`, {
+        var response = await fetch(API_BASE + '/api/invest', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({telegram_id:userId, field_number:fieldNumber, amount:amountNum})
         });
-        const data = await response.json();
+        var data = await response.json();
         if (data.success) {
             tg.showPopup({title:'✅ Success!', message:'$' + amountNum + ' invested in Field #' + fieldNumber + '!', buttons:[{type:'ok'}]});
             loadUserData();
@@ -351,8 +351,8 @@ async function investField(fieldNumber) {
 }
 
 async function copyReferral() {
-    const walletText = document.getElementById('walletText');
-    const isConnected = walletText?.textContent.includes('Connected');
+    var walletText = document.getElementById('walletText');
+    var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
     if (!isConnected) {
         tg.showPopup({
             title: '⚠️ Wallet Required',
@@ -361,15 +361,15 @@ async function copyReferral() {
         });
         return;
     }
-    const userId = tgUser?.id || '0';
+    var userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/get_referral_code?telegram_id=${userId}&t=${Date.now()}`);
-        const data = await response.json();
+        var response = await fetch(API_BASE + '/api/get_referral_code?telegram_id=' + userId + '&t=' + Date.now());
+        var data = await response.json();
         if (data.success && data.referral_code) {
-            const link = `https://t.me/PlantUSDT_bot?start=${data.referral_code}`;
-            navigator.clipboard.writeText(link).then(() => {
+            var link = 'https://t.me/PlantUSDT_bot?start=' + data.referral_code;
+            navigator.clipboard.writeText(link).then(function() {
                 tg.showPopup({title: '✅ Copied!', message: 'Referral link copied!', buttons: [{type: 'ok'}]});
-            }).catch(() => {
+            }).catch(function() {
                 tg.showPopup({title: '📋 Referral Link', message: link, buttons: [{type: 'ok'}]});
             });
         } else {
@@ -382,22 +382,22 @@ async function copyReferral() {
 }
 
 function copyAddress() {
-    const address = document.getElementById('addressText')?.textContent || '';
+    var address = document.getElementById('addressText') ? document.getElementById('addressText').textContent : '';
     if (address) {
-        navigator.clipboard.writeText(address).then(() => {
+        navigator.clipboard.writeText(address).then(function() {
             tg.showPopup({title:'✅ Copied!', message:'Wallet address copied.', buttons:[{type:'ok'}]});
         });
     }
 }
 
 async function checkDeposit() {
-    const statusDiv = document.getElementById('depositStatus');
+    var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
         statusDiv.innerHTML = '🔍 Checking for deposits...';
         try {
-            const userId = tgUser?.id || '0';
-            const response = await fetch(`${API_BASE}/api/check_deposit?telegram_id=${userId}`);
-            const data = await response.json();
+            var userId = tgUser ? tgUser.id : '0';
+            var response = await fetch(API_BASE + '/api/check_deposit?telegram_id=' + userId);
+            var data = await response.json();
             if (data.success) {
                 statusDiv.innerHTML = '✅ Deposit detected! Balance updated.';
                 loadUserData();
@@ -411,35 +411,38 @@ async function checkDeposit() {
 }
 
 function filterHistory(type) {
-    document.querySelectorAll('.filter-btn').forEach(btn => { btn.classList.remove('active'); });
+    var buttons = document.querySelectorAll('.filter-btn');
+    for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active');
+    }
     event.target.classList.add('active');
-    const historyList = document.getElementById('historyList');
+    var historyList = document.getElementById('historyList');
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
-    const userId = tgUser?.id || '0';
+    var userId = tgUser ? tgUser.id : '0';
     
-    let url1 = `${API_BASE}/api/real_history?telegram_id=${userId}`;
-    let url2 = `${API_BASE}/api/investments/${userId}`;
+    var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
+    var url2 = API_BASE + '/api/investments/' + userId;
     
     if (type === 'investments') {
         fetch(url2)
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
                 if (data.transactions && data.transactions.length > 0) {
                     renderHistory(data.transactions);
                 } else {
                     historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
                 }
             })
-            .catch(error => {
+            .catch(function(error) {
                 historyList.innerHTML = '<p class="empty-state">Error loading history.</p>';
             });
         return;
     }
     
     Promise.all([fetch(url1), fetch(url2)])
-        .then(responses => Promise.all(responses.map(r => r.json())))
-        .then(data => {
-            let allTransactions = [];
+        .then(function(responses) { return Promise.all(responses.map(function(r) { return r.json(); })); })
+        .then(function(data) {
+            var allTransactions = [];
             
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
@@ -450,10 +453,10 @@ function filterHistory(type) {
             }
             
             if (type !== 'all') {
-                allTransactions = allTransactions.filter(tx => tx.type === type);
+                allTransactions = allTransactions.filter(function(tx) { return tx.type === type; });
             }
             
-            allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            allTransactions.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
             
             if (allTransactions.length > 0) {
                 renderHistory(allTransactions);
@@ -461,37 +464,38 @@ function filterHistory(type) {
                 historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
             }
         })
-        .catch(error => {
+        .catch(function(error) {
             historyList.innerHTML = '<p class="empty-state">Error loading history.</p>';
         });
 }
 
 function renderHistory(transactions) {
-    const historyList = document.getElementById('historyList');
-    let html = '';
-    transactions.forEach(tx => {
-        let icon = tx.type === 'deposit' ? '📥' : tx.type === 'withdraw' ? '📤' : tx.type === 'investment' ? '🌱' : '💰';
-        const status = tx.status || 'completed';
-        const date = new Date(tx.date).toLocaleDateString();
-        let displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+    var historyList = document.getElementById('historyList');
+    var html = '';
+    for (var i = 0; i < transactions.length; i++) {
+        var tx = transactions[i];
+        var icon = tx.type === 'deposit' ? '📥' : tx.type === 'withdraw' ? '📤' : tx.type === 'investment' ? '🌱' : '💰';
+        var status = tx.status || 'completed';
+        var date = new Date(tx.date).toLocaleDateString();
+        var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         
-        let amountDisplay = `$${tx.amount.toFixed(2)}`;
+        var amountDisplay = '$' + tx.amount.toFixed(2);
         if (tx.type === 'investment' && tx.field) {
-            amountDisplay = `$${tx.amount.toFixed(2)} (Field ${tx.field})`;
+            amountDisplay = '$' + tx.amount.toFixed(2) + ' (Field ' + tx.field + ')';
         }
         
         html += '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-details"><div class="history-type">' + displayText + '</div><div class="history-date">' + date + '</div></div><div class="history-amount ' + status + '">' + amountDisplay + '</div></div>';
-    });
+    }
     historyList.innerHTML = html;
 }
 
 function updateFieldTimers() {
-    const now = new Date();
-    const utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+    var now = new Date();
+    var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
     
-    for (let i = 1; i <= 3; i++) {
-        const timerEl = document.getElementById(`field${i}Timer`);
-        const statusEl = document.getElementById(`field${i}Status`);
+    for (var i = 1; i <= 3; i++) {
+        var timerEl = document.getElementById('field' + i + 'Timer');
+        var statusEl = document.getElementById('field' + i + 'Status');
         
         if (!timerEl || !statusEl) continue;
         
@@ -501,25 +505,25 @@ function updateFieldTimers() {
             continue;
         }
         
-        const fieldData = window.fieldData ? window.fieldData[i] : null;
+        var fieldData = window.fieldData ? window.fieldData[i] : null;
         if (!fieldData || !fieldData.next_payout_date) {
             timerEl.textContent = '⏳ Calculating...';
             continue;
         }
         
-        const nextPayout = new Date(fieldData.next_payout_date + 'Z').getTime();
-        const timeLeft = nextPayout - utcNow;
+        var nextPayout = new Date(fieldData.next_payout_date + 'Z').getTime();
+        var timeLeft = nextPayout - utcNow;
         
         if (timeLeft <= 0) {
             timerEl.textContent = '🟢 Ready for payout! (UTC)';
             timerEl.className = 'field-timer ready';
         } else {
-            const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            var hours = Math.floor(timeLeft / (1000 * 60 * 60));
+            var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
             
-            const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            timerEl.textContent = `⏳ Next payout (UTC): ${timeString}`;
+            var timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            timerEl.textContent = '⏳ Next payout (UTC): ' + timeString;
             timerEl.className = 'field-timer countdown';
         }
     }
@@ -541,14 +545,14 @@ function stopCountdownTimer() {
 }
 
 function setupEventListeners() {
-    const withdrawForm = document.getElementById('withdrawForm');
+    var withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            const amountInput = document.getElementById('withdrawAmount');
-            const addressInput = document.getElementById('withdrawAddress');
-            const amount = amountInput?.value;
-            const address = addressInput?.value;
+            var amountInput = document.getElementById('withdrawAmount');
+            var addressInput = document.getElementById('withdrawAddress');
+            var amount = amountInput ? amountInput.value : '';
+            var address = addressInput ? addressInput.value : '';
             if (!amount || parseFloat(amount) < 2) {
                 tg.showPopup({title:'❌ Error', message:'Please enter at least $2 USDT.', buttons:[{type:'ok'}]});
                 return;
@@ -561,16 +565,16 @@ function setupEventListeners() {
                 tg.showPopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet.', buttons:[{type:'ok'}]});
                 return;
             }
-            const userId = tgUser?.id || '0';
-            const submitBtn = document.querySelector('.withdraw-btn');
+            var userId = tgUser ? tgUser.id : '0';
+            var submitBtn = document.querySelector('.withdraw-btn');
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Processing...'; }
-            fetch(`${API_BASE}/api/withdraw`, {
+            fetch(API_BASE + '/api/withdraw', {
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({telegram_id:userId, amount:parseFloat(amount), address:address})
             })
-                .then(response => response.json())
-                .then(data => {
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
                     if (data.success) {
                         tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted!', buttons:[{type:'ok'}]});
@@ -580,7 +584,7 @@ function setupEventListeners() {
                         tg.showPopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
                     }
                 })
-                .catch(error => {
+                .catch(function(error) {
                     console.error('Error:', error);
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
                     tg.showPopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
