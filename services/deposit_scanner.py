@@ -177,17 +177,18 @@ class DepositScanner:
             logger.info(f"✅ Deposit detected for user {user_id}: ${amount} (expected: ${expected_amount})")
 
             # Send notification
-            try:
-                await bot.send_message(
-                    chat_id=user.telegram_id,
-                    text=f"✅ **Deposit Detected!**\n\n"
-                         f"💰 Amount: **${amount:.2f} USDT**\n"
-                         f"📊 Your balance: **${user.balance:.2f}**\n\n"
-                         f"🌱 You can now invest in planting fields!",
-                    parse_mode='Markdown'
-                )
-            except Exception as e:
-                logger.error(f"Error sending deposit notification: {e}")
+            if bot:
+                try:
+                    await bot.send_message(
+                        chat_id=user.telegram_id,
+                        text=f"✅ **Deposit Detected!**\n\n"
+                             f"💰 Amount: **${amount:.2f} USDT**\n"
+                             f"📊 Your balance: **${user.balance:.2f}**\n\n"
+                             f"🌱 You can now invest in planting fields!",
+                        parse_mode='Markdown'
+                    )
+                except Exception as e:
+                    logger.error(f"Error sending deposit notification: {e}")
 
             session.close()
             return {'success': True, 'message': 'Deposit detected and processed'}
@@ -197,13 +198,20 @@ class DepositScanner:
             return {'success': False, 'message': str(e)}
 
     async def _get_current_block(self):
-        """Get the current BSC block number"""
+        """Get the current BSC block number using BSC RPC"""
         try:
-            url = f"{Config.BSC_SCAN_API}?module=proxy&action=eth_blockNumber&apikey={self.api_key}"
+            # Use the BSC RPC URL directly
+            url = Config.BSC_RPC_URL
+            payload = {
+                "jsonrpc": "2.0",
+                "method": "eth_blockNumber",
+                "params": [],
+                "id": 1
+            }
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
+                async with session.post(url, json=payload) as response:
                     data = await response.json()
-                    if data.get('status') == '1':
+                    if data and data.get('result'):
                         return int(data.get('result', '0'), 16)
                     return None
         except Exception as e:
@@ -270,6 +278,8 @@ class DepositScanner:
                 f"&apikey={self.api_key}"
             )
 
+            logger.info(f"🔍 Checking BSCScan for deposits: {url[:100]}...")
+
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     data = await response.json()
@@ -277,7 +287,7 @@ class DepositScanner:
                         transactions = data.get('result', [])
                         # Filter by sender AND amount
                         expected_amount_wei = int(expected_amount * 10**18)
-                        return [
+                        found = [
                             {
                                 'hash': tx.get('hash'),
                                 'from': tx.get('from'),
@@ -288,9 +298,13 @@ class DepositScanner:
                             for tx in transactions
                             if (
                                 tx.get('from', '').lower() == user_wallet and
-                                abs(int(tx.get('value', 0)) - expected_amount_wei) < 10**15  # tolerance 0.001 USDT
+                                abs(int(tx.get('value', 0)) - expected_amount_wei) < 10**15
                             )
                         ]
+                        if found:
+                            logger.info(f"✅ Found {len(found)} matching transactions")
+                        return found
+                    logger.warning(f"BSCScan returned status: {data.get('status')}, message: {data.get('message')}")
                     return []
         except Exception as e:
             logger.error(f"Error getting user transactions with amount: {e}")
