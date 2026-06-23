@@ -14,6 +14,17 @@
             <h1 style="color: #00ff87; font-size: 20px;">💳 Deposit</h1>
         </div>
 
+        <!-- Connected Wallet Display -->
+        <div id="walletDisplay" style="margin-bottom: 16px; padding: 12px; background: rgba(0,255,135,0.05); border: 1px solid rgba(0,255,135,0.1); border-radius: 8px;">
+            <p style="font-size: 12px; color: #8892b0; margin: 0;">
+                🔗 <strong>Connected Wallet:</strong>
+                <span id="connectedWalletDisplay" style="color: #00ff87; font-family: monospace; font-size: 12px; word-break: break-all;">Not connected</span>
+            </p>
+            <p style="font-size: 11px; color: #ffd93d; margin: 4px 0 0 0;">
+                ⚠️ Send USDT ONLY from this wallet!
+            </p>
+        </div>
+
         <div class="info-card">
             <h3>📋 Deposit Instructions</h3>
             <p style="font-size: 13px; color: #8892b0; line-height: 1.6;">
@@ -28,6 +39,26 @@
                     0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76
                 </div>
                 <button onclick="copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
+            </div>
+
+            <!-- 🔒 CRITICAL WARNING - Connected Wallet Only -->
+            <div style="margin-top: 12px; padding: 14px; background: rgba(255,107,107,0.15); border: 2px solid rgba(255,107,107,0.4); border-radius: 8px;">
+                <p style="font-size: 12px; color: #ff6b6b; margin: 0; line-height: 1.6;">
+                    ⚠️ <strong>CRITICAL WARNING:</strong><br><br>
+                    🔗 We will ONLY check your <strong>connected wallet</strong> for deposits.<br><br>
+                    📤 You must send USDT <strong>FROM YOUR CONNECTED WALLET</strong>.<br><br>
+                    ❌ If you send from a different wallet, <strong>YOUR FUNDS WILL BE LOST</strong> and cannot be recovered.<br><br>
+                    ✅ Always double-check that you are sending from the wallet shown above.
+                </p>
+            </div>
+
+            <!-- 🔒 Security Note -->
+            <div style="margin-top: 8px; padding: 10px; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); border-radius: 8px;">
+                <p style="font-size: 12px; color: #ffd93d; margin: 0; line-height: 1.6;">
+                    🔒 <strong>How it works:</strong><br>
+                    We check the blockchain for incoming USDT from your connected wallet address.<br>
+                    If the sender address doesn't match, we cannot credit your balance.
+                </p>
             </div>
 
             <div style="margin-top: 12px; padding: 10px; background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); border-radius: 8px;">
@@ -57,6 +88,32 @@
         </button>
     </div>
 
+    <script>
+        // Load connected wallet on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+
+            // Get connected wallet
+            const userId = tg.initDataUnsafe?.user?.id || '0';
+            fetch(`https://plantusdt.ddns.net/api/get_wallet?telegram_id=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.wallet_address) {
+                        document.getElementById('connectedWalletDisplay').textContent = data.wallet_address;
+                        document.getElementById('connectedWalletDisplay').style.color = '#00ff87';
+                    } else {
+                        document.getElementById('connectedWalletDisplay').textContent = '⚠️ No wallet connected!';
+                        document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('connectedWalletDisplay').textContent = '❌ Error loading wallet';
+                    document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
+                });
+        });
+    </script>
     <script src="js/app.js"></script>
 </body>
 </html>

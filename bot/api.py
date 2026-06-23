@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sys
 import os
+import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -28,6 +29,10 @@ db = DatabaseManager()
 
 # Project wallet - blocked from user use
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
+
+# Import deposit scanner for amount-based detection
+from services.deposit_scanner import DepositScanner
+deposit_scanner = DepositScanner()
 
 @app.route('/api/get_wallet', methods=['GET'])
 def get_wallet():
@@ -297,7 +302,7 @@ def get_real_history():
                 'date': p.paid_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # --- ADD REFERRAL EARNINGS ---
+        # Get referral earnings
         referral_earnings = user.referral_deposit_earnings or 0
         if referral_earnings > 0:
             transactions.append({
@@ -306,7 +311,6 @@ def get_real_history():
                 'status': 'completed',
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
-        # --- END REFERRAL EARNINGS ---
         
         # Get withdrawals
         withdrawals = session.query(Withdrawal).filter_by(user_id=user.id).all()
@@ -411,6 +415,37 @@ def invest():
         })
     finally:
         session.close()
+
+@app.route('/api/check_deposit_with_amount', methods=['GET'])
+def check_deposit_with_amount():
+    """Check for a deposit with a specific expected amount - FASTER detection"""
+    telegram_id = request.args.get('telegram_id')
+    expected_amount = request.args.get('expected_amount', type=float)
+    
+    if not telegram_id or not expected_amount:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    try:
+        # Use the deposit scanner with amount filtering
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            deposit_scanner.check_deposit_with_amount(
+                int(telegram_id),
+                expected_amount,
+                None  # bot will be passed from main when called from scheduler
+            )
+        )
+        loop.close()
+        
+        # If deposit was found and processed, update the user's data
+        if result.get('success'):
+            # Balance was already updated in the scanner
+            pass
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)

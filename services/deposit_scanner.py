@@ -1,113 +1,297 @@
-from services.wallet import WalletService
-from database.db_manager import DatabaseManager
-from datetime import datetime, timedelta
-import logging
+import aiohttp
 import asyncio
+from datetime import datetime, timedelta
+from database.db_manager import DatabaseManager
+from database.models import User, Deposit
+from config.settings import Config
+import logging
 
 logger = logging.getLogger(__name__)
 
 class DepositScanner:
     def __init__(self):
-        self.wallet_service = WalletService()
         self.db = DatabaseManager()
-        self.last_checked_block = None
-    
-    async def scan_for_deposits(self, bot=None):
-        """Scan for new deposits and process them"""
+        self.api_key = Config.BSCSCAN_API_KEY
+        self.project_wallet = Config.PROJECT_WALLET.lower()
+        self.scan_interval = 300  # 5 minutes
+        self.confirmations = 6  # BSC block confirmations
+
+    async def scan_for_deposits(self, bot):
+        """Scan for new deposits on BSC"""
         try:
             logger.info("Scanning for new deposits...")
-            
-            users = self.db.get_all_users()
-            users_with_wallets = [u for u in users if u.wallet_address]
-            
-            if not users_with_wallets:
-                logger.info("No users with wallet addresses found")
+            session = self.db.get_session()
+
+            # Get all users with wallet addresses
+            users = session.query(User).filter(
+                User.wallet_address.isnot(None),
+                User.wallet_address != ''
+            ).all()
+
+            if not users:
+                logger.info("No users with wallets found")
                 return
-            
-            for user in users_with_wallets:
+
+            # Get current block number
+            current_block = await self._get_current_block()
+            if not current_block:
+                logger.error("Failed to get current block number")
+                return
+
+            # Check each user's wallet for deposits
+            for user in users:
                 try:
-                    # Check every 5 minutes
-                    if user.last_deposit_check and (datetime.utcnow() - user.last_deposit_check) < timedelta(minutes=5):
-                        continue
+                    # Get the user's wallet address
+                    user_wallet = user.wallet_address.lower()
                     
-                    # Check for deposits
-                    deposits = self.wallet_service.check_user_deposits(
-                        user.wallet_address,
-                        hours_back=1
+                    # Check for new transactions to project wallet from this user
+                    transactions = await self._get_user_transactions(
+                        user_wallet,
+                        current_block
                     )
-                    
-                    if deposits:
-                        for deposit in deposits:
-                            # Process deposit
-                            processed = self.db.process_deposit(
+
+                    for tx in transactions:
+                        # Check if this transaction was already processed
+                        existing = session.query(Deposit).filter_by(
+                            tx_hash=tx['hash']
+                        ).first()
+                        if existing:
+                            continue
+
+                        # 🔑 KEY CHECK: Does the sender match the user's connected wallet?
+                        sender = tx.get('from', '').lower()
+                        amount = float(tx.get('value', 0)) / 10**18
+
+                        if sender == user_wallet:
+                            # ✅ This is THEIR deposit!
+                            logger.info(f"✅ Deposit detected for user {user.telegram_id}: ${amount}")
+
+                            # Process the deposit
+                            deposit = Deposit(
                                 user_id=user.id,
-                                amount=deposit['amount'],
-                                tx_hash=deposit['tx_hash'],
-                                from_address=deposit['from'],
-                                block_number=0
+                                amount=amount,
+                                tx_hash=tx['hash'],
+                                from_address=sender,
+                                block_number=tx['block_number'],
+                                confirmed_at=datetime.utcnow(),
+                                processed=True
                             )
-                            
-                            if processed:
-                                logger.info(f"Deposit processed for user {user.telegram_id}: {deposit['amount']} USDT")
-                                
-                                # ============================================
-                                # CREDIT REFERRAL BONUS
-                                # ============================================
-                                if user.referred_by:
-                                    referrer = self.db.get_user_by_id(user.referred_by)
-                                    if referrer:
-                                        bonus = deposit['amount'] * 0.05  # 5%
-                                        self.db.credit_referral_bonus(referrer.id, bonus)
-                                        logger.info(f"Referral bonus credited to {referrer.telegram_id}: ${bonus}")
-                                        
-                                        # Notify referrer
-                                        if bot:
-                                            await bot.send_message(
-                                                chat_id=referrer.telegram_id,
-                                                text=f"👥 **Referral Bonus!**\n\n"
-                                                     f"Your referral @{user.username or 'User'} deposited "
-                                                     f"${deposit['amount']:.2f} USDT!\n"
-                                                     f"You earned **${bonus:.2f} USDT** bonus! 🎉\n\n"
-                                                     f"Total referral earnings: **${referrer.referral_earnings:.2f}**"
-                                            )
-                                
-                                # Send notification to user
-                                if bot:
-                                    await self.notify_user(bot, user, deposit)
-                    
-                    # Update last check time
-                    self.db.update_last_deposit_check(user.id)
-                    
+                            session.add(deposit)
+
+                            # Credit user's balance
+                            user.balance += amount
+                            user.total_deposited += amount
+                            user.total_earnings_all_time = (user.total_earnings_all_time or 0)
+
+                            session.commit()
+
+                            # Send notification to user
+                            try:
+                                await bot.send_message(
+                                    chat_id=user.telegram_id,
+                                    text=f"✅ **Deposit Detected!**\n\n"
+                                         f"💰 Amount: **${amount:.2f} USDT**\n"
+                                         f"📊 Your balance: **${user.balance:.2f}**\n\n"
+                                         f"🌱 You can now invest in planting fields!",
+                                    parse_mode='Markdown'
+                                )
+                                logger.info(f"✅ Deposit notification sent to {user.telegram_id}")
+                            except Exception as e:
+                                logger.error(f"Error sending deposit notification: {e}")
+
+                        else:
+                            # ❌ Not their deposit - ignore
+                            logger.info(f"❌ Transaction from {sender} does not match {user_wallet}")
+
                 except Exception as e:
-                    logger.error(f"Error checking deposits for user {user.telegram_id}: {e}")
+                    logger.error(f"Error processing user {user.telegram_id}: {e}")
                     continue
-            
-            logger.info("Deposit scan completed")
-            
+
+            session.close()
+
         except Exception as e:
             logger.error(f"Error in deposit scanner: {e}")
-    
-    async def notify_user(self, bot, user, deposit):
-        """Send notification to user about successful deposit"""
+
+    async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
+        """
+        Check for a deposit with a specific expected amount.
+        This is faster and more accurate than scanning all transactions.
+        """
         try:
-            message = f"""✅ **Deposit Confirmed!**
+            session = self.db.get_session()
 
-💰 **Amount:** ${deposit['amount']:.2f} USDT
-🔗 **Transaction:** `{deposit['tx_hash'][:10]}...{deposit['tx_hash'][-8:]}`
-📅 **Time:** {deposit['timestamp'].strftime('%Y-%m-%d %H:%M:%S')} UTC
+            # Get the user
+            user = session.query(User).filter_by(telegram_id=user_id).first()
+            if not user or not user.wallet_address:
+                return {'success': False, 'message': 'No wallet connected'}
 
-🌱 Your balance has been updated!
-You can now invest in any of the 3 planting fields.
+            user_wallet = user.wallet_address.lower()
 
-Use the Mini App to start investing! 🚀"""
-            
-            await bot.send_message(
-                chat_id=user.telegram_id,
-                text=message,
-                parse_mode='Markdown'
+            # Get current block number
+            current_block = await self._get_current_block()
+            if not current_block:
+                return {'success': False, 'message': 'Could not fetch blockchain data'}
+
+            # Check for transactions from user's wallet to project wallet
+            transactions = await self._get_user_transactions_with_amount(
+                user_wallet,
+                expected_amount,
+                current_block
             )
-            
-            logger.info(f"Notification sent to user {user.telegram_id}")
-            
+
+            if not transactions:
+                return {'success': False, 'message': 'No deposit found'}
+
+            # Process the first matching transaction
+            tx = transactions[0]
+            sender = tx.get('from', '').lower()
+            amount = float(tx.get('value', 0)) / 10**18
+
+            # Verify amount matches (with small tolerance)
+            if abs(amount - expected_amount) > 0.01:
+                return {'success': False, 'message': f'Amount mismatch: expected ${expected_amount:.2f}, found ${amount:.2f}'}
+
+            # Check if already processed
+            existing = session.query(Deposit).filter_by(tx_hash=tx['hash']).first()
+            if existing:
+                return {'success': True, 'message': 'Deposit already processed'}
+
+            # Process deposit
+            deposit = Deposit(
+                user_id=user.id,
+                amount=amount,
+                tx_hash=tx['hash'],
+                from_address=sender,
+                block_number=tx['block_number'],
+                confirmed_at=datetime.utcnow(),
+                processed=True
+            )
+            session.add(deposit)
+
+            # Credit user's balance
+            user.balance += amount
+            user.total_deposited += amount
+
+            session.commit()
+
+            logger.info(f"✅ Deposit detected for user {user_id}: ${amount} (expected: ${expected_amount})")
+
+            # Send notification
+            try:
+                await bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=f"✅ **Deposit Detected!**\n\n"
+                         f"💰 Amount: **${amount:.2f} USDT**\n"
+                         f"📊 Your balance: **${user.balance:.2f}**\n\n"
+                         f"🌱 You can now invest in planting fields!",
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.error(f"Error sending deposit notification: {e}")
+
+            session.close()
+            return {'success': True, 'message': 'Deposit detected and processed'}
+
         except Exception as e:
-            logger.error(f"Error sending notification to user {user.telegram_id}: {e}")
+            logger.error(f"Error checking deposit with amount: {e}")
+            return {'success': False, 'message': str(e)}
+
+    async def _get_current_block(self):
+        """Get the current BSC block number"""
+        try:
+            url = f"{Config.BSC_SCAN_API}?module=proxy&action=eth_blockNumber&apikey={self.api_key}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+                    if data.get('status') == '1':
+                        return int(data.get('result', '0'), 16)
+                    return None
+        except Exception as e:
+            logger.error(f"Error getting current block: {e}")
+            return None
+
+    async def _get_user_transactions(self, user_wallet: str, current_block: int):
+        """Get transactions from a user's wallet to the project wallet"""
+        try:
+            # Check the last 1000 blocks
+            start_block = current_block - 1000
+            if start_block < 0:
+                start_block = 0
+
+            url = (
+                f"{Config.BSC_SCAN_API}?"
+                f"module=account&action=tokentx"
+                f"&contractaddress={Config.USDT_CONTRACT}"
+                f"&address={self.project_wallet}"
+                f"&startblock={start_block}"
+                f"&endblock={current_block}"
+                f"&sort=desc"
+                f"&apikey={self.api_key}"
+            )
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+                    if data.get('status') == '1':
+                        transactions = data.get('result', [])
+                        # Filter by sender
+                        return [
+                            {
+                                'hash': tx.get('hash'),
+                                'from': tx.get('from'),
+                                'to': tx.get('to'),
+                                'value': int(tx.get('value', 0)),
+                                'block_number': int(tx.get('blockNumber', 0)),
+                            }
+                            for tx in transactions
+                            if tx.get('from', '').lower() == user_wallet
+                        ]
+                    return []
+        except Exception as e:
+            logger.error(f"Error getting user transactions: {e}")
+            return []
+
+    async def _get_user_transactions_with_amount(self, user_wallet: str, expected_amount: float, current_block: int):
+        """Get transactions from a user's wallet with a specific amount"""
+        try:
+            # Check the last 1000 blocks
+            start_block = current_block - 1000
+            if start_block < 0:
+                start_block = 0
+
+            url = (
+                f"{Config.BSC_SCAN_API}?"
+                f"module=account&action=tokentx"
+                f"&contractaddress={Config.USDT_CONTRACT}"
+                f"&address={self.project_wallet}"
+                f"&startblock={start_block}"
+                f"&endblock={current_block}"
+                f"&sort=desc"
+                f"&apikey={self.api_key}"
+            )
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+                    if data.get('status') == '1':
+                        transactions = data.get('result', [])
+                        # Filter by sender AND amount
+                        expected_amount_wei = int(expected_amount * 10**18)
+                        return [
+                            {
+                                'hash': tx.get('hash'),
+                                'from': tx.get('from'),
+                                'to': tx.get('to'),
+                                'value': int(tx.get('value', 0)),
+                                'block_number': int(tx.get('blockNumber', 0)),
+                            }
+                            for tx in transactions
+                            if (
+                                tx.get('from', '').lower() == user_wallet and
+                                abs(int(tx.get('value', 0)) - expected_amount_wei) < 10**15  # tolerance 0.001 USDT
+                            )
+                        ]
+                    return []
+        except Exception as e:
+            logger.error(f"Error getting user transactions with amount: {e}")
+            return []
