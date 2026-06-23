@@ -410,6 +410,43 @@ async function checkDeposit() {
     }
 }
 
+async function checkDepositWithAmount() {
+    const userId = tgUser?.id || '0';
+    const amountInput = document.getElementById('depositAmount');
+    const amount = amountInput?.value;
+    
+    if (!amount || parseFloat(amount) < 5) {
+        tg.showPopup({
+            title: '⚠️ Invalid Amount',
+            message: 'Please enter at least $5 USDT.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    const statusDiv = document.getElementById('depositStatus');
+    if (statusDiv) {
+        statusDiv.innerHTML = '🔍 Checking for deposits...';
+        statusDiv.className = 'deposit-status pending';
+        statusDiv.style.display = 'block';
+        try {
+            const response = await fetch(`${API_BASE}/api/check_deposit?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
+            const data = await response.json();
+            if (data.success) {
+                statusDiv.innerHTML = '✅ Deposit detected! Balance updated.';
+                statusDiv.className = 'deposit-status success';
+                loadUserData();
+            } else {
+                statusDiv.innerHTML = '⏳ No new deposits found. Please wait a few minutes and try again.';
+                statusDiv.className = 'deposit-status pending';
+            }
+        } catch (error) {
+            statusDiv.innerHTML = '❌ Error checking deposits. Please try again.';
+            statusDiv.className = 'deposit-status error';
+        }
+    }
+}
+
 function filterHistory(type) {
     var buttons = document.querySelectorAll('.filter-btn');
     for (var i = 0; i < buttons.length; i++) {
@@ -648,6 +685,7 @@ window.goBack = goBack;
 window.copyAddress = copyAddress;
 window.copyReferral = copyReferral;
 window.checkDeposit = checkDeposit;
+window.checkDepositWithAmount = checkDepositWithAmount;
 window.investField = investField;
 window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;

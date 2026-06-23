@@ -11,31 +11,50 @@
     <div class="container">
         <div class="header">
             <button class="back-btn" onclick="goBack()">←</button>
-            <h1>💳 Deposit</h1>
+            <h1 style="color: #00ff87; font-size: 20px;">💳 Deposit</h1>
         </div>
 
-        <div class="deposit-info">
-            <div class="info-card">
-                <h3>📋 Deposit Instructions</h3>
-                <p><strong>Network:</strong> BSC (BEP-20)</p>
-                <p><strong>Token:</strong> USDT</p>
-                <p><strong>Min Amount:</strong> $5 USDT</p>
-                <p><strong>Address:</strong></p>
-                <div class="address-box" id="walletAddress">
-                    <span id="addressText">0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76</span>
-                    <button class="copy-btn" onclick="copyAddress()">📋</button>
+        <div class="info-card">
+            <h3>📋 Deposit Instructions</h3>
+            <p style="font-size: 13px; color: #8892b0; line-height: 1.6;">
+                <strong>Network:</strong> BSC (BEP-20)<br>
+                <strong>Token:</strong> USDT<br>
+                <strong>Min Amount:</strong> $5 USDT
+            </p>
+
+            <div class="deposit-address-box" style="margin-top: 12px;">
+                <p style="font-size: 12px; color: #8892b0; margin-bottom: 4px;">📌 Address (BSC BEP-20):</p>
+                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);">
+                    0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76
                 </div>
-                <p class="warning">⚠️ Only send USDT on BSC network!</p>
+                <button onclick="copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
             </div>
 
-            <div class="info-card">
-                <h3>🔍 Check Deposit</h3>
-                <button class="action-btn primary" onclick="checkDeposit()">✅ I've Sent USDT</button>
-                <div id="depositStatus"></div>
+            <div style="margin-top: 12px; padding: 10px; background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); border-radius: 8px;">
+                <p style="font-size: 12px; color: #ff6b6b; margin: 0;">
+                    ⚠️ Only send USDT on BSC network! Sending other tokens may result in loss.
+                </p>
             </div>
         </div>
 
-        <button class="action-btn secondary" onclick="navigateTo('dashboard')">📊 Back to Dashboard</button>
+        <!-- Amount Input -->
+        <div class="form-group" style="margin: 16px 0;">
+            <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">💰 Deposit Amount (USDT)</label>
+            <input type="number" id="depositAmount" placeholder="Enter the exact amount you sent" min="5" step="0.01" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
+            <p style="font-size: 11px; color: #495670; margin-top: 4px;">Enter the exact amount you sent to help us detect your deposit faster.</p>
+        </div>
+
+        <!-- Deposit Status -->
+        <div id="depositStatus" class="deposit-status" style="display: none;"></div>
+
+        <!-- Check Deposit Button -->
+        <button class="action-btn primary" onclick="checkDepositWithAmount()" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
+            🔍 I've Sent USDT
+        </button>
+
+        <button class="action-btn secondary" onclick="goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
+            📊 Back to Dashboard
+        </button>
     </div>
 
     <script src="js/app.js"></script>
