@@ -29,8 +29,16 @@ class SchedulerService:
             replace_existing=True
         )
 
+        # 🔧 NEW: Run every hour to fix stuck timers
+        self.scheduler.add_job(
+            self.correct_timers,
+            trigger=IntervalTrigger(hours=1),
+            id='timer_correction',
+            replace_existing=True
+        )
+
         self.scheduler.start()
-        logger.info("Scheduler started - checking for due payouts every 5 minutes")
+        logger.info("Scheduler started - checking for due payouts every 5 minutes, correcting timers every hour")
 
     async def process_daily_payouts(self):
         try:
@@ -45,6 +53,14 @@ class SchedulerService:
             self.investment_service.process_expired_investments()
         except Exception as e:
             logger.error(f"Error processing expired investments: {e}")
+
+    def correct_timers(self):
+        """Auto-correct stuck timers (runs every hour)"""
+        try:
+            logger.info("🔄 Running timer correction job...")
+            self.investment_service.correct_stuck_timers()
+        except Exception as e:
+            logger.error(f"Error in timer correction: {e}")
 
     def stop(self):
         self.scheduler.shutdown()

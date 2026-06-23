@@ -262,6 +262,64 @@ class InvestmentService:
         finally:
             session.close()
 
+    def correct_stuck_timers(self):
+        """Automatically correct any timers that are stuck in the past or out of sync."""
+        try:
+            session = self.db.get_session()
+            now = datetime.utcnow()
+            
+            # PART 1: Fix stuck timers
+            stuck = session.query(Investment).filter(
+                Investment.is_active == True,
+                Investment.next_payout_date < now
+            ).all()
+            
+            if stuck:
+                logger.info(f"🔄 Found {len(stuck)} stuck timers. Correcting...")
+                for investment in stuck:
+                    # Get the original time from start_date
+                    original_time = investment.start_date.time()
+                    next_payout = datetime.combine(now.date(), original_time)
+                    if next_payout <= now:
+                        next_payout += timedelta(days=1)
+                    
+                    if investment.last_payout_date and next_payout <= investment.last_payout_date:
+                        next_payout = investment.last_payout_date + timedelta(days=1)
+                        next_payout = datetime.combine(next_payout.date(), original_time)
+                    
+                    investment.next_payout_date = next_payout
+                    logger.info(f"✅ Corrected field {investment.field_number}: next_payout = {next_payout} (original time: {original_time})")
+                
+                session.commit()
+                logger.info(f"✅ Successfully corrected {len(stuck)} timers")
+            else:
+                logger.info("✅ No stuck timers found")
+            
+            # PART 2: Fix payout mismatches (paid_out vs actual payouts)
+            investments = session.query(Investment).filter(
+                Investment.is_active == True
+            ).all()
+            
+            for investment in investments:
+                # Count actual payouts from daily_payouts table
+                actual_payouts = session.query(DailyPayout).filter(
+                    DailyPayout.investment_id == investment.id
+                ).all()
+                
+                total_paid = sum(p.amount for p in actual_payouts) if actual_payouts else 0
+                
+                # If paid_out doesn't match the sum, fix it
+                if investment.paid_out != total_paid:
+                    logger.warning(f"⚠️ Mismatch for field {investment.field_number}: paid_out={investment.paid_out}, actual={total_paid}")
+                    investment.paid_out = total_paid
+                    logger.info(f"✅ Fixed paid_out for field {investment.field_number}: now {total_paid}")
+            
+            session.commit()
+            
+        except Exception as e:
+            logger.error(f"Error correcting timers: {e}")
+            session.rollback()
+
     def get_investment_status(self, user_id: int):
         """Get investment status for a user"""
         try:
