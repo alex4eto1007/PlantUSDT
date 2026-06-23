@@ -12,7 +12,7 @@ class DepositScanner:
     def __init__(self):
         self.db = DatabaseManager()
         self.api_key = Config.BSC_SCAN_API_KEY
-        self.project_wallet = Config.PROJECT_WALLET.lower()
+        self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.scan_interval = 300  # 5 minutes
         self.confirmations = 6  # BSC block confirmations
 
