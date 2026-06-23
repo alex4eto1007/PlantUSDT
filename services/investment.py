@@ -223,9 +223,9 @@ class InvestmentService:
         try:
             session = self.db.get_session()
 
+            # Get expired investments regardless of is_active status
             expired = session.query(Investment).filter(
                 Investment.end_date < datetime.utcnow(),
-                Investment.is_active == True,
                 Investment.principal_returned == False
             ).all()
 
@@ -237,13 +237,17 @@ class InvestmentService:
 
             for investment in expired:
                 try:
-                    investment.is_active = False
+                    # Mark as inactive and completed if not already
+                    if investment.is_active:
+                        investment.is_active = False
                     investment.is_completed = True
                     investment.principal_returned = True
 
+                    # Return principal to user's balance
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if user:
                         user.balance += investment.amount
+                        logger.info(f"✅ Principal ${investment.amount} returned to user {user.telegram_id}")
 
                     session.commit()
                     logger.info(f"Principal returned for investment {investment.id}: ${investment.amount}")
