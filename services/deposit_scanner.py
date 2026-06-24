@@ -16,15 +16,15 @@ class DepositScanner:
         self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.usdt_contract = Config.USDT_CONTRACT.lower()
         self.rpc_url = Config.POLYGON_RPC_URL
-        self.api_url = Config.POLYGONSCAN_API_URL
+        self.api_url = Config.ETHERSCAN_API_V2_URL  # V2 API URL
         self.api_key = Config.ETHERSCAN_API_KEY
+        self.chain_id = Config.POLYGON_CHAIN_ID  # 137 for Polygon
         self.network = "Polygon"
-        self.chain_id = 137
-        self.decimals = 6
+        self.decimals = Config.USDT_DECIMALS  # 6 for Polygon USDT
         self.scan_interval = 300
 
     async def scan_for_deposits(self, bot):
-        """Scan for deposits on Polygon using Polygonscan API"""
+        """Scan for deposits on Polygon using Etherscan V2 API"""
         try:
             logger.info("🔍 Scanning for Polygon deposits...")
             session = self.db.get_session()
@@ -44,9 +44,10 @@ class DepositScanner:
             logger.error(f"Scanner error: {e}")
 
     async def _check_user_deposits(self, user, bot):
-        """Check for new deposits from a specific user on Polygon"""
+        """Check for new deposits from a specific user on Polygon using V2 API"""
         try:
-            url = f"{self.api_url}?module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
+            # V2 API format with chainid
+            url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=30) as response:
@@ -64,7 +65,7 @@ class DepositScanner:
                             if existing:
                                 continue
                             
-                            amount = int(tx.get('value', '0')) / 10**6
+                            amount = int(tx.get('value', '0')) / 10**self.decimals
                             
                             await self._process_deposit(
                                 user=user,
@@ -109,7 +110,7 @@ class DepositScanner:
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
-            # --- SEND DEPOSIT NOTIFICATION ---
+            # Send deposit notification
             try:
                 await self.notification_service.send_deposit_notification(
                     user_id=user.telegram_id,
@@ -145,9 +146,9 @@ class DepositScanner:
             session.close()
 
     async def _verify_transaction(self, tx_hash: str) -> bool:
-        """Verify transaction is valid and is USDT on Polygon"""
+        """Verify transaction is valid and is USDT on Polygon using V2 API"""
         try:
-            url = f"{self.api_url}?module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
+            url = f"{self.api_url}?chainid={self.chain_id}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=10) as response:
@@ -172,21 +173,19 @@ class DepositScanner:
             return False
 
     async def _get_usdt_balance(self, wallet_address: str) -> float:
-        """Get USDT balance on Polygon"""
+        """Get USDT balance on Polygon using Etherscan V2 API (FREE)"""
         try:
-            data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
-            payload = {
-                "jsonrpc": "2.0",
-                "method": "eth_call",
-                "params": [{"to": self.usdt_contract, "data": data}, "latest"],
-                "id": 1
-            }
+            # V2 API format with chainid
+            url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
+            
             async with aiohttp.ClientSession() as session:
-                async with session.post(self.rpc_url, json=payload, timeout=10) as response:
+                async with session.get(url, timeout=10) as response:
                     data = await response.json()
-                    if data and data.get('result'):
-                        return int(data.get('result'), 16) / 10**6
-                    return 0
+                    if data and data.get('status') == '1':
+                        return int(data.get('result', '0')) / 10**self.decimals
+                    else:
+                        logger.error(f"API V2 error: {data.get('message', 'Unknown error')}")
+                        return 0
         except Exception as e:
             logger.error(f"Balance error on Polygon: {e}")
             return 0
@@ -206,7 +205,8 @@ class DepositScanner:
             current_balance = await self._get_usdt_balance(self.project_wallet)
             logger.info(f"📊 Project wallet balance on Polygon: ${current_balance:.2f}")
 
-            url = f"{self.api_url}?module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
+            # V2 API format for token transactions
+            url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session_api:
                 async with session_api.get(url, timeout=30) as response:
@@ -216,7 +216,7 @@ class DepositScanner:
                         transactions = data.get('result', [])
                         for tx in transactions:
                             if tx.get('to', '').lower() == self.project_wallet:
-                                amount = int(tx.get('value', '0')) / 10**6
+                                amount = int(tx.get('value', '0')) / 10**self.decimals
                                 if abs(amount - expected_amount) < 0.01:
                                     existing = session.query(Deposit).filter_by(tx_hash=tx.get('hash')).first()
                                     if not existing:

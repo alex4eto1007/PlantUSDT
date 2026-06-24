@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 class WalletService:
     def __init__(self):
-        # Use Polygon RPC instead of BSC
         self.w3 = Web3(Web3.HTTPProvider(Config.POLYGON_RPC_URL))
         self.project_wallet = Config.WALLET_ADDRESS
         self.usdt_contract = Config.USDT_CONTRACT
@@ -21,16 +20,13 @@ class WalletService:
         if wallet_address.lower() == self.project_wallet.lower():
             return False, f"This is the project wallet on {self.network}. Please use your own."
 
-        # Check if address has any transactions on Polygon
         try:
             balance = self.w3.eth.get_balance(wallet_address)
             if balance > 0:
                 return True, f"Wallet verified on {self.network}"
-            # Check token balance
             token_balance = self.get_usdt_balance(wallet_address)
             if token_balance > 0:
                 return True, f"Wallet verified on {self.network} (has USDT)"
-            # Even if empty, it's still a valid address
             return True, f"Valid {self.network} wallet address"
         except Exception as e:
             logger.error(f"Error verifying wallet: {e}")
@@ -39,13 +35,11 @@ class WalletService:
     def get_usdt_balance(self, wallet_address):
         """Get USDT balance on Polygon"""
         try:
-            # ERC-20 balanceOf function signature
             data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
             result = self.w3.eth.call({
                 'to': self.usdt_contract,
                 'data': data
             })
-            # USDT on Polygon uses 6 decimals
             balance = int(result.hex(), 16) / 10**self.usdt_decimals
             return balance
         except Exception as e:
