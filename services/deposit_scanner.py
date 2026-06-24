@@ -74,15 +74,23 @@ class DepositScanner:
                             
                             amount = int(tx.get('value', '0')) / 10**self.decimals
                             logger.info(f"💰 Processing deposit: ${amount:.2f}")
+                            print(f"🔍 DEBUG: About to call _process_deposit for amount ${amount:.2f}")
                             
-                            await self._process_deposit(
-                                user=user,
-                                amount=amount,
-                                tx_hash=tx.get('hash'),
-                                from_address=tx.get('from'),
-                                block_number=int(tx.get('blockNumber', 0)),
-                                bot=bot
-                            )
+                            try:
+                                await self._process_deposit(
+                                    user=user,
+                                    amount=amount,
+                                    tx_hash=tx.get('hash'),
+                                    from_address=tx.get('from'),
+                                    block_number=int(tx.get('blockNumber', 0)),
+                                    bot=bot
+                                )
+                                print(f"✅ DEBUG: _process_deposit completed successfully")
+                            except Exception as e:
+                                print(f"❌ DEBUG: _process_deposit failed: {e}")
+                                logger.error(f"❌ ERROR in _process_deposit: {e}")
+                                import traceback
+                                logger.error(traceback.format_exc())
                         else:
                             print(f"⏭️ DEBUG: Skipping - not to project wallet")
                             
@@ -101,6 +109,7 @@ class DepositScanner:
             
             # DEBUG: Log the user's balance before update
             logger.info(f"🔍 DEBUG - User {user.telegram_id} balance BEFORE: ${user.balance:.2f}")
+            print(f"🔍 DEBUG - User balance BEFORE: ${user.balance:.2f}")
             
             existing = session.query(Deposit).filter_by(tx_hash=tx_hash).first()
             if existing:
@@ -120,18 +129,22 @@ class DepositScanner:
             
             # DEBUG: Log before balance update
             logger.info(f"🔍 DEBUG - Adding ${amount:.2f} to balance")
+            print(f"🔍 DEBUG - Adding ${amount:.2f} to balance")
             
             user.balance += amount
             user.total_deposited += amount
             
             # DEBUG: Log the user's balance after update
             logger.info(f"🔍 DEBUG - User {user.telegram_id} balance AFTER: ${user.balance:.2f}")
+            print(f"🔍 DEBUG - User balance AFTER: ${user.balance:.2f}")
             
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
+            print(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
             # DEBUG: Verify commit worked
             logger.info(f"🔍 DEBUG - After commit, balance in object: ${user.balance:.2f}")
+            print(f"🔍 DEBUG - After commit, balance in object: ${user.balance:.2f}")
             
             try:
                 await self.notification_service.send_deposit_notification(
