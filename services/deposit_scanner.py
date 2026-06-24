@@ -16,11 +16,11 @@ class DepositScanner:
         self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.usdt_contract = Config.USDT_CONTRACT.lower()
         self.rpc_url = Config.POLYGON_RPC_URL
-        self.api_url = Config.ETHERSCAN_API_V2_URL  # V2 API URL
+        self.api_url = Config.ETHERSCAN_API_V2_URL
         self.api_key = Config.ETHERSCAN_API_KEY
-        self.chain_id = Config.POLYGON_CHAIN_ID  # 137 for Polygon
+        self.chain_id = Config.POLYGON_CHAIN_ID
         self.network = "Polygon"
-        self.decimals = Config.USDT_DECIMALS  # 6 for Polygon USDT
+        self.decimals = Config.USDT_DECIMALS
         self.scan_interval = 300
 
     async def scan_for_deposits(self, bot):
@@ -46,7 +46,6 @@ class DepositScanner:
     async def _check_user_deposits(self, user, bot):
         """Check for new deposits from a specific user on Polygon using V2 API"""
         try:
-            # V2 API format with chainid
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
@@ -110,7 +109,6 @@ class DepositScanner:
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
-            # Send deposit notification
             try:
                 await self.notification_service.send_deposit_notification(
                     user_id=user.telegram_id,
@@ -120,7 +118,6 @@ class DepositScanner:
             except Exception as e:
                 logger.error(f"Error sending deposit notification: {e}")
             
-            # Send Telegram message (legacy)
             try:
                 message = (
                     f"💰 **Deposit Detected on Polygon!**\n\n"
@@ -175,20 +172,22 @@ class DepositScanner:
     async def _get_usdt_balance(self, wallet_address: str) -> float:
         """Get USDT balance on Polygon using Etherscan V2 API (FREE)"""
         try:
-            # V2 API format with chainid
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=10) as response:
                     data = await response.json()
                     if data and data.get('status') == '1':
-                        return int(data.get('result', '0')) / 10**self.decimals
+                        result = data.get('result', '0')
+                        if result:
+                            return int(result) / 10**self.decimals
+                        return 0.0
                     else:
                         logger.error(f"API V2 error: {data.get('message', 'Unknown error')}")
-                        return 0
+                        return 0.0
         except Exception as e:
             logger.error(f"Balance error on Polygon: {e}")
-            return 0
+            return 0.0
 
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
         """Manual deposit check - triggered by user clicking 'I've Sent USDT' on Polygon"""
@@ -202,10 +201,6 @@ class DepositScanner:
             if not user.wallet_address:
                 return {'success': False, 'message': 'No wallet connected'}
 
-            current_balance = await self._get_usdt_balance(self.project_wallet)
-            logger.info(f"📊 Project wallet balance on Polygon: ${current_balance:.2f}")
-
-            # V2 API format for token transactions
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session_api:
