@@ -44,7 +44,7 @@ class DepositScanner:
                     # Get the user's wallet address
                     user_wallet = user.wallet_address.lower()
                     
-                    # Check for new transactions to project wallet from this user
+                    # Check for new transactions from user wallet to project wallet
                     transactions = await self._get_user_transactions(
                         user_wallet,
                         current_block
@@ -200,7 +200,6 @@ class DepositScanner:
     async def _get_current_block(self):
         """Get the current BSC block number using BSC RPC"""
         try:
-            # Use the BSC RPC URL directly
             url = Config.BSC_RPC_URL
             payload = {
                 "jsonrpc": "2.0",
@@ -221,29 +220,32 @@ class DepositScanner:
     async def _get_user_transactions(self, user_wallet: str, current_block: int):
         """Get transactions from a user's wallet to the project wallet"""
         try:
-            # Check the last 1000 blocks
-            start_block = current_block - 1000
+            # Check the last 5000 blocks (increased from 1000 to catch more transactions)
+            start_block = current_block - 5000
             if start_block < 0:
                 start_block = 0
 
+            # Get all USDT transactions FROM the user's wallet
             url = (
                 f"{Config.BSC_SCAN_API}?"
                 f"module=account&action=tokentx"
                 f"&contractaddress={Config.USDT_CONTRACT}"
-                f"&address={self.project_wallet}"
+                f"&address={user_wallet}"
                 f"&startblock={start_block}"
                 f"&endblock={current_block}"
                 f"&sort=desc"
                 f"&apikey={self.api_key}"
             )
 
+            logger.info(f"🔍 Checking BSCScan for USDT transactions from {user_wallet[:10]}...")
+
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     data = await response.json()
                     if data.get('status') == '1':
                         transactions = data.get('result', [])
-                        # Filter by sender
-                        return [
+                        # Filter: only transactions TO the project wallet
+                        filtered = [
                             {
                                 'hash': tx.get('hash'),
                                 'from': tx.get('from'),
@@ -252,9 +254,13 @@ class DepositScanner:
                                 'block_number': int(tx.get('blockNumber', 0)),
                             }
                             for tx in transactions
-                            if tx.get('from', '').lower() == user_wallet
+                            if tx.get('to', '').lower() == self.project_wallet
                         ]
-                    return []
+                        logger.info(f"✅ Found {len(filtered)} USDT transactions to project wallet")
+                        return filtered
+                    else:
+                        logger.warning(f"BSCScan returned status: {data.get('status')}, message: {data.get('message')}")
+                        return []
         except Exception as e:
             logger.error(f"Error getting user transactions: {e}")
             return []
@@ -262,32 +268,33 @@ class DepositScanner:
     async def _get_user_transactions_with_amount(self, user_wallet: str, expected_amount: float, current_block: int):
         """Get transactions from a user's wallet with a specific amount"""
         try:
-            # Check the last 1000 blocks
-            start_block = current_block - 1000
+            # Check the last 5000 blocks (increased from 1000)
+            start_block = current_block - 5000
             if start_block < 0:
                 start_block = 0
 
+            # Get all USDT transactions FROM the user's wallet
             url = (
                 f"{Config.BSC_SCAN_API}?"
                 f"module=account&action=tokentx"
                 f"&contractaddress={Config.USDT_CONTRACT}"
-                f"&address={self.project_wallet}"
+                f"&address={user_wallet}"
                 f"&startblock={start_block}"
                 f"&endblock={current_block}"
                 f"&sort=desc"
                 f"&apikey={self.api_key}"
             )
 
-            logger.info(f"🔍 Checking BSCScan for deposits: {url[:100]}...")
+            logger.info(f"🔍 Checking BSCScan for USDT transactions from {user_wallet[:10]}...")
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     data = await response.json()
                     if data.get('status') == '1':
                         transactions = data.get('result', [])
-                        # Filter by sender AND amount
+                        # Filter: only transactions TO the project wallet with matching amount
                         expected_amount_wei = int(expected_amount * 10**18)
-                        found = [
+                        filtered = [
                             {
                                 'hash': tx.get('hash'),
                                 'from': tx.get('from'),
@@ -297,15 +304,16 @@ class DepositScanner:
                             }
                             for tx in transactions
                             if (
-                                tx.get('from', '').lower() == user_wallet and
+                                tx.get('to', '').lower() == self.project_wallet and
                                 abs(int(tx.get('value', 0)) - expected_amount_wei) < 10**15
                             )
                         ]
-                        if found:
-                            logger.info(f"✅ Found {len(found)} matching transactions")
-                        return found
-                    logger.warning(f"BSCScan returned status: {data.get('status')}, message: {data.get('message')}")
-                    return []
+                        if filtered:
+                            logger.info(f"✅ Found {len(filtered)} matching transactions")
+                        return filtered
+                    else:
+                        logger.warning(f"BSCScan returned status: {data.get('status')}, message: {data.get('message')}")
+                        return []
         except Exception as e:
             logger.error(f"Error getting user transactions with amount: {e}")
             return []
