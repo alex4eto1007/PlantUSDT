@@ -225,20 +225,25 @@ def get_user():
                 'level2_count': 0
             })
         
-        # Get investments
+        # Get investments (locked investments)
         investments = session.query(Investment).filter_by(user_id=user.id).all()
         fields = []
         for inv in investments:
             if inv.is_active or not inv.is_completed:
-                next_payout = inv.next_payout_date
+                # For locked investments, there is no next_payout_date
+                # They unlock all at once when unlock_date is reached
                 fields.append({
                     'field_number': inv.field_number,
                     'amount': inv.amount,
-                    'total_return': inv.total_return,
-                    'paid_out': inv.paid_out,
+                    'total_return': inv.expected_return,
+                    'paid_out': inv.paid_out or 0,
                     'start_date': inv.start_date.isoformat(),
                     'is_active': inv.is_active,
-                    'next_payout_date': next_payout.isoformat() if next_payout else None
+                    'next_payout_date': None,  # No daily payouts for locked investments
+                    'lock_period': inv.lock_period,
+                    'unlock_date': inv.unlock_date.isoformat() if inv.unlock_date else None,
+                    'is_locked': inv.is_locked,
+                    'expected_return': inv.expected_return
                 })
         
         # Get referrals (level 1 only for display)
@@ -292,7 +297,7 @@ def get_real_history():
                 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # Get earnings (daily payouts)
+        # Get earnings (daily payouts - legacy, keep for compatibility)
         payouts = session.query(DailyPayout).filter_by(user_id=user.id).all()
         for p in payouts:
             transactions.append({
@@ -348,7 +353,7 @@ def get_investments(telegram_id):
                 'date': inv.start_date.strftime('%Y-%m-%d %H:%M'),
                 'field': inv.field_number,
                 'paid_out': inv.paid_out,
-                'total_return': inv.total_return
+                'total_return': inv.expected_return
             })
         
         return jsonify({'transactions': transactions})
