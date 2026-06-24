@@ -45,6 +45,16 @@ async function loadUserData() {
     }
 }
 
+function refreshData() {
+    tg.showPopup({
+        title: '🔄 Refreshing...',
+        message: 'Updating your data...',
+        buttons: [{type: 'ok'}]
+    });
+    loadUserData();
+    loadSavedWallet();
+}
+
 async function updateReferralStats(userId) {
     try {
         const response = await fetch(`${API_BASE}/api/referral_stats/${userId}`);
@@ -117,26 +127,35 @@ function updateFields(data) {
         if (field) {
             // For locked investments, show lock period instead of days
             var lockPeriod = field.lock_period || 30;
-            var daysRemaining = Math.max(0, Math.ceil((new Date(field.unlock_date) - new Date()) / (1000 * 60 * 60 * 24)));
+            var isLocked = field.is_locked || false;
             
-            statusEl.textContent = field.is_locked ? '🔒 Locked' : '🟢 Active';
-            statusEl.className = field.is_locked ? 'field-status locked' : 'field-status active';
+            // Calculate remaining days
+            var unlockDate = new Date(field.unlock_date);
+            var now = new Date();
+            var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
+            
+            statusEl.textContent = isLocked ? '🔒 Locked' : '🟢 Active';
+            statusEl.className = isLocked ? 'field-status locked' : 'field-status active';
             amountEl.textContent = '$' + field.amount.toFixed(2);
-            daysEl.textContent = daysRemaining + '/' + lockPeriod + ' days';
-            earnedEl.textContent = '$' + (field.expected_return || 0).toFixed(2);
+            daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
+            
+            // Show expected return if locked
+            var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
+            earnedEl.textContent = '$' + displayEarned.toFixed(2);
             
             // Progress based on time remaining
-            var progress = ((lockPeriod - daysRemaining) / lockPeriod) * 100;
+            var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
-            btnEl.textContent = '🌱 Active';
+            btnEl.textContent = isLocked ? '🔒 Locked' : '🌱 Active';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
             
-            // Timer for unlock countdown
             window.fieldData[i] = {
-                unlock_date: field.unlock_date
+                unlock_date: field.unlock_date,
+                is_locked: isLocked,
+                lock_period: lockPeriod
             };
         } else {
             statusEl.textContent = '✅ Available';
@@ -653,7 +672,7 @@ function renderHistory(transactions) {
 }
 
 function updateFieldTimers() {
-    // Skip if we're on the history page (prevents date overwriting)
+    // Skip if we're on the history page
     if (document.getElementById('historyList')) {
         return;
     }
@@ -667,15 +686,18 @@ function updateFieldTimers() {
         
         if (!timerEl || !statusEl) continue;
         
-        if (!statusEl.textContent.includes('Locked') && !statusEl.textContent.includes('Active')) {
+        var fieldData = window.fieldData ? window.fieldData[i] : null;
+        if (!fieldData || !fieldData.unlock_date) {
             timerEl.textContent = '⏳ Payout: --:--:-- UTC';
             timerEl.className = 'field-timer';
             continue;
         }
         
-        var fieldData = window.fieldData ? window.fieldData[i] : null;
-        if (!fieldData || !fieldData.unlock_date) {
-            timerEl.textContent = '⏳ Calculating...';
+        var isLocked = fieldData.is_locked || false;
+        
+        if (!isLocked) {
+            timerEl.textContent = '🟢 Unlocked! (UTC)';
+            timerEl.className = 'field-timer ready';
             continue;
         }
         
@@ -697,7 +719,7 @@ function updateFieldTimers() {
             } else {
                 timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
             }
-            timerEl.textContent = '⏳ Unlock in: ' + timeString + ' UTC';
+            timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
             timerEl.className = 'field-timer countdown';
         }
     }
@@ -769,6 +791,7 @@ function setupEventListeners() {
 
 window.navigateTo = navigateTo;
 window.goBack = goBack;
+window.refreshData = refreshData;
 window.copyAddress = copyAddress;
 window.copyReferral = copyReferral;
 window.checkDeposit = checkDeposit;

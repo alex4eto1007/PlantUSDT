@@ -4,24 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=13">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- Header with Refresh Button -->
         <div class="header">
             <div class="logo">🌱 PlantUSDT</div>
-            <div class="balance-display">
-                <span class="balance-label">💰 Balance</span>
-                <span class="balance-amount" id="balance">$0.00</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button onclick="refreshData()" style="background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 8px; padding: 6px 12px; color: #00ff87; cursor: pointer; font-size: 14px; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(0,255,135,0.2)'" onmouseout="this.style.background='rgba(0,255,135,0.1)'">
+                    🔄
+                </button>
+                <div class="balance-display">
+                    <span class="balance-label">💰 Balance</span>
+                    <span class="balance-amount" id="balance">$0.00</span>
+                </div>
             </div>
         </div>
 
         <!-- Total Earnings Display -->
         <div class="earnings-section">
             <div class="earnings-card">
-                <div class="earnings-label">💰 Total Earnings</div>
+                <div class="earnings-label">📈 Total Earnings</div>
                 <div class="earnings-amount" id="totalEarnings">$0.00</div>
                 <div class="earnings-details">
                     <span>From Investments: <strong id="investmentEarnings">$0.00</strong></span>
@@ -38,9 +43,9 @@
                 <div class="stat-value">2%</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">⏱️</div>
-                <div class="stat-label">Duration</div>
-                <div class="stat-value">30 Days</div>
+                <div class="stat-icon">🔒</div>
+                <div class="stat-label">Lock Period</div>
+                <div class="stat-value">1-30 Days</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">💵</div>
@@ -175,10 +180,11 @@
             <p>1. Enter your wallet address</p>
             <p>2. Deposit $5+ USDT (BEP-20)</p>
             <p>3. Choose a field and invest (max $100 per field)</p>
-            <p>4. Earn 2% DAILY for 30 days</p>
-            <p>5. After 30 days, your $100 is returned to balance</p>
-            <p>6. Withdraw anytime (min $2, 10% fee)</p>
-            <p>7. Refer friends and earn 5% of their deposits!</p>
+            <p>4. Choose lock period: 1, 7, or 30 days</p>
+            <p>5. Your investment locks and earns profit</p>
+            <p>6. When period ends, your funds unlock automatically</p>
+            <p>7. Withdraw anytime (min $2, 10% fee)</p>
+            <p>8. Refer friends and earn 5% of their deposits!</p>
         </div>
 
         <!-- Footer -->
@@ -188,6 +194,6 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=12"></script>
+    <script src="js/app.js?v=13"></script>
 </body>
 </html>
