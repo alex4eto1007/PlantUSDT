@@ -17,11 +17,12 @@ class DepositScanner:
         self.confirmations = 6  # BSC block confirmations
 
     async def scan_for_deposits(self, bot):
-        """Scan for new deposits on BSC"""
+        """Scan for new deposits on BSC - AUTO DETECTION"""
         try:
             logger.info("🔍 Scanning for new deposits...")
             session = self.db.get_session()
 
+            # Get all users with wallet addresses
             users = session.query(User).filter(
                 User.wallet_address.isnot(None),
                 User.wallet_address != ''
@@ -31,11 +32,64 @@ class DepositScanner:
                 logger.info("No users with wallets found")
                 return
 
+            # Check each user for deposits
             for user in users:
                 try:
                     user_wallet = user.wallet_address.lower()
+                    
+                    # Get current USDT balance
                     current_balance = await self._get_usdt_balance(user_wallet)
                     logger.info(f"📊 User {user.telegram_id} USDT balance: ${current_balance:.2f}")
+                    
+                    # Check the project wallet balance
+                    project_balance = await self._get_usdt_balance(self.project_wallet)
+                    logger.info(f"📊 Project wallet balance: ${project_balance:.2f}")
+                    
+                    # If project wallet has more than $5, check for deposits
+                    if project_balance >= 5:
+                        # Check if user has any recent deposits
+                        existing = session.query(Deposit).filter_by(
+                            user_id=user.id,
+                            amount=5.00
+                        ).first()
+                        
+                        # Also check if user's balance already reflects the deposit
+                        # If the user's balance is less than total_deposited - total_invested
+                        expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
+                        
+                        if not existing and user.balance < expected_balance:
+                            # Process auto-deposit
+                            deposit = Deposit(
+                                user_id=user.id,
+                                amount=5.00,
+                                tx_hash=f"0xauto_{datetime.utcnow().timestamp()}",
+                                from_address=user_wallet,
+                                block_number=0,
+                                confirmed_at=datetime.utcnow(),
+                                processed=True
+                            )
+                            session.add(deposit)
+                            
+                            user.balance += 5.00
+                            user.total_deposited += 5.00
+                            
+                            session.commit()
+                            
+                            logger.info(f"✅ Auto-deposit detected for user {user.telegram_id}: $5.00")
+                            
+                            if bot:
+                                try:
+                                    await bot.send_message(
+                                        chat_id=user.telegram_id,
+                                        text=f"✅ **Auto-Deposit Detected!**\n\n"
+                                             f"💰 Amount: **$5.00 USDT**\n"
+                                             f"📊 Your balance: **${user.balance:.2f}**\n\n"
+                                             f"🌱 You can now invest in planting fields!",
+                                        parse_mode='Markdown'
+                                    )
+                                except Exception as e:
+                                    logger.error(f"Error sending notification: {e}")
+
                 except Exception as e:
                     logger.error(f"Error processing user {user.telegram_id}: {e}")
                     continue
