@@ -14,7 +14,13 @@ class DepositScanner:
         self.db = DatabaseManager()
         self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.usdt_contract = Config.USDT_CONTRACT.lower()
-        self.rpc_url = Config.BSC_RPC_URL
+        # List of RPC endpoints to try
+        self.rpc_urls = [
+            Config.BSC_RPC_URL,
+            "https://bsc-dataseed1.defibit.io/",
+            "https://bsc-dataseed2.binance.org/",
+            "https://bsc-dataseed3.binance.org/",
+        ]
         self.scan_interval = 300  # 5 minutes
 
     async def scan_for_deposits(self, bot):
@@ -97,109 +103,122 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error in deposit scanner: {e}")
 
-    async def _get_usdt_transfers(self, blocks_back: int = 1000):
-        """Fetch USDT Transfer events via BSC RPC eth_getLogs"""
+    async def _get_usdt_transfers(self, initial_blocks: int = 200):
+        """Fetch USDT Transfer events via BSC RPC eth_getLogs with adaptive range"""
         try:
-            # Get current block
             current_block = await self._get_current_block()
             if not current_block:
                 logger.error("Failed to get current block")
                 return []
 
-            from_block = current_block - blocks_back
-            if from_block < 0:
-                from_block = 0
+            # Try different block ranges and RPC endpoints
+            ranges = [initial_blocks, 100, 50, 20, 10]
+            logs = None
 
-            logger.info(f"🔍 Scanning blocks {from_block} to {current_block} for USDT transfers")
+            for block_range in ranges:
+                from_block = current_block - block_range
+                if from_block < 0:
+                    from_block = 0
 
-            # USDT Transfer event signature: Transfer(address,address,uint256)
-            event_signature = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+                logger.info(f"🔍 Trying block range {block_range} (from {from_block} to {current_block})")
 
-            # Filter for transfers TO the project wallet (topic2 = to address)
-            to_topic = "0x" + "0" * 24 + self.project_wallet[2:]
+                payload = {
+                    "jsonrpc": "2.0",
+                    "method": "eth_getLogs",
+                    "params": [{
+                        "fromBlock": hex(from_block),
+                        "toBlock": hex(current_block),
+                        "address": self.usdt_contract,
+                        "topics": [
+                            "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                            None,
+                            "0x" + "0" * 24 + self.project_wallet[2:]
+                        ]
+                    }],
+                    "id": 1
+                }
 
-            payload = {
-                "jsonrpc": "2.0",
-                "method": "eth_getLogs",
-                "params": [{
-                    "fromBlock": hex(from_block),
-                    "toBlock": hex(current_block),
-                    "address": self.usdt_contract,
-                    "topics": [
-                        event_signature,
-                        None,  # from (any)
-                        to_topic  # to = project wallet
-                    ]
-                }],
-                "id": 1
-            }
+                # Try each RPC endpoint
+                for rpc_url in self.rpc_urls:
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(rpc_url, json=payload, timeout=15) as response:
+                                if response.status != 200:
+                                    continue
+                                data = await response.json()
+                                if 'error' in data:
+                                    if 'limit exceeded' in data['error'].get('message', ''):
+                                        logger.warning(f"Limit exceeded for range {block_range} on {rpc_url}")
+                                        continue
+                                    else:
+                                        logger.error(f"RPC error: {data['error']}")
+                                        continue
+                                logs = data.get('result', [])
+                                if logs:
+                                    logger.info(f"✅ Found {len(logs)} logs with range {block_range} on {rpc_url}")
+                                    # Break out of RPC loop and range loop
+                                    break
+                    except Exception as e:
+                        logger.warning(f"RPC {rpc_url} failed: {e}")
+                        continue
 
-            logger.info(f"🔍 Fetching USDT transfer logs from blocks {from_block} to {current_block}")
+                if logs:
+                    break
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(self.rpc_url, json=payload, timeout=30) as response:
-                    if response.status != 200:
-                        logger.error(f"RPC error: {response.status}")
-                        return []
+            if logs is None:
+                logger.error("All block ranges and RPC endpoints failed")
+                return []
 
-                    data = await response.json()
-                    if 'error' in data:
-                        logger.error(f"RPC error: {data['error']}")
-                        return []
+            # Process logs
+            transfers = []
+            for log in logs:
+                try:
+                    from_addr = "0x" + log['topics'][1][-40:]
+                    to_addr = "0x" + log['topics'][2][-40:]
+                    amount_hex = log['data']
+                    amount = int(amount_hex, 16) / 10**18
 
-                    logs = data.get('result', [])
-                    logger.info(f"✅ Found {len(logs)} USDT transfer logs")
+                    if amount < 0.01:
+                        continue
 
-                    transfers = []
-                    for log in logs:
-                        try:
-                            from_addr = "0x" + log['topics'][1][-40:]
-                            to_addr = "0x" + log['topics'][2][-40:]
-                            amount_hex = log['data']
-                            amount = int(amount_hex, 16) / 10**18
+                    transfers.append({
+                        'hash': log['transactionHash'],
+                        'from': from_addr,
+                        'to': to_addr,
+                        'value': amount,
+                        'block_number': int(log['blockNumber'], 16),
+                    })
+                except Exception as e:
+                    logger.error(f"Error decoding log: {e}")
+                    continue
 
-                            if amount < 0.01:
-                                continue
+            transfers.sort(key=lambda x: x['block_number'], reverse=True)
+            logger.info(f"✅ Decoded {len(transfers)} USDT transfers")
+            return transfers
 
-                            transfers.append({
-                                'hash': log['transactionHash'],
-                                'from': from_addr,
-                                'to': to_addr,
-                                'value': amount,
-                                'block_number': int(log['blockNumber'], 16),
-                            })
-                        except Exception as e:
-                            logger.error(f"Error decoding log: {e}")
-                            continue
-
-                    transfers.sort(key=lambda x: x['block_number'], reverse=True)
-                    return transfers
-
-        except asyncio.TimeoutError:
-            logger.error("RPC timeout")
-            return []
         except Exception as e:
             logger.error(f"Error fetching transfers: {e}")
             return []
 
     async def _get_current_block(self):
         """Get current BSC block number via RPC"""
-        try:
-            payload = {
-                "jsonrpc": "2.0",
-                "method": "eth_blockNumber",
-                "params": [],
-                "id": 1
-            }
-            async with aiohttp.ClientSession() as session:
-                async with session.post(self.rpc_url, json=payload, timeout=10) as response:
-                    data = await response.json()
-                    if data and data.get('result'):
-                        return int(data.get('result', '0'), 16)
-                    return None
-        except Exception as e:
-            logger.error(f"Error getting block: {e}")
-            return None
+        for rpc_url in self.rpc_urls:
+            try:
+                payload = {
+                    "jsonrpc": "2.0",
+                    "method": "eth_blockNumber",
+                    "params": [],
+                    "id": 1
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(rpc_url, json=payload, timeout=10) as response:
+                        data = await response.json()
+                        if data and data.get('result'):
+                            return int(data.get('result', '0'), 16)
+            except Exception as e:
+                logger.warning(f"Block RPC {rpc_url} failed: {e}")
+                continue
+        return None
 
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
         """Manual deposit check (button fallback)"""
@@ -214,7 +233,7 @@ class DepositScanner:
                 return {'success': False, 'message': 'No wallet connected'}
 
             # Use the log scanner to find recent transfers
-            transfers = await self._get_usdt_transfers(blocks_back=5000)
+            transfers = await self._get_usdt_transfers(initial_blocks=500)
             for tx in transfers:
                 if tx['from'].lower() == user.wallet_address.lower() and tx['to'].lower() == self.project_wallet:
                     # Check if already processed
