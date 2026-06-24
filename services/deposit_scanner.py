@@ -174,19 +174,27 @@ class DepositScanner:
         try:
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
             
+            logger.info(f"🔍 Fetching balance from: {url}")
+            
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=10) as response:
                     data = await response.json()
+                    logger.info(f"📦 Balance API Response: {data}")
+                    
                     if data and data.get('status') == '1':
                         result = data.get('result', '0')
-                        if result:
-                            return int(result) / 10**self.decimals
-                        return 0.0
+                        if result and result != '0':
+                            balance = int(result) / 10**self.decimals
+                            logger.info(f"💰 Balance found: ${balance:.2f} USDT")
+                            return balance
+                        else:
+                            logger.info(f"💰 Balance is zero or empty")
+                            return 0.0
                     else:
-                        logger.error(f"API V2 error: {data.get('message', 'Unknown error')}")
+                        logger.error(f"❌ API V2 error: {data.get('message', 'Unknown error')}")
                         return 0.0
         except Exception as e:
-            logger.error(f"Balance error on Polygon: {e}")
+            logger.error(f"❌ Balance error on Polygon: {e}")
             return 0.0
 
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
