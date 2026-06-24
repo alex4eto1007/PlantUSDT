@@ -16,7 +16,7 @@ class DepositScanner:
         self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.usdt_contract = Config.USDT_CONTRACT.lower()
         self.rpc_url = Config.POLYGON_RPC_URL
-        self.api_url = Config.ETHERSCAN_API_V2_URL
+        self.api_url = Config.POLYGONSCAN_API_URL  # Now using Polygonscan
         self.api_key = Config.ETHERSCAN_API_KEY
         self.chain_id = Config.POLYGON_CHAIN_ID
         self.network = "Polygon"
@@ -24,7 +24,7 @@ class DepositScanner:
         self.scan_interval = 300
 
     async def scan_for_deposits(self, bot):
-        """Scan for deposits on Polygon using Etherscan V2 API"""
+        """Scan for deposits on Polygon using Polygonscan API"""
         try:
             logger.info("🔍 Scanning for Polygon deposits...")
             session = self.db.get_session()
@@ -44,9 +44,9 @@ class DepositScanner:
             logger.error(f"Scanner error: {e}")
 
     async def _check_user_deposits(self, user, bot):
-        """Check for new deposits from a specific user on Polygon using V2 API"""
+        """Check for new deposits from a specific user on Polygon using Polygonscan API"""
         try:
-            url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
+            url = f"{self.api_url}?module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=30) as response:
@@ -143,9 +143,9 @@ class DepositScanner:
             session.close()
 
     async def _verify_transaction(self, tx_hash: str) -> bool:
-        """Verify transaction is valid and is USDT on Polygon using V2 API"""
+        """Verify transaction is valid and is USDT on Polygon using Polygonscan API"""
         try:
-            url = f"{self.api_url}?chainid={self.chain_id}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
+            url = f"{self.api_url}?module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=10) as response:
@@ -172,8 +172,7 @@ class DepositScanner:
     async def _get_usdt_balance(self, wallet_address: str) -> float:
         """Get USDT balance on Polygon using Polygonscan API (FREE)"""
         try:
-            # Use Polygonscan directly instead of V2
-            url = f"https://api.polygonscan.com/api?module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
+            url = f"{self.api_url}?module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
             
             logger.info(f"🔍 Fetching balance from Polygonscan: {url}")
             
@@ -210,7 +209,7 @@ class DepositScanner:
             if not user.wallet_address:
                 return {'success': False, 'message': 'No wallet connected'}
 
-            url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
+            url = f"{self.api_url}?module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session_api:
                 async with session_api.get(url, timeout=30) as response:
