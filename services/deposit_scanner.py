@@ -194,15 +194,17 @@ class DepositScanner:
             return None
 
     async def _get_user_transactions(self, user_wallet: str, current_block: int):
-        """Get transactions from a user's wallet to the project wallet"""
+        """Get transactions from a user's wallet to the project wallet using Etherscan V2 API"""
         try:
             start_block = current_block - 5000
             if start_block < 0:
                 start_block = 0
 
+            # Etherscan V2 API format with chainid
             url = (
                 f"{Config.BSC_SCAN_API}"
-                f"?module=account"
+                f"?chainid={Config.BSC_SCAN_CHAIN_ID}"
+                f"&module=account"
                 f"&action=tokentx"
                 f"&contractaddress={Config.USDT_CONTRACT}"
                 f"&address={user_wallet}"
@@ -212,7 +214,7 @@ class DepositScanner:
                 f"&apikey={self.api_key}"
             )
 
-            logger.info(f"🔍 Checking BSCScan for USDT transactions from {user_wallet[:10]}...")
+            logger.info(f"🔍 Checking Etherscan V2: {url[:100]}...")
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers={"User-Agent": "Mozilla/5.0"}) as response:
@@ -234,25 +236,27 @@ class DepositScanner:
                             logger.info(f"✅ Found {len(filtered)} USDT transactions to project wallet")
                             return filtered
                         else:
-                            logger.warning(f"BSCScan returned: {data.get('message')}")
+                            logger.warning(f"Etherscan returned: {data.get('message')}")
                             return []
                     else:
-                        logger.error(f"BSCScan returned status: {response.status}")
+                        logger.error(f"Etherscan returned status: {response.status}")
                         return []
         except Exception as e:
             logger.error(f"Error getting user transactions: {e}")
             return []
 
     async def _get_user_transactions_with_amount(self, user_wallet: str, expected_amount: float, current_block: int):
-        """Get transactions from a user's wallet with a specific amount"""
+        """Get transactions from a user's wallet with a specific amount using Etherscan V2 API"""
         try:
             start_block = current_block - 5000
             if start_block < 0:
                 start_block = 0
 
+            # Etherscan V2 API format with chainid
             url = (
                 f"{Config.BSC_SCAN_API}"
-                f"?module=account"
+                f"?chainid={Config.BSC_SCAN_CHAIN_ID}"
+                f"&module=account"
                 f"&action=tokentx"
                 f"&contractaddress={Config.USDT_CONTRACT}"
                 f"&address={user_wallet}"
@@ -262,7 +266,7 @@ class DepositScanner:
                 f"&apikey={self.api_key}"
             )
 
-            logger.info(f"🔍 Checking BSCScan for USDT transactions from {user_wallet[:10]}...")
+            logger.info(f"🔍 Checking Etherscan V2 for amount: {url[:100]}...")
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers={"User-Agent": "Mozilla/5.0"}) as response:
@@ -289,10 +293,10 @@ class DepositScanner:
                                 logger.info(f"✅ Found {len(filtered)} matching transactions")
                             return filtered
                         else:
-                            logger.warning(f"BSCScan returned: {data.get('message')}")
+                            logger.warning(f"Etherscan returned: {data.get('message')}")
                             return []
                     else:
-                        logger.error(f"BSCScan returned status: {response.status}")
+                        logger.error(f"Etherscan returned status: {response.status}")
                         return []
         except Exception as e:
             logger.error(f"Error getting user transactions with amount: {e}")
