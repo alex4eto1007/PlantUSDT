@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 class DepositScanner:
     def __init__(self):
         self.db = DatabaseManager()
+        self.api_key = Config.BSC_SCAN_API_KEY
         self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.scan_interval = 300  # 5 minutes
+        self.confirmations = 6  # BSC block confirmations
 
     async def scan_for_deposits(self, bot):
         """Scan for new deposits on BSC"""
@@ -124,7 +126,7 @@ class DepositScanner:
                 session.close()
                 return {'success': True, 'message': 'Deposit detected and processed'}
             else:
-                return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found in project wallet. Current project balance: ${project_balance:.2f}'}
+                return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found. Project balance: ${project_balance:.2f}'}
 
         except Exception as e:
             logger.error(f"Error checking deposit with amount: {e}")
@@ -159,14 +161,23 @@ class DepositScanner:
             
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload) as response:
-                    data = await response.json()
-                    if data and data.get('result'):
-                        # Balance is returned in wei (18 decimals)
-                        balance = int(data.get('result', '0'), 16)
-                        return balance / 10**18
-                    return 0
+                    if response.status == 200:
+                        data = await response.json()
+                        if data and data.get('result'):
+                            # Convert hex to decimal
+                            balance_hex = data.get('result')
+                            balance = int(balance_hex, 16)
+                            result = balance / 10**18
+                            logger.info(f"✅ USDT balance: ${result:.2f}")
+                            return result
+                        else:
+                            logger.warning(f"⚠️ No result in response: {data}")
+                            return 0
+                    else:
+                        logger.error(f"❌ HTTP Error: {response.status}")
+                        return 0
         except Exception as e:
-            logger.error(f"Error getting USDT balance: {e}")
+            logger.error(f"❌ Error getting USDT balance: {e}")
             return 0
 
     async def _get_current_block(self):
