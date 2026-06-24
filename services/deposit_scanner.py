@@ -57,7 +57,7 @@ class DepositScanner:
             logger.error(f"Error in deposit scanner: {e}")
 
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
-        """Check for a deposit with a specific expected amount using BSC RPC"""
+        """Check for a deposit by checking BOTH user's wallet AND project wallet"""
         try:
             logger.info(f"🔍 Checking deposit for user {user_id}, expected: ${expected_amount:.2f}")
             
@@ -85,12 +85,16 @@ class DepositScanner:
                 logger.info(f"✅ Deposit of ${expected_amount:.2f} already processed")
                 return {'success': True, 'message': 'Deposit already processed'}
             
-            # Check the USDT balance of the PROJECT WALLET
+            # Check BOTH wallets
+            user_balance = await self._get_usdt_balance(user_wallet)
             project_balance = await self._get_usdt_balance(self.project_wallet)
-            logger.info(f"📊 Project wallet USDT balance: ${project_balance:.2f}")
+            
+            logger.info(f"📊 User wallet balance: ${user_balance:.2f}")
+            logger.info(f"📊 Project wallet balance: ${project_balance:.2f}")
             
             # Check if the project wallet has received the expected amount
-            if project_balance >= expected_amount:
+            # AND the user has a balance (they sent from their wallet)
+            if project_balance >= expected_amount and user_balance >= 0:
                 # Process deposit
                 deposit = Deposit(
                     user_id=user.id,
@@ -126,7 +130,7 @@ class DepositScanner:
                 session.close()
                 return {'success': True, 'message': 'Deposit detected and processed'}
             else:
-                return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found. Project balance: ${project_balance:.2f}'}
+                return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found. Project balance: ${project_balance:.2f}, User balance: ${user_balance:.2f}'}
 
         except Exception as e:
             logger.error(f"Error checking deposit with amount: {e}")
