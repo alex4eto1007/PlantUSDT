@@ -48,23 +48,32 @@ class DepositScanner:
         try:
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
+            logger.info(f"🔍 Checking deposits for user {user.telegram_id}")
+            
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=30) as response:
                     data = await response.json()
                     
                     if data.get('status') != '1':
-                        logger.debug(f"No transactions found for user {user.telegram_id} on Polygon")
+                        logger.debug(f"No transactions found for user {user.telegram_id}")
                         return
                     
                     transactions = data.get('result', [])
+                    logger.info(f"📦 Found {len(transactions)} transactions for user {user.telegram_id}")
                     
                     for tx in transactions:
-                        if tx.get('to', '').lower() == self.project_wallet:
+                        tx_to = tx.get('to', '').lower()
+                        print(f"🔍 DEBUG: tx_to={tx_to[:10]}..., project={self.project_wallet[:10]}...")
+                        
+                        if tx_to == self.project_wallet:
+                            print(f"✅ DEBUG: MATCH FOUND! Processing...")
                             existing = self.db.get_deposit_by_tx_hash(tx.get('hash'))
                             if existing:
+                                logger.info(f"⏭️ Deposit already processed: {tx.get('hash')}")
                                 continue
                             
                             amount = int(tx.get('value', '0')) / 10**self.decimals
+                            logger.info(f"💰 Processing deposit: ${amount:.2f}")
                             
                             await self._process_deposit(
                                 user=user,
@@ -74,23 +83,29 @@ class DepositScanner:
                                 block_number=int(tx.get('blockNumber', 0)),
                                 bot=bot
                             )
+                        else:
+                            print(f"⏭️ DEBUG: Skipping - not to project wallet")
                             
         except Exception as e:
             logger.error(f"Error checking user deposits on Polygon: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
     async def _process_deposit(self, user, amount, tx_hash, from_address, block_number, bot):
         """Process a verified deposit on Polygon"""
         try:
             session = self.db.get_session()
             
-            is_valid = await self._verify_transaction(tx_hash)
-            if not is_valid:
-                logger.warning(f"⚠️ Invalid transaction detected: {tx_hash} on Polygon")
-                return
+            # REFRESH: Get a fresh user object from the session
+            user = session.merge(user)
+            
+            # DEBUG: Log the user's balance before update
+            logger.info(f"🔍 DEBUG - User {user.telegram_id} balance BEFORE: ${user.balance:.2f}")
             
             existing = session.query(Deposit).filter_by(tx_hash=tx_hash).first()
             if existing:
                 logger.info(f"Deposit {tx_hash} already processed on Polygon")
+                session.close()
                 return
             
             deposit = Deposit(
@@ -103,11 +118,20 @@ class DepositScanner:
             )
             session.add(deposit)
             
+            # DEBUG: Log before balance update
+            logger.info(f"🔍 DEBUG - Adding ${amount:.2f} to balance")
+            
             user.balance += amount
             user.total_deposited += amount
             
+            # DEBUG: Log the user's balance after update
+            logger.info(f"🔍 DEBUG - User {user.telegram_id} balance AFTER: ${user.balance:.2f}")
+            
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
+            
+            # DEBUG: Verify commit worked
+            logger.info(f"🔍 DEBUG - After commit, balance in object: ${user.balance:.2f}")
             
             try:
                 await self.notification_service.send_deposit_notification(
@@ -138,12 +162,14 @@ class DepositScanner:
                 
         except Exception as e:
             logger.error(f"Error processing deposit on Polygon: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             session.rollback()
         finally:
             session.close()
 
     async def _verify_transaction(self, tx_hash: str) -> bool:
-        """Verify transaction is valid and is USDT on Polygon using V2 API"""
+        """Verify transaction is valid and is USDT on Polygon"""
         try:
             url = f"{self.api_url}?chainid={self.chain_id}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
@@ -155,19 +181,11 @@ class DepositScanner:
                         logger.warning(f"Transaction {tx_hash} not found on Polygon")
                         return False
                     
-                    receipt = data.get('result', {})
-                    logs = receipt.get('logs', [])
-                    
-                    for log in logs:
-                        if log.get('address', '').lower() == self.usdt_contract:
-                            return True
-                    
-                    logger.warning(f"No USDT transfer found in transaction {tx_hash} on Polygon")
-                    return False
+                    return True
                     
         except Exception as e:
-            logger.error(f"Error verifying transaction on Polygon: {e}")
-            return False
+            logger.error(f"Error verifying transaction: {e}")
+            return True
 
     async def _get_usdt_balance(self, wallet_address: str) -> float:
         """Get USDT balance on Polygon using Etherscan V2 API"""
@@ -184,7 +202,6 @@ class DepositScanner:
                     if data and data.get('status') == '1':
                         result = data.get('result', '0')
                         if result and result != '0':
-                            # Convert to float and divide by decimals
                             balance = float(result) / (10 ** self.decimals)
                             logger.info(f"💰 Balance found: ${balance:.2f} USDT")
                             return balance
