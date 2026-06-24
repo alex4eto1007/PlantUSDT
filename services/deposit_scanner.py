@@ -57,48 +57,38 @@ class DepositScanner:
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
         """Check for a deposit with a specific expected amount using BSC RPC"""
         try:
+            logger.info(f"🔍 Checking deposit for user {user_id}, expected: ${expected_amount:.2f}")
+            
             session = self.db.get_session()
 
             user = session.query(User).filter_by(telegram_id=user_id).first()
-            if not user or not user.wallet_address:
+            if not user:
+                logger.error(f"❌ User {user_id} not found")
+                return {'success': False, 'message': 'User not found'}
+            
+            if not user.wallet_address:
+                logger.error(f"❌ User {user_id} has no wallet connected")
                 return {'success': False, 'message': 'No wallet connected'}
 
             user_wallet = user.wallet_address.lower()
+            logger.info(f"🔍 User wallet: {user_wallet}")
             
-            # Check if this user already has a deposit processed
-            existing_deposits = session.query(Deposit).filter_by(
-                user_id=user.id
-            ).all()
-            
-            # Check the USDT balance of the project wallet
+            # Check the USDT balance of the PROJECT WALLET
             project_balance = await self._get_usdt_balance(self.project_wallet)
+            logger.info(f"📊 Project wallet USDT balance: ${project_balance:.2f}")
             
-            # Get all deposits for the project wallet
-            # Since we can't get transaction history via RPC, we'll use the balance approach
-            # We'll track deposits by checking if the user's wallet has sent USDT
+            # Check if we already processed a deposit for this user
+            existing = session.query(Deposit).filter_by(
+                user_id=user.id,
+                amount=expected_amount
+            ).first()
             
-            # For now, we'll use a manual approach - the user clicks "I've Sent USDT"
-            # and we check the project wallet's balance
+            if existing:
+                logger.info(f"✅ Deposit of ${expected_amount:.2f} already processed")
+                return {'success': True, 'message': 'Deposit already processed'}
             
-            # Check if we have a record of this deposit
-            # We'll look for the user's wallet address in the project wallet's transactions
-            # Since we can't get transaction history via RPC, we'll use an alternative approach
-            
-            # This is a simplified version - we'll just check if the user has a balance
-            
-            # Check if the user has a balance greater than 0
-            user_balance = await self._get_usdt_balance(user_wallet)
-            
-            if user_balance > 0 and user_balance >= expected_amount:
-                # Check if we already processed this deposit
-                existing = session.query(Deposit).filter_by(
-                    from_address=user_wallet,
-                    amount=expected_amount
-                ).first()
-                
-                if existing:
-                    return {'success': True, 'message': 'Deposit already processed'}
-                
+            # Check if the project wallet has received the expected amount
+            if project_balance >= expected_amount:
                 # Process deposit
                 deposit = Deposit(
                     user_id=user.id,
@@ -134,10 +124,12 @@ class DepositScanner:
                 session.close()
                 return {'success': True, 'message': 'Deposit detected and processed'}
             else:
-                return {'success': False, 'message': f'No USDT found in your wallet. Current balance: ${user_balance:.2f}'}
+                return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found in project wallet. Current project balance: ${project_balance:.2f}'}
 
         except Exception as e:
             logger.error(f"Error checking deposit with amount: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             session.rollback()
             return {'success': False, 'message': str(e)}
 
