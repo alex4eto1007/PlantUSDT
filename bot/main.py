@@ -24,7 +24,7 @@ application = None
 # Initialize services
 db = DatabaseManager()
 investment_service = InvestmentService()
-wallet_service = WalletService()  # Now uses Polygon
+wallet_service = WalletService()
 scheduler = SchedulerService()
 deposit_scanner = DepositScanner()
 
@@ -307,7 +307,7 @@ Example:
 /complete_payout 1 0xabc123...
 /reset_referral 123456789
 
-💡 Transactions are on Polygon (MATIC) network using USDT (ERC-20)"""
+💡 Transactions are on Polygon (MATIC) network using USDT on Polygon"""
 
     await update.message.reply_text(help_text)
 
