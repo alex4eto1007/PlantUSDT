@@ -10,12 +10,18 @@ logger = logging.getLogger(__name__)
 class InvestmentService:
     def __init__(self):
         self.db = DatabaseManager()
+        
+        # Lock period multipliers
+        self.lock_multipliers = {
+            1: 1.02,   # 2% for 1 day
+            7: 1.14,   # 14% for 7 days
+            30: 1.60   # 60% for 30 days
+        }
 
-    def calculate_daily_payout(self, investment_amount: float) -> float:
-        return investment_amount * Config.DAILY_RATE
-
-    def calculate_total_return(self, investment_amount: float) -> float:
-        return investment_amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
+    def calculate_return(self, amount: float, lock_period: int) -> float:
+        """Calculate the total return based on lock period"""
+        multiplier = self.lock_multipliers.get(lock_period, 1.60)
+        return round(amount * multiplier, 2)
 
     async def process_referral_earnings(self, investment):
         """Process referral earnings based on deposits (5% of deposit amount)"""
@@ -99,8 +105,8 @@ class InvestmentService:
         finally:
             session.close()
 
-    def create_investment(self, user_id: int, field_number: int, amount: float):
-        """Create a new investment with 24-hour payout timer"""
+    def create_investment(self, user_id: int, field_number: int, amount: float, lock_period: int):
+        """Create a new locked investment"""
         try:
             session = self.db.get_session()
 
@@ -111,214 +117,131 @@ class InvestmentService:
                 is_active=True
             ).first()
             if existing:
-                return None
+                return None, "Field is already active"
 
-            from config.settings import Config
-            total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
+            # Check if user has enough balance
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user or user.balance < amount:
+                return None, "Insufficient balance"
+
+            # Calculate expected return
+            expected_return = self.calculate_return(amount, lock_period)
             now = datetime.utcnow()
+            unlock_date = now + timedelta(days=lock_period)
 
+            # Create investment
             investment = Investment(
                 user_id=user_id,
                 field_number=field_number,
                 amount=amount,
-                total_return=total_return,
-                end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
-                next_payout_date=now + timedelta(hours=24)
+                lock_period=lock_period,
+                unlock_date=unlock_date,
+                expected_return=expected_return,
+                start_date=now,
+                end_date=unlock_date,
+                is_active=True,
+                is_locked=True
             )
             session.add(investment)
 
-            # Deduct from user balance
-            user = session.query(User).filter_by(id=user_id).first()
-            if user:
-                user.total_invested += amount
-                user.balance -= amount
+            # Deduct from balance
+            user.balance -= amount
+            user.total_invested += amount
 
             session.commit()
-            logger.info(f"Investment created: Field {field_number}, ${amount}, next payout at {investment.next_payout_date}")
-            return investment
+            logger.info(f"Investment created: Field {field_number}, ${amount}, {lock_period} days, returns ${expected_return}")
+            return investment, None
 
         except Exception as e:
             logger.error(f"Error creating investment: {e}")
             session.rollback()
-            return None
+            return None, str(e)
         finally:
             session.close()
 
-    async def process_daily_payouts(self):
-        """Process daily payouts - 24 hours after investment or last payout"""
+    async def process_locked_investments(self):
+        """Process investments that have reached their unlock date"""
         try:
             session = self.db.get_session()
-
-            # Get all active investments
-            investments = session.query(Investment).filter_by(
-                is_active=True
-            ).all()
-
-            if not investments:
-                logger.info("No active investments found")
-                return
-
-            logger.info(f"Processing payouts for {len(investments)} investments")
             now = datetime.utcnow()
 
-            for investment in investments:
+            # Get all locked investments that have reached unlock date
+            unlocked = session.query(Investment).filter(
+                Investment.is_active == True,
+                Investment.is_locked == True,
+                Investment.unlock_date <= now
+            ).all()
+
+            if not unlocked:
+                logger.info("No locked investments to process")
+                return
+
+            logger.info(f"🔓 Processing {len(unlocked)} unlocked investments")
+
+            for investment in unlocked:
                 try:
-                    # Check if investment is expired
-                    if investment.end_date and now > investment.end_date:
-                        investment.is_active = False
-                        investment.is_completed = True
-                        session.commit()
-                        logger.info(f"Investment {investment.id} expired and marked as completed")
-                        continue
+                    # Mark as unlocked and completed
+                    investment.is_locked = False
+                    investment.is_active = False
+                    investment.is_completed = True
+                    investment.completed_at = now
+                    investment.principal_returned = True
 
-                    # Check if next payout is due
-                    if investment.next_payout_date and now < investment.next_payout_date:
-                        continue
-
-                    # Calculate daily payout
-                    daily_amount = self.calculate_daily_payout(investment.amount)
-                    day_number = (now - investment.start_date).days + 1
-
-                    # Record payout
-                    payout = DailyPayout(
-                        user_id=investment.user_id,
-                        investment_id=investment.id,
-                        amount=daily_amount,
-                        day_number=day_number
-                    )
-                    session.add(payout)
-
-                    # Update investment
-                    investment.paid_out = (investment.paid_out or 0) + daily_amount
-                    investment.last_payout_date = now
-                    investment.next_payout_date = now + timedelta(hours=24)
-
-                    # Credit user's balance
+                    # Credit the expected return to user's balance
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if user:
-                        user.balance += daily_amount
-                        user.total_earned += daily_amount
-                        user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + daily_amount
-                        user.total_earnings_all_time = (user.total_earnings_all_time or 0) + daily_amount
+                        user.balance += investment.expected_return
+                        user.total_earned += investment.expected_return
+                        user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
+                        user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
+                        
+                        logger.info(f"✅ User {user.telegram_id} received ${investment.expected_return:.2f} from Field {investment.field_number}")
 
                     session.commit()
 
                     # Process referral earnings
                     await self.process_referral_earnings(investment)
 
-                    logger.info(f"Payout processed for investment {investment.id}: ${daily_amount:.2f}")
+                    # Send notification to user
+                    try:
+                        from bot.main import application
+                        if application and application.bot:
+                            profit = investment.expected_return - investment.amount
+                            message = (
+                                f"🎉 **Investment Completed!**\n\n"
+                                f"Your investment in **Field #{investment.field_number}** has been completed!\n\n"
+                                f"💰 Amount invested: **${investment.amount:.2f}**\n"
+                                f"📈 Profit: **+${profit:.2f}**\n"
+                                f"💵 Total received: **${investment.expected_return:.2f}**\n"
+                                f"📅 Lock period: **{investment.lock_period} days**\n\n"
+                                f"🌱 Your balance: **${user.balance:.2f}**"
+                            )
+                            await application.bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=message,
+                                parse_mode='Markdown'
+                            )
+                            logger.info(f"✅ Completion notification sent to {user.telegram_id}")
+                    except Exception as e:
+                        logger.error(f"Error sending completion notification: {e}")
 
                 except Exception as e:
-                    logger.error(f"Error processing payout for investment {investment.id}: {e}")
+                    logger.error(f"Error processing investment {investment.id}: {e}")
                     session.rollback()
                     continue
 
         except Exception as e:
-            logger.error(f"Error in process_daily_payouts: {e}")
+            logger.error(f"Error in process_locked_investments: {e}")
         finally:
             session.close()
 
-    def process_expired_investments(self):
-        """Return principal for expired investments"""
-        try:
-            session = self.db.get_session()
-
-            # Get expired investments regardless of is_active status
-            expired = session.query(Investment).filter(
-                Investment.end_date < datetime.utcnow(),
-                Investment.principal_returned == False
-            ).all()
-
-            if not expired:
-                logger.info("No expired investments found")
-                return
-
-            logger.info(f"Processing {len(expired)} expired investments")
-
-            for investment in expired:
-                try:
-                    # Mark as inactive and completed if not already
-                    if investment.is_active:
-                        investment.is_active = False
-                    investment.is_completed = True
-                    investment.principal_returned = True
-
-                    # Return principal to user's balance
-                    user = session.query(User).filter_by(id=investment.user_id).first()
-                    if user:
-                        user.balance += investment.amount
-                        logger.info(f"✅ Principal ${investment.amount} returned to user {user.telegram_id}")
-
-                    session.commit()
-                    logger.info(f"Principal returned for investment {investment.id}: ${investment.amount}")
-
-                except Exception as e:
-                    logger.error(f"Error returning principal for investment {investment.id}: {e}")
-                    session.rollback()
-                    continue
-
-        except Exception as e:
-            logger.error(f"Error in process_expired_investments: {e}")
-        finally:
-            session.close()
-
-    def correct_stuck_timers(self):
-        """Automatically correct any timers that are stuck in the past or out of sync."""
-        try:
-            session = self.db.get_session()
-            now = datetime.utcnow()
-            
-            # PART 1: Fix stuck timers
-            stuck = session.query(Investment).filter(
-                Investment.is_active == True,
-                Investment.next_payout_date < now
-            ).all()
-            
-            if stuck:
-                logger.info(f"🔄 Found {len(stuck)} stuck timers. Correcting...")
-                for investment in stuck:
-                    # Get the original time from start_date
-                    original_time = investment.start_date.time()
-                    next_payout = datetime.combine(now.date(), original_time)
-                    if next_payout <= now:
-                        next_payout += timedelta(days=1)
-                    
-                    if investment.last_payout_date and next_payout <= investment.last_payout_date:
-                        next_payout = investment.last_payout_date + timedelta(days=1)
-                        next_payout = datetime.combine(next_payout.date(), original_time)
-                    
-                    investment.next_payout_date = next_payout
-                    logger.info(f"✅ Corrected field {investment.field_number}: next_payout = {next_payout} (original time: {original_time})")
-                
-                session.commit()
-                logger.info(f"✅ Successfully corrected {len(stuck)} timers")
-            else:
-                logger.info("✅ No stuck timers found")
-            
-            # PART 2: Fix payout mismatches (paid_out vs actual payouts)
-            investments = session.query(Investment).filter(
-                Investment.is_active == True
-            ).all()
-            
-            for investment in investments:
-                # Count actual payouts from daily_payouts table
-                actual_payouts = session.query(DailyPayout).filter(
-                    DailyPayout.investment_id == investment.id
-                ).all()
-                
-                total_paid = sum(p.amount for p in actual_payouts) if actual_payouts else 0
-                
-                # If paid_out doesn't match the sum, fix it
-                if investment.paid_out != total_paid:
-                    logger.warning(f"⚠️ Mismatch for field {investment.field_number}: paid_out={investment.paid_out}, actual={total_paid}")
-                    investment.paid_out = total_paid
-                    logger.info(f"✅ Fixed paid_out for field {investment.field_number}: now {total_paid}")
-            
-            session.commit()
-            
-        except Exception as e:
-            logger.error(f"Error correcting timers: {e}")
-            session.rollback()
+    def get_available_lock_periods(self):
+        """Get available lock periods with their returns"""
+        return [
+            {'days': 1, 'return_percent': 2, 'multiplier': 1.02},
+            {'days': 7, 'return_percent': 14, 'multiplier': 1.14},
+            {'days': 30, 'return_percent': 60, 'multiplier': 1.60}
+        ]
 
     def get_investment_status(self, user_id: int):
         """Get investment status for a user"""
@@ -334,14 +257,13 @@ class InvestmentService:
                     'id': inv.id,
                     'field_number': inv.field_number,
                     'amount': inv.amount,
-                    'paid_out': inv.paid_out,
-                    'total_return': inv.total_return,
+                    'lock_period': inv.lock_period,
+                    'expected_return': inv.expected_return,
+                    'unlock_date': inv.unlock_date.isoformat() if inv.unlock_date else None,
                     'start_date': inv.start_date.isoformat(),
-                    'end_date': inv.end_date.isoformat() if inv.end_date else None,
-                    'next_payout_date': inv.next_payout_date.isoformat() if inv.next_payout_date else None,
                     'is_active': inv.is_active,
+                    'is_locked': inv.is_locked,
                     'is_completed': inv.is_completed,
-                    'principal_returned': inv.principal_returned
                 })
 
             return result

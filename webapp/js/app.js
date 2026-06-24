@@ -115,13 +115,18 @@ function updateFields(data) {
         var timerEl = document.getElementById('field' + i + 'Timer');
         
         if (field) {
-            var progress = field.paid_out / field.total_return * 100;
-            var days = Math.floor((Date.now() - new Date(field.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-            statusEl.textContent = '🟢 Active';
-            statusEl.className = 'field-status active';
+            // For locked investments, show lock period instead of days
+            var lockPeriod = field.lock_period || 30;
+            var daysRemaining = Math.max(0, Math.ceil((new Date(field.unlock_date) - new Date()) / (1000 * 60 * 60 * 24)));
+            
+            statusEl.textContent = field.is_locked ? '🔒 Locked' : '🟢 Active';
+            statusEl.className = field.is_locked ? 'field-status locked' : 'field-status active';
             amountEl.textContent = '$' + field.amount.toFixed(2);
-            daysEl.textContent = Math.min(days, 30) + '/30';
-            earnedEl.textContent = '$' + field.paid_out.toFixed(2);
+            daysEl.textContent = daysRemaining + '/' + lockPeriod + ' days';
+            earnedEl.textContent = '$' + (field.expected_return || 0).toFixed(2);
+            
+            // Progress based on time remaining
+            var progress = ((lockPeriod - daysRemaining) / lockPeriod) * 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
             btnEl.textContent = '🌱 Active';
@@ -129,14 +134,15 @@ function updateFields(data) {
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
             
+            // Timer for unlock countdown
             window.fieldData[i] = {
-                next_payout_date: field.next_payout_date
+                unlock_date: field.unlock_date
             };
         } else {
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             amountEl.textContent = '$0.00';
-            daysEl.textContent = '0/30';
+            daysEl.textContent = '0 days';
             earnedEl.textContent = '$0.00';
             progressEl.style.width = '0%';
             cardEl.className = 'field-card';
@@ -322,32 +328,107 @@ async function setWallet() {
     }
 }
 
-async function investField(fieldNumber) {
-    var userId = tgUser ? tgUser.id : '0';
-    var amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
+// ============================================
+// LOCKED INVESTMENT FUNCTIONS
+// ============================================
+
+function calculateReturn(amount, days) {
+    const multipliers = {
+        1: 1.02,   // 2%
+        7: 1.14,   // 14%
+        30: 1.60   // 60%
+    };
+    const multiplier = multipliers[days] || 1.60;
+    return amount * multiplier;
+}
+
+function getLockOptions() {
+    return [
+        { days: 1, returnPercent: 2 },
+        { days: 7, returnPercent: 14 },
+        { days: 30, returnPercent: 60 }
+    ];
+}
+
+async function investFieldWithLock(fieldNumber) {
+    const userId = tgUser ? tgUser.id : '0';
+    
+    // Show investment dialog with options
+    const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
     
-    var cleanAmount = amount.replace('$', '').trim();
-    var amountNum = parseFloat(cleanAmount);
-    
+    const amountNum = parseFloat(amount.replace('$', '').trim());
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
         tg.showPopup({title:'❌ Invalid Amount', message:'Please enter between $5 and $100.', buttons:[{type:'ok'}]});
         return;
     }
-    try {
-        var response = await fetch(API_BASE + '/api/invest', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({telegram_id:userId, field_number:fieldNumber, amount:amountNum})
-        });
-        var data = await response.json();
-        if (data.success) {
-            tg.showPopup({title:'✅ Success!', message:'$' + amountNum + ' invested in Field #' + fieldNumber + '!', buttons:[{type:'ok'}]});
-            loadUserData();
-        } else {
-            tg.showPopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
+    
+    // Show lock period options with calculated returns
+    const options = getLockOptions();
+    let message = '📊 Choose lock period:\n\n';
+    options.forEach(opt => {
+        const returnAmount = calculateReturn(amountNum, opt.days);
+        const profit = returnAmount - amountNum;
+        message += `• ${opt.days} day${opt.days > 1 ? 's' : ''}: +${opt.returnPercent}% → $${returnAmount.toFixed(2)} (+$${profit.toFixed(2)})\n`;
+    });
+    message += '\n\nEnter 1, 7, or 30:';
+    
+    const lockPeriod = prompt(message);
+    if (!lockPeriod) return;
+    
+    const days = parseInt(lockPeriod);
+    if (![1, 7, 30].includes(days)) {
+        tg.showPopup({title:'❌ Invalid Option', message:'Please enter 1, 7, or 30.', buttons:[{type:'ok'}]});
+        return;
+    }
+    
+    const expectedReturn = calculateReturn(amountNum, days);
+    const profit = expectedReturn - amountNum;
+    
+    // Confirm with user
+    tg.showPopup({
+        title: '📊 Confirm Investment',
+        message: `Field #${fieldNumber}\n\n💰 Amount: $${amountNum.toFixed(2)}\n⏱️ Lock Period: ${days} day${days > 1 ? 's' : ''}\n📈 Expected Return: $${expectedReturn.toFixed(2)}\n✅ Profit: +$${profit.toFixed(2)}`,
+        buttons: [
+            {id:'cancel', type:'cancel'},
+            {id:'confirm', type:'ok', text:'✅ Confirm'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(`${API_BASE}/api/invest_locked`, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({
+                        telegram_id: userId,
+                        field_number: fieldNumber,
+                        amount: amountNum,
+                        lock_period: days
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    tg.showPopup({
+                        title:'✅ Success!',
+                        message:`Invested $${amountNum.toFixed(2)} in Field #${fieldNumber}!\n🔒 Locked for ${days} days.\n📈 Expected return: $${expectedReturn.toFixed(2)}`,
+                        buttons:[{type:'ok'}]
+                    });
+                    loadUserData();
+                } else {
+                    tg.showPopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
+                }
+            } catch (error) {
+                console.error('Error investing:', error);
+                tg.showPopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
+            }
         }
-    } catch (error) { console.error('Error investing:', error); }
+    });
+}
+
+// Keep original investField for compatibility with old system
+async function investField(fieldNumber) {
+    // Use the new locked investment system
+    await investFieldWithLock(fieldNumber);
 }
 
 async function copyReferral() {
@@ -586,31 +667,37 @@ function updateFieldTimers() {
         
         if (!timerEl || !statusEl) continue;
         
-        if (!statusEl.textContent.includes('Active')) {
+        if (!statusEl.textContent.includes('Locked') && !statusEl.textContent.includes('Active')) {
             timerEl.textContent = '⏳ Payout: --:--:-- UTC';
             timerEl.className = 'field-timer';
             continue;
         }
         
         var fieldData = window.fieldData ? window.fieldData[i] : null;
-        if (!fieldData || !fieldData.next_payout_date) {
+        if (!fieldData || !fieldData.unlock_date) {
             timerEl.textContent = '⏳ Calculating...';
             continue;
         }
         
-        var nextPayout = new Date(fieldData.next_payout_date + 'Z').getTime();
-        var timeLeft = nextPayout - utcNow;
+        var unlockDate = new Date(fieldData.unlock_date + 'Z').getTime();
+        var timeLeft = unlockDate - utcNow;
         
         if (timeLeft <= 0) {
-            timerEl.textContent = '🟢 Ready for payout! (UTC)';
+            timerEl.textContent = '🟢 Unlocked! (UTC)';
             timerEl.className = 'field-timer ready';
         } else {
-            var hours = Math.floor(timeLeft / (1000 * 60 * 60));
+            var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
             
-            var timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            timerEl.textContent = '⏳ Next payout (UTC): ' + timeString;
+            var timeString = '';
+            if (days > 0) {
+                timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            } else {
+                timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            }
+            timerEl.textContent = '⏳ Unlock in: ' + timeString + ' UTC';
             timerEl.className = 'field-timer countdown';
         }
     }
@@ -687,6 +774,7 @@ window.copyReferral = copyReferral;
 window.checkDeposit = checkDeposit;
 window.checkDepositWithAmount = checkDepositWithAmount;
 window.investField = investField;
+window.investFieldWithLock = investFieldWithLock;
 window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
 window.disconnectWallet = disconnectWallet;

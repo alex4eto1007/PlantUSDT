@@ -13,11 +13,11 @@ class SchedulerService:
         self.investment_service = InvestmentService()
 
     def start(self):
-        # Run every 5 minutes to check for due payouts
+        # Run every 5 minutes to check for unlocked investments
         self.scheduler.add_job(
-            self.process_daily_payouts,
+            self.process_locked_investments,
             trigger=IntervalTrigger(minutes=5),
-            id='payout_check',
+            id='locked_check',
             replace_existing=True
         )
 
@@ -29,7 +29,7 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # 🔧 NEW: Run every hour to fix stuck timers
+        # 🔧 Run every hour to fix stuck timers
         self.scheduler.add_job(
             self.correct_timers,
             trigger=IntervalTrigger(hours=1),
@@ -38,14 +38,14 @@ class SchedulerService:
         )
 
         self.scheduler.start()
-        logger.info("Scheduler started - checking for due payouts every 5 minutes, correcting timers every hour")
+        logger.info("Scheduler started - checking for unlocked investments every 5 minutes")
 
-    async def process_daily_payouts(self):
+    async def process_locked_investments(self):
         try:
-            logger.info("Checking for due payouts...")
-            await self.investment_service.process_daily_payouts()
+            logger.info("Checking for unlocked investments...")
+            await self.investment_service.process_locked_investments()
         except Exception as e:
-            logger.error(f"Error processing daily payouts: {e}")
+            logger.error(f"Error processing locked investments: {e}")
 
     def process_expired_investments(self):
         try:
@@ -58,6 +58,8 @@ class SchedulerService:
         """Auto-correct stuck timers (runs every hour)"""
         try:
             logger.info("🔄 Running timer correction job...")
+            # For the new system, this will check if any investments are stuck
+            # and correct their unlock dates
             self.investment_service.correct_stuck_timers()
         except Exception as e:
             logger.error(f"Error in timer correction: {e}")

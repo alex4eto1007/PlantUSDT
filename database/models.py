@@ -28,7 +28,7 @@ class User(Base):
     investment_earnings_all_time = Column(Float, default=0.0)
     referral_earnings_all_time = Column(Float, default=0.0)
     
-    # Referral deposit earnings (new)
+    # Referral deposit earnings
     referral_deposit_earnings = Column(Float, default=0.0)
     
     # Referral system
@@ -55,16 +55,25 @@ class Investment(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     field_number = Column(Integer, nullable=False)
     amount = Column(Float, nullable=False)
-    daily_rate = Column(Float, default=0.02)
-    total_return = Column(Float)
+    
+    # Lock period settings
+    lock_period = Column(Integer, nullable=False, default=30)  # 1, 7, or 30 days
+    unlock_date = Column(DateTime, nullable=False)
+    expected_return = Column(Float, nullable=False)  # The total amount user will receive
+    
+    # Payout tracking
     paid_out = Column(Float, default=0.0)
     referral_earnings_paid = Column(Float, default=0.0)
+    
+    # Dates
     start_date = Column(DateTime, default=datetime.utcnow)
     end_date = Column(DateTime)
-    last_payout_date = Column(DateTime, nullable=True)
-    next_payout_date = Column(DateTime, nullable=True)  # 24 hours after investment or last payout
+    completed_at = Column(DateTime, nullable=True)
+    
+    # Status
     is_active = Column(Boolean, default=True)
     is_completed = Column(Boolean, default=False)
+    is_locked = Column(Boolean, default=True)  # True until unlock_date is reached
     principal_returned = Column(Boolean, default=False)
     
     user = relationship("User", back_populates="investments")
