@@ -13,88 +13,169 @@ class DepositScanner:
         self.db = DatabaseManager()
         self.project_wallet = Config.WALLET_ADDRESS.lower()
         self.usdt_contract = Config.USDT_CONTRACT.lower()
-        self.rpc_url = Config.BSC_RPC_URL
+        self.rpc_url = Config.POLYGON_RPC_URL  # Changed to Polygon RPC
+        self.api_url = Config.POLYGONSCAN_API_URL  # Changed to Polygonscan
+        self.api_key = Config.ETHERSCAN_API_KEY
+        self.network = "Polygon"
+        self.chain_id = 137  # Polygon chain ID
+        self.decimals = 6  # USDT has 6 decimals on Polygon
         self.scan_interval = 300
 
     async def scan_for_deposits(self, bot):
-        """Simple scanner: just log balances (manual detection via button)"""
+        """Scan for deposits on Polygon using Polygonscan API"""
         try:
-            logger.info("🔍 Checking balances...")
+            logger.info("🔍 Scanning for Polygon deposits...")
             session = self.db.get_session()
             users = session.query(User).filter(
                 User.wallet_address.isnot(None),
                 User.wallet_address != ''
             ).all()
+            
             for user in users:
                 try:
-                    balance = await self._get_usdt_balance(user.wallet_address)
-                    logger.info(f"📊 User {user.telegram_id} USDT balance: ${balance:.2f}")
+                    # Check for new deposits from this user
+                    await self._check_user_deposits(user, bot)
                 except Exception as e:
-                    logger.error(f"Error: {e}")
+                    logger.error(f"Error checking user {user.telegram_id}: {e}")
+            
             session.close()
         except Exception as e:
             logger.error(f"Scanner error: {e}")
 
-    async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
-        """Manual deposit check - triggered by user clicking 'I've Sent USDT'"""
+    async def _check_user_deposits(self, user, bot):
+        """Check for new deposits from a specific user on Polygon"""
         try:
-            logger.info(f"🔍 Manual deposit check for user {user_id}, expected: ${expected_amount:.2f}")
-            session = self.db.get_session()
-
-            user = session.query(User).filter_by(telegram_id=user_id).first()
-            if not user:
-                return {'success': False, 'message': 'User not found'}
-            if not user.wallet_address:
-                return {'success': False, 'message': 'No wallet connected'}
-
-            # Check current project wallet balance
-            current_balance = await self._get_usdt_balance(self.project_wallet)
-            logger.info(f"📊 Project wallet balance: ${current_balance:.2f}")
-
-            # Check if user already has a deposit of this amount
-            existing = session.query(Deposit).filter_by(
-                user_id=user.id,
-                amount=expected_amount
-            ).first()
-
-            if existing:
-                # Check if balance already reflects it
-                expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
-                if user.balance < expected_balance:
-                    user.balance += expected_amount
-                    session.commit()
-                    logger.info(f"✅ Balance corrected: ${user.balance:.2f}")
-                    return {'success': True, 'message': 'Balance corrected'}
-                return {'success': True, 'message': 'Deposit already processed'}
-
-            # If project wallet has the funds, credit the user
-            if current_balance >= expected_amount:
-                deposit = Deposit(
-                    user_id=user.id,
-                    amount=expected_amount,
-                    tx_hash=f"0xmanual_{datetime.utcnow().timestamp()}",
-                    from_address=user.wallet_address,
-                    block_number=0,
-                    confirmed_at=datetime.utcnow(),
-                    processed=True
-                )
-                session.add(deposit)
-                user.balance += expected_amount
-                user.total_deposited += expected_amount
-                session.commit()
-                logger.info(f"✅ Deposit processed: ${expected_amount:.2f}")
-                return {'success': True, 'message': 'Deposit detected and processed'}
-
-            return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found'}
-
+            # Get recent transactions from user to project wallet
+            url = f"{self.api_url}?module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=30) as response:
+                    data = await response.json()
+                    
+                    if data.get('status') != '1':
+                        logger.debug(f"No transactions found for user {user.telegram_id} on Polygon")
+                        return
+                    
+                    transactions = data.get('result', [])
+                    
+                    for tx in transactions:
+                        # Check if transaction is to project wallet
+                        if tx.get('to', '').lower() == self.project_wallet:
+                            # Check if we already processed this transaction
+                            existing = self.db.get_deposit_by_tx_hash(tx.get('hash'))
+                            if existing:
+                                continue
+                            
+                            # Parse amount (USDT has 6 decimals on Polygon)
+                            amount = int(tx.get('value', '0')) / 10**6
+                            
+                            # Process the deposit
+                            await self._process_deposit(
+                                user=user,
+                                amount=amount,
+                                tx_hash=tx.get('hash'),
+                                from_address=tx.get('from'),
+                                block_number=int(tx.get('blockNumber', 0)),
+                                bot=bot
+                            )
+                            
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error checking user deposits on Polygon: {e}")
+
+    async def _process_deposit(self, user, amount, tx_hash, from_address, block_number, bot):
+        """Process a verified deposit on Polygon"""
+        try:
+            session = self.db.get_session()
+            
+            # Verify the transaction is valid and not a fake token
+            is_valid = await self._verify_transaction(tx_hash)
+            if not is_valid:
+                logger.warning(f"⚠️ Invalid transaction detected: {tx_hash} on Polygon")
+                return
+            
+            # Check if already processed
+            existing = session.query(Deposit).filter_by(tx_hash=tx_hash).first()
+            if existing:
+                logger.info(f"Deposit {tx_hash} already processed on Polygon")
+                return
+            
+            # Create deposit record
+            deposit = Deposit(
+                user_id=user.id,
+                amount=amount,
+                tx_hash=tx_hash,
+                from_address=from_address,
+                block_number=block_number,
+                network='polygon'
+            )
+            session.add(deposit)
+            
+            # Update user balance
+            user.balance += amount
+            user.total_deposited += amount
+            
+            session.commit()
+            logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
+            
+            # Send notification
+            try:
+                message = (
+                    f"💰 **Deposit Detected on Polygon!**\n\n"
+                    f"Amount: **${amount:.2f} USDT**\n"
+                    f"Network: **Polygon** ⛓️\n"
+                    f"TX: `{tx_hash[:10]}...{tx_hash[-8:]}`\n\n"
+                    f"🌱 Your balance: **${user.balance:.2f}**\n"
+                    f"💎 Total deposited: **${user.total_deposited:.2f}**"
+                )
+                await bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=message,
+                    parse_mode='Markdown'
+                )
+                logger.info(f"✅ Deposit notification sent to {user.telegram_id}")
+            except Exception as e:
+                logger.error(f"Error sending deposit notification: {e}")
+                
+        except Exception as e:
+            logger.error(f"Error processing deposit on Polygon: {e}")
             session.rollback()
-            return {'success': False, 'message': str(e)}
+        finally:
+            session.close()
+
+    async def _verify_transaction(self, tx_hash: str) -> bool:
+        """Verify transaction is valid and is USDT on Polygon"""
+        try:
+            # Check transaction details on Polygonscan
+            url = f"{self.api_url}?module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=10) as response:
+                    data = await response.json()
+                    
+                    if data.get('status') != '1':
+                        logger.warning(f"Transaction {tx_hash} not found on Polygon")
+                        return False
+                    
+                    # Check transaction logs for USDT transfer
+                    receipt = data.get('result', {})
+                    logs = receipt.get('logs', [])
+                    
+                    # Look for USDT transfer event
+                    for log in logs:
+                        if log.get('address', '').lower() == self.usdt_contract:
+                            return True
+                    
+                    logger.warning(f"No USDT transfer found in transaction {tx_hash} on Polygon")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error verifying transaction on Polygon: {e}")
+            return False
 
     async def _get_usdt_balance(self, wallet_address: str) -> float:
-        """Simple USDT balance check via RPC"""
+        """Get USDT balance on Polygon"""
         try:
+            # USDT on Polygon uses 6 decimals
             data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
             payload = {
                 "jsonrpc": "2.0",
@@ -106,8 +187,65 @@ class DepositScanner:
                 async with session.post(self.rpc_url, json=payload, timeout=10) as response:
                     data = await response.json()
                     if data and data.get('result'):
-                        return int(data.get('result'), 16) / 10**18
+                        return int(data.get('result'), 16) / 10**6  # 6 decimals on Polygon
                     return 0
         except Exception as e:
-            logger.error(f"Balance error: {e}")
+            logger.error(f"Balance error on Polygon: {e}")
             return 0
+
+    async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
+        """Manual deposit check - triggered by user clicking 'I've Sent USDT' on Polygon"""
+        try:
+            logger.info(f"🔍 Manual deposit check for user {user_id}, expected: ${expected_amount:.2f} on Polygon")
+            session = self.db.get_session()
+
+            user = session.query(User).filter_by(telegram_id=user_id).first()
+            if not user:
+                return {'success': False, 'message': 'User not found'}
+            if not user.wallet_address:
+                return {'success': False, 'message': 'No wallet connected'}
+
+            # Check current project wallet balance on Polygon
+            current_balance = await self._get_usdt_balance(self.project_wallet)
+            logger.info(f"📊 Project wallet balance on Polygon: ${current_balance:.2f}")
+
+            # Check recent transactions from user to project wallet on Polygon
+            url = f"{self.api_url}?module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
+            
+            async with aiohttp.ClientSession() as session_api:
+                async with session_api.get(url, timeout=30) as response:
+                    data = await response.json()
+                    
+                    if data.get('status') == '1':
+                        transactions = data.get('result', [])
+                        for tx in transactions:
+                            if tx.get('to', '').lower() == self.project_wallet:
+                                amount = int(tx.get('value', '0')) / 10**6
+                                if abs(amount - expected_amount) < 0.01:  # Within 1 cent
+                                    # Verify this transaction hasn't been processed
+                                    existing = session.query(Deposit).filter_by(tx_hash=tx.get('hash')).first()
+                                    if not existing:
+                                        # Process the deposit
+                                        await self._process_deposit(
+                                            user=user,
+                                            amount=amount,
+                                            tx_hash=tx.get('hash'),
+                                            from_address=tx.get('from'),
+                                            block_number=int(tx.get('blockNumber', 0)),
+                                            bot=bot
+                                        )
+                                        return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT detected and processed on Polygon!'}
+                                    else:
+                                        return {'success': True, 'message': 'Deposit already processed'}
+            
+            # If we get here, no matching deposit found
+            return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} USDT found on Polygon. Please make sure you sent USDT on the Polygon network.'}
+
+        except Exception as e:
+            logger.error(f"Error in manual deposit check on Polygon: {e}")
+            if 'session' in locals():
+                session.rollback()
+            return {'success': False, 'message': str(e)}
+        finally:
+            if 'session' in locals():
+                session.close()

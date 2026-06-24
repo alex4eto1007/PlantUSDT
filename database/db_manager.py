@@ -17,22 +17,19 @@ class DatabaseManager:
     def _init_engine(self):
         """Initialize database engine with connection pooling"""
         try:
-            # Get database URL from config
             database_url = Config.DATABASE_URL
             
-            # Create engine with connection pooling settings
             self.engine = create_engine(
                 database_url,
-                pool_size=10,              # Increased from default 5
-                max_overflow=20,           # Increased from default 10
-                pool_timeout=60,           # Increased from default 30
-                pool_recycle=3600,         # Recycle connections after 1 hour
-                pool_pre_ping=True,        # Check connection before using
+                pool_size=10,
+                max_overflow=20,
+                pool_timeout=60,
+                pool_recycle=3600,
+                pool_pre_ping=True,
                 echo=False,
                 poolclass=QueuePool
             )
             
-            # Create session factory
             self.Session = scoped_session(
                 sessionmaker(
                     bind=self.engine,
@@ -137,7 +134,7 @@ class DatabaseManager:
                     withdrawal.tx_hash = tx_hash
                 withdrawal.processed_at = datetime.utcnow()
                 session.commit()
-                logger.info(f"Withdrawal {withdrawal_id} updated to {status}")
+                logger.info(f"Withdrawal {withdrawal_id} updated to {status} on Polygon")
                 return True
             return False
         except Exception as e:
@@ -233,6 +230,37 @@ class DatabaseManager:
             session.rollback()
             logger.error(f"Error updating user balance: {e}")
             return False
+        finally:
+            session.close()
+
+    def create_deposit(self, user_id, amount, tx_hash, from_address, block_number):
+        """Create a new deposit record"""
+        session = self.get_session()
+        try:
+            deposit = Deposit(
+                user_id=user_id,
+                amount=amount,
+                tx_hash=tx_hash,
+                from_address=from_address,
+                block_number=block_number,
+                network='polygon'  # Always Polygon for now
+            )
+            session.add(deposit)
+            session.commit()
+            logger.info(f"Deposit {tx_hash} created for user {user_id} on Polygon")
+            return deposit
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error creating deposit: {e}")
+            return None
+        finally:
+            session.close()
+
+    def get_deposit_by_tx_hash(self, tx_hash):
+        """Get deposit by transaction hash"""
+        session = self.get_session()
+        try:
+            return session.query(Deposit).filter_by(tx_hash=tx_hash).first()
         finally:
             session.close()
 

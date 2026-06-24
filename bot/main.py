@@ -73,15 +73,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
 
-Grow your USDT with 2% DAILY returns for 30 days!
+Grow your USDT with returns up to 60% on Polygon network!
 
 💰 INVESTMENT DETAILS:
-• 📈 Daily return: 2%
-• ⏱️ Duration: 30 days
+• 🌿 1 Day: 2% return
+• 🌿 7 Days: 14% return  
+• 🌿 30 Days: 60% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
 • 🔒 Platform fee: 10% on withdrawals
 • 🌱 3 Planting Fields: $100 max each
+• ⛓️ Network: Polygon (MATIC) - Low fees!
 
 👥 REFERRAL BONUS:
 Share your referral link and earn 5% from your friends' deposits!
@@ -98,13 +100,13 @@ Use /app to open the Mini App!"""
 
     # ============================================
     # EXISTING USER - Check if they can accept a referral
-    # 3-MINUTE WINDOW (CHANGED FROM 3 DAYS)
+    # 3-MINUTE WINDOW
     # ============================================
     if context.args and len(context.args) > 0 and existing_user.can_be_referred and existing_user.referred_by is None:
         referral_code = context.args[0]
         logger.info(f"Existing user {user.id} trying to accept referral: {referral_code}")
 
-        # Check if user is within 3-minute window (changed from 3 days)
+        # Check if user is within 3-minute window
         seconds_since_creation = (now - existing_user.created_at).total_seconds()
 
         if seconds_since_creation <= 180:  # 3 minutes = 180 seconds
@@ -116,7 +118,7 @@ Use /app to open the Mini App!"""
                     return
 
                 # ============================================
-                # APPLY REFERRAL - NO BONUS (REMOVED $5)
+                # APPLY REFERRAL - NO BONUS
                 # ============================================
                 session = db.get_session()
 
@@ -128,9 +130,6 @@ Use /app to open the Mini App!"""
                     user_obj.referred_by = referrer.id
                     user_obj.referred_at = now
                     user_obj.can_be_referred = False
-
-                    # NO BONUS - Removed the $5 bonus
-                    # Referral earnings will come from deposits (5%)
 
                     session.commit()
                     logger.info(f"Referral saved: {user.id} referred by {referrer.id}")
@@ -144,7 +143,7 @@ Use /app to open the Mini App!"""
                     f"💡 Your referrer will earn 5% from your future deposits!"
                 )
 
-                # Notify referrer (no bonus notification)
+                # Notify referrer
                 try:
                     await context.bot.send_message(
                         chat_id=referrer.telegram_id,
@@ -242,7 +241,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 2:
         await update.message.reply_text(
             "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
-            "Example: /complete_payout 1 0xabc123..."
+            "Example: /complete_payout 1 0xabc123...\n\n"
+            "💡 Transaction hash should be from sending USDT on Polygon network."
         )
         return
 
@@ -268,7 +268,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✅ Withdrawal {withdrawal_id} marked as COMPLETED!\n\n"
             f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
             f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
-            f"🔗 TX: {tx_hash}"
+            f"🔗 TX: {tx_hash}\n"
+            f"⛓️ Network: Polygon"
         )
 
         user_obj = db.get_user_by_id(withdrawal.user_id)
@@ -279,7 +280,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"✅ Your withdrawal request has been processed!\n\n"
                          f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
                          f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
-                         f"🔗 TX: {tx_hash}\n\n"
+                         f"🔗 TX: {tx_hash}\n"
+                         f"⛓️ Network: Polygon\n\n"
                          f"Check your wallet!"
                 )
             except Exception as e:
@@ -304,7 +306,7 @@ Example:
 /complete_payout 1 0xabc123...
 /reset_referral 123456789
 
-💡 The transaction hash should be from sending USDT on BEP-20 (BSC) network."""
+💡 Transactions are on Polygon (MATIC) network using USDT (ERC-20)"""
 
     await update.message.reply_text(help_text)
 
@@ -376,13 +378,11 @@ def main():
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
 
-        # ============================================
-        # SET PERSISTENT MENU BUTTON TO MINI APP
-        # ============================================
+        # Set persistent menu button
         async def set_menu_button():
             try:
                 await application.bot.set_chat_menu_button(
-                    chat_id=None,  # None = global setting for all chats
+                    chat_id=None,
                     menu_button={
                         "type": "web_app",
                         "text": "🌱 PlantUSDT",
@@ -393,15 +393,11 @@ def main():
             except Exception as e:
                 logger.error(f"❌ Error setting menu button: {e}")
 
-        # Add to the event loop
         loop.create_task(set_menu_button())
-        # ============================================
-        # END MENU BUTTON SETUP
-        # ============================================
 
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
-        logger.info("🔍 Deposit scanner running (checks every 5 minutes)")
+        logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
         logger.info("📌 Menu button set to: 🌱 PlantUSDT")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)

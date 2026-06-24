@@ -89,6 +89,7 @@ class Deposit(Base):
     block_number = Column(BigInteger)
     confirmed_at = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
+    network = Column(String(20), default="polygon")  # Track which network deposit came from
     
     user = relationship("User", back_populates="deposits")
 
@@ -115,5 +116,6 @@ class Withdrawal(Base):
     tx_hash = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime)
+    network = Column(String(20), default="polygon")  # Track which network withdrawal was on
     
     user = relationship("User", back_populates="withdrawals")

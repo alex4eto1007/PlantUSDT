@@ -6,82 +6,194 @@
     <title>🏦 Withdraw - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .network-badge-small {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(130, 71, 229, 0.12);
+            color: #8247E5;
+            padding: 2px 12px;
+            border-radius: 14px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        .network-badge-small .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #8247E5;
+            display: inline-block;
+        }
+        .fee-summary {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 14px;
+            color: #8892b0;
+        }
+        .fee-row.total {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 8px;
+            margin-top: 4px;
+            font-weight: 700;
+            color: #00ff87;
+        }
+        .fee-row .net {
+            color: #00ff87;
+            font-size: 16px;
+        }
+        .fee-row .fee-amount {
+            color: #ff6b6b;
+        }
+        .fee-row .amount {
+            color: #ffffff;
+        }
+        .warning-text {
+            font-size: 12px;
+            color: #ffd93d;
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(255, 193, 7, 0.08);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 193, 7, 0.15);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <button class="back-btn" onclick="goBack()">←</button>
             <h1 style="color: #00ff87; font-size: 20px;">🏦 Withdraw</h1>
+            <span class="network-badge-small">
+                <span class="dot"></span>
+                Polygon
+            </span>
         </div>
 
-        <div class="withdraw-info">
-            <!-- Balance Card -->
-            <div class="info-card" style="text-align: center; border-color: rgba(0,255,135,0.2);">
-                <h3 style="color: #8899bb; font-size: 14px; font-weight: normal;">💰 Available Balance</h3>
-                <div class="withdraw-balance" id="withdrawBalance">$0.00</div>
-                <div style="display: flex; justify-content: center; gap: 20px; margin-top: 8px;">
-                    <span style="color: #8899bb; font-size: 13px;">💵 Min: <span style="color: #00ff87;">$2</span></span>
-                    <span style="color: #8899bb; font-size: 13px;">🔒 Fee: <span style="color: #ff6b6b;">10%</span></span>
-                </div>
+        <div class="info-card">
+            <h3>📋 Withdrawal Instructions</h3>
+            <p style="font-size: 13px; color: #8892b0; line-height: 1.6;">
+                <strong>Min Amount:</strong> $2 USDT<br>
+                <strong>Fee:</strong> 10%<br>
+                <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
+                <strong>Token:</strong> USDT (ERC-20)<br>
+                <strong>Gas Fees:</strong> Covered by us!
+            </p>
+            <div class="warning-text">
+                ⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.
             </div>
-
-            <!-- Withdrawal Form -->
-            <div class="info-card" style="border-color: rgba(0,255,135,0.15);">
-                <h3 style="color: #00ff87;">📝 Withdrawal Form</h3>
-                <form id="withdrawForm">
-                    <div class="form-group">
-                        <label>Amount (USDT)</label>
-                        <input type="number" id="withdrawAmount" min="2" step="0.01" placeholder="Enter amount (min $2)">
-                    </div>
-                    <div class="form-group">
-                        <label>Your Wallet Address (BSC)</label>
-                        <input type="text" id="withdrawAddress" placeholder="0x...">
-                        <button type="button" class="set-wallet-btn" onclick="setWallet()">
-                            💳 Use Saved Wallet
-                        </button>
-                    </div>
-                    
-                    <!-- Fee Display -->
-                    <div class="fee-summary">
-                        <div class="fee-row">
-                            <span>Amount:</span>
-                            <span class="amount" id="feeAmount">$0.00</span>
-                        </div>
-                        <div class="fee-row">
-                            <span>Fee (10%):</span>
-                            <span class="fee-amount" id="feeDisplay">$0.00</span>
-                        </div>
-                        <div class="fee-row total">
-                            <span>You Receive:</span>
-                            <span class="net" id="netAmount">$0.00</span>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="withdraw-btn">🌱 Request Withdrawal</button>
-                </form>
-            </div>
-
-            <!-- Important Info -->
-            <div class="info-card" style="border-color: rgba(0,255,135,0.1);">
-                <h3 style="color: #00ff87;">📋 Important</h3>
-                <div class="withdraw-info-text">
-                    <p>• Withdrawals are processed <span class="highlight">manually</span></p>
-                    <p>• Processing time: <span class="highlight">12-24 hours</span></p>
-                    <p>• Make sure your wallet address is <span class="highlight">correct</span>!</p>
-                    <p>• Fee: <span class="fee">10%</span> covers operational costs</p>
-                </div>
-                <div class="withdraw-warning">
-                    <p>⚠️ Double-check your wallet address before submitting!</p>
-                    <p class="small-text">Sending to wrong address is irreversible.</p>
-                </div>
-            </div>
+            <p style="font-size: 12px; color: #8892b0; margin-top: 8px;">
+                🔒 Your funds will be sent to your Polygon wallet address.
+            </p>
         </div>
 
-        <button class="action-btn secondary" onclick="navigateTo('index')" style="width: 100%; margin-top: 8px; border-color: rgba(0,255,135,0.2); color: #00ff87;">
+        <form id="withdrawForm">
+            <div class="form-group">
+                <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">💰 Amount (USDT on Polygon)</label>
+                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $2)" min="2" step="0.01" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
+            </div>
+
+            <div class="form-group">
+                <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">📤 Withdraw to (Polygon Wallet)</label>
+                <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
+                <button type="button" onclick="setWallet()" style="margin-top: 4px; padding: 4px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 11px;">📂 Use Connected Wallet</button>
+                <p style="font-size: 11px; color: #495670; margin-top: 4px;">
+                    ⚠️ Must be a Polygon network wallet address
+                </p>
+            </div>
+
+            <div class="fee-summary" id="feeSummary" style="display: none;">
+                <div class="fee-row">
+                    <span>Amount:</span>
+                    <span class="amount" id="feeAmount">$0.00</span>
+                </div>
+                <div class="fee-row">
+                    <span>Fee (10%):</span>
+                    <span class="fee-amount" id="feeAmountFee">$0.00</span>
+                </div>
+                <div class="fee-row total">
+                    <span>You will receive on Polygon:</span>
+                    <span class="net" id="feeNet">$0.00</span>
+                </div>
+            </div>
+
+            <button type="submit" class="withdraw-btn" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
+                🌱 Request Withdrawal on Polygon
+            </button>
+        </form>
+
+        <button class="action-btn secondary" onclick="goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
             📊 Back to Dashboard
         </button>
     </div>
 
     <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+
+            const amountInput = document.getElementById('withdrawAmount');
+            const feeSummary = document.getElementById('feeSummary');
+            const feeAmount = document.getElementById('feeAmount');
+            const feeAmountFee = document.getElementById('feeAmountFee');
+            const feeNet = document.getElementById('feeNet');
+
+            if (amountInput) {
+                amountInput.addEventListener('input', function() {
+                    const amount = parseFloat(this.value) || 0;
+                    if (amount >= 2) {
+                        const fee = amount * 0.10;
+                        const net = amount - fee;
+                        feeAmount.textContent = '$' + amount.toFixed(2);
+                        feeAmountFee.textContent = '$' + fee.toFixed(2);
+                        feeNet.textContent = '$' + net.toFixed(2);
+                        feeSummary.style.display = 'block';
+                    } else {
+                        feeSummary.style.display = 'none';
+                    }
+                });
+            }
+
+            // Set wallet address from connected wallet
+            window.setWallet = function() {
+                const userId = tg.initDataUnsafe?.user?.id || '0';
+                fetch(`https://plantusdt.ddns.net/api/get_wallet?telegram_id=${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.wallet_address) {
+                            document.getElementById('withdrawAddress').value = data.wallet_address;
+                            window.Telegram.WebApp.showPopup({
+                                title: '✅ Wallet Set',
+                                message: 'Your connected Polygon wallet address has been set.',
+                                buttons: [{type: 'ok'}]
+                            });
+                        } else {
+                            window.Telegram.WebApp.showPopup({
+                                title: '❌ No Wallet',
+                                message: 'Please connect a wallet first in the main app.',
+                                buttons: [{type: 'ok'}]
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Error',
+                            message: 'Could not fetch wallet: ' + error.message,
+                            buttons: [{type: 'ok'}]
+                        });
+                    });
+            };
+        });
+    </script>
 </body>
 </html>

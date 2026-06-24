@@ -1,9 +1,11 @@
-// PlantUSDT Mini App - JavaScript
+// PlantUSDT Mini App - JavaScript (Polygon Network)
 
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const API_BASE = 'https://plantusdt.ddns.net';
+const NETWORK = 'Polygon';
+const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -208,15 +210,15 @@ async function saveWallet() {
     var walletInput = document.getElementById('walletInput');
     var walletAddress = walletInput ? walletInput.value.trim() : '';
     if (!walletAddress) {
-        tg.showPopup({title:'❌ Error', message:'Please enter a wallet address.', buttons:[{type:'ok'}]});
+        tg.showPopup({title:'❌ Error', message:'Please enter a Polygon wallet address.', buttons:[{type:'ok'}]});
         return;
     }
     if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
-        tg.showPopup({title:'❌ Invalid Address', message:'Please enter a valid BSC wallet address.', buttons:[{type:'ok'}]});
+        tg.showPopup({title:'❌ Invalid Address', message:'Please enter a valid Polygon wallet address.', buttons:[{type:'ok'}]});
         return;
     }
     if (walletAddress.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
-        tg.showPopup({title:'❌ Invalid Wallet', message:'This is the project wallet. Please enter your own.', buttons:[{type:'ok'}]});
+        tg.showPopup({title:'❌ Invalid Wallet', message:'This is the project wallet on Polygon. Please enter your own.', buttons:[{type:'ok'}]});
         return;
     }
     try {
@@ -227,7 +229,7 @@ async function saveWallet() {
         });
         var data = await response.json();
         if (data.success) {
-            tg.showPopup({title:'✅ Wallet Saved!', message:'Wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
+            tg.showPopup({title:'✅ Wallet Saved!', message:'Polygon wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
             updateWalletUI(walletAddress);
             loadUserData();
         } else {
@@ -246,11 +248,11 @@ function updateWalletUI(address) {
     var saveBtn = document.getElementById('saveWalletBtn');
     var disconnectBtn = document.getElementById('disconnectWalletBtn');
     if (statusText) {
-        statusText.textContent = '✅ Wallet Connected';
+        statusText.textContent = '✅ Polygon Wallet Connected';
         statusText.className = 'connected';
     }
     if (addressDisplay) {
-        addressDisplay.textContent = '📍 ' + address;
+        addressDisplay.textContent = '📍 ' + address + ' (Polygon)';
         addressDisplay.style.display = 'block';
     }
     if (walletInput) {
@@ -270,7 +272,7 @@ function resetWalletUI() {
     var saveBtn = document.getElementById('saveWalletBtn');
     var disconnectBtn = document.getElementById('disconnectWalletBtn');
     if (statusText) {
-        statusText.textContent = 'Wallet not connected';
+        statusText.textContent = 'Polygon wallet not connected';
         statusText.className = 'disconnected';
     }
     if (addressDisplay) addressDisplay.style.display = 'none';
@@ -288,7 +290,7 @@ async function disconnectWallet() {
     var userId = tgUser ? tgUser.id : '0';
     tg.showPopup({
         title:'🔓 Disconnect Wallet',
-        message:'Are you sure you want to disconnect your wallet?',
+        message:'Are you sure you want to disconnect your Polygon wallet?',
         buttons:[
             {id:'cancel', type:'cancel'},
             {id:'confirm', type:'ok', text:'Disconnect'}
@@ -304,7 +306,7 @@ async function disconnectWallet() {
                 var data = await response.json();
                 if (data.success) {
                     resetWalletUI();
-                    tg.showPopup({title:'✅ Disconnected', message:'Wallet disconnected.', buttons:[{type:'ok'}]});
+                    tg.showPopup({title:'✅ Disconnected', message:'Polygon wallet disconnected.', buttons:[{type:'ok'}]});
                 } else {
                     tg.showPopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]});
                 }
@@ -338,10 +340,10 @@ async function setWallet() {
             var withdrawAddress = document.getElementById('withdrawAddress');
             if (withdrawAddress) {
                 withdrawAddress.value = data.wallet_address;
-                tg.showPopup({title:'✅ Wallet Loaded!', message:'Wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
+                tg.showPopup({title:'✅ Wallet Loaded!', message:'Polygon wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
             }
         } else {
-            tg.showPopup({title:'❌ No Wallet Found', message:'Please save a wallet address first.', buttons:[{type:'ok'}]});
+            tg.showPopup({title:'❌ No Wallet Found', message:'Please save a Polygon wallet address first.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
         console.error('Error loading wallet:', error);
@@ -402,7 +404,7 @@ async function investFieldWithLock(fieldNumber) {
     
     tg.showPopup({
         title: '📊 Confirm Investment',
-        message: `Field #${fieldNumber}\n\n💰 Amount: $${amountNum.toFixed(2)}\n⏱️ Lock Period: ${days} day${days > 1 ? 's' : ''}\n📈 Expected Return: $${expectedReturn.toFixed(2)}\n✅ Profit: +$${profit.toFixed(2)}`,
+        message: `Field #${fieldNumber}\n\n💰 Amount: $${amountNum.toFixed(2)}\n⏱️ Lock Period: ${days} day${days > 1 ? 's' : ''}\n📈 Expected Return: $${expectedReturn.toFixed(2)}\n✅ Profit: +$${profit.toFixed(2)}\n⛓️ Network: Polygon`,
         buttons: [
             {id:'cancel', type:'cancel'},
             {id:'confirm', type:'ok', text:'✅ Confirm'}
@@ -424,7 +426,7 @@ async function investFieldWithLock(fieldNumber) {
                 if (data.success) {
                     tg.showPopup({
                         title:'✅ Success!',
-                        message:`Invested $${amountNum.toFixed(2)} in Field #${fieldNumber}!\n🔒 Locked for ${days} days.\n📈 Expected return: $${expectedReturn.toFixed(2)}`,
+                        message:`Invested $${amountNum.toFixed(2)} in Field #${fieldNumber} on Polygon!\n🔒 Locked for ${days} days.\n📈 Expected return: $${expectedReturn.toFixed(2)}`,
                         buttons:[{type:'ok'}]
                     });
                     loadUserData();
@@ -461,7 +463,7 @@ function copyAddress() {
             navigator.clipboard.writeText(address).then(function() {
                 tg.showPopup({
                     title: '✅ Copied!',
-                    message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                    message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
                     buttons: [{type: 'ok'}]
                 });
             }).catch(function() {
@@ -473,7 +475,7 @@ function copyAddress() {
                 document.body.removeChild(textArea);
                 tg.showPopup({
                     title: '✅ Copied!',
-                    message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                    message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
                     buttons: [{type: 'ok'}]
                 });
             });
@@ -486,7 +488,7 @@ function copyAddress() {
             document.body.removeChild(textArea);
             tg.showPopup({
                 title: '✅ Copied!',
-                message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
                 buttons: [{type: 'ok'}]
             });
         }
@@ -505,7 +507,7 @@ async function copyReferral() {
     if (!isConnected) {
         tg.showPopup({
             title: '⚠️ Wallet Required',
-            message: 'You must save your wallet address first to get your referral link!',
+            message: 'You must save your Polygon wallet address first to get your referral link!',
             buttons: [{type: 'ok'}]
         });
         return;
@@ -533,16 +535,16 @@ async function copyReferral() {
 async function checkDeposit() {
     var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
-        statusDiv.innerHTML = '🔍 Checking for deposits...';
+        statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
         try {
             var userId = tgUser ? tgUser.id : '0';
             var response = await fetch(API_BASE + '/api/check_deposit?telegram_id=' + userId);
             var data = await response.json();
             if (data.success) {
-                statusDiv.innerHTML = '✅ Deposit detected! Balance updated.';
+                statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
                 loadUserData();
             } else {
-                statusDiv.innerHTML = '⏳ No new deposits found.';
+                statusDiv.innerHTML = '⏳ No new deposits found on Polygon.';
             }
         } catch (error) {
             statusDiv.innerHTML = '❌ Error checking deposits.';
@@ -558,7 +560,7 @@ async function checkDepositWithAmount() {
     if (!amount || parseFloat(amount) < 5) {
         tg.showPopup({
             title: '⚠️ Invalid Amount',
-            message: 'Please enter at least $5 USDT.',
+            message: 'Please enter at least $5 USDT on Polygon.',
             buttons: [{type: 'ok'}]
         });
         return;
@@ -566,22 +568,22 @@ async function checkDepositWithAmount() {
     
     const statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
-        statusDiv.innerHTML = '🔍 Checking for deposits...';
+        statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
         statusDiv.className = 'deposit-status pending';
         statusDiv.style.display = 'block';
         try {
             const response = await fetch(`${API_BASE}/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
             const data = await response.json();
             if (data.success) {
-                statusDiv.innerHTML = '✅ Deposit detected! Balance updated.';
+                statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
                 statusDiv.className = 'deposit-status success';
                 loadUserData();
             } else {
-                statusDiv.innerHTML = '⏳ No new deposits found. Please wait a few minutes and try again.';
+                statusDiv.innerHTML = '⏳ No new deposits found on Polygon. Please wait a few minutes and try again.';
                 statusDiv.className = 'deposit-status pending';
             }
         } catch (error) {
-            statusDiv.innerHTML = '❌ Error checking deposits. Please try again.';
+            statusDiv.innerHTML = '❌ Error checking deposits on Polygon. Please try again.';
             statusDiv.className = 'deposit-status error';
         }
     }
@@ -616,7 +618,7 @@ function filterHistory(type) {
             }
             
             if (allTransactions.length === 0) {
-                historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
+                historyList.innerHTML = '<p class="empty-state">No transactions found on Polygon.</p>';
                 return;
             }
             
@@ -644,7 +646,7 @@ function filterHistory(type) {
                 if (type === 'withdrawals') displayType = 'withdrawal';
                 if (type === 'earnings') displayType = 'earning';
                 if (type === 'investments') displayType = 'investment';
-                historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found.</p>';
+                historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found on Polygon.</p>';
                 return;
             }
             
@@ -689,7 +691,7 @@ function renderHistory(transactions) {
         html += '<div class="history-item">' +
             '<div class="history-icon">' + icon + '</div>' +
             '<div class="history-details">' +
-                '<div class="history-type">' + displayText + statusBadge + '</div>' +
+                '<div class="history-type">' + displayText + ' 🟣 Polygon' + statusBadge + '</div>' +
                 '<div class="history-date">' + date + '</div>' +
             '</div>' +
             '<div class="history-amount ' + status + '">' + amountDisplay + '</div>' +
@@ -776,15 +778,15 @@ function setupEventListeners() {
             var amount = amountInput ? amountInput.value : '';
             var address = addressInput ? addressInput.value : '';
             if (!amount || parseFloat(amount) < 2) {
-                tg.showPopup({title:'❌ Error', message:'Please enter at least $2 USDT.', buttons:[{type:'ok'}]});
+                tg.showPopup({title:'❌ Error', message:'Please enter at least $2 USDT for withdrawal on Polygon.', buttons:[{type:'ok'}]});
                 return;
             }
             if (!address || !address.startsWith('0x')) {
-                tg.showPopup({title:'❌ Error', message:'Please enter a valid BSC wallet address.', buttons:[{type:'ok'}]});
+                tg.showPopup({title:'❌ Error', message:'Please enter a valid Polygon wallet address.', buttons:[{type:'ok'}]});
                 return;
             }
             if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
-                tg.showPopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet.', buttons:[{type:'ok'}]});
+                tg.showPopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet on Polygon.', buttons:[{type:'ok'}]});
                 return;
             }
             var userId = tgUser ? tgUser.id : '0';
@@ -799,7 +801,7 @@ function setupEventListeners() {
                 .then(function(data) {
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
                     if (data.success) {
-                        tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted!', buttons:[{type:'ok'}]});
+                        tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         loadUserData();
                         if (amountInput) amountInput.value = '';
                     } else {
@@ -828,4 +830,3 @@ window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
 window.disconnectWallet = disconnectWallet;
 window.setWallet = setWallet;
-// Force redeploy - Wed Jun 24 08:05:31 AM UTC 2026

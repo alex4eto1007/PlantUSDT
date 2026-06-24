@@ -6,12 +6,28 @@
     <title>📊 Dashboard - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .stat-value { font-size: 20px; }
+        .loading-text { color: #8892b0; font-size: 14px; text-align: center; padding: 20px; }
+        .error-text { color: #ff6b6b; font-size: 14px; text-align: center; padding: 20px; }
+        .network-badge-mini {
+            display: inline-block;
+            background: rgba(130, 71, 229, 0.2);
+            color: #8247E5;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="window.location.href='index.html'">←</button>
+            <button class="back-btn" onclick="window.history.back()">←</button>
             <h1 style="color: #00ff87; font-size: 20px;">📊 Dashboard</h1>
+            <span class="network-badge-mini">🟣 Polygon</span>
         </div>
 
         <div id="loadingMessage" class="loading-text">Loading your data...</div>
@@ -45,6 +61,10 @@
                 </div>
             </div>
 
+            <div style="text-align: center; color: rgba(255,255,255,0.4); font-size: 12px; margin: 8px 0 16px 0;">
+                ⛓️ All values in USDT on Polygon network
+            </div>
+
             <div class="actions-grid" style="grid-template-columns: repeat(1, 1fr);">
                 <button class="action-btn" onclick="window.location.href='history.html'" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7) !important; color: #ffffff !important; border: none; padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%;">
                     <span class="btn-icon">📜</span>
@@ -55,21 +75,17 @@
     </div>
 
     <script>
-        // Initialize Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
-        // Get user data
         const user = tg.initDataUnsafe?.user;
         const userId = user?.id || '0';
 
         console.log('Dashboard loaded, userId:', userId);
 
-        // Show loading
         document.getElementById('loadingMessage').textContent = '📡 Fetching data for user: ' + userId;
 
-        // Fetch data
         fetch(`https://plantusdt.ddns.net/api/user?telegram_id=${userId}`)
             .then(response => {
                 console.log('Response status:', response.status);
@@ -77,13 +93,11 @@
             })
             .then(data => {
                 console.log('API Response:', data);
-                
-                // Hide loading, show stats
+
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('dashboardStats').style.display = 'block';
 
                 if (data.success) {
-                    // Update stats
                     document.getElementById('dashBalance').textContent = '$' + (data.balance || 0).toFixed(2);
                     document.getElementById('dashInvested').textContent = '$' + (data.total_invested || 0).toFixed(2);
                     document.getElementById('dashEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);

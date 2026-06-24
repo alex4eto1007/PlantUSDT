@@ -23,6 +23,15 @@
             </div>
         </div>
 
+        <!-- Polygon Network Badge -->
+        <div class="network-badge-container">
+            <div class="network-badge">
+                <span class="network-dot polygon"></span>
+                <span>🟣 Polygon Network</span>
+                <span style="font-size: 11px; opacity: 0.7; margin-left: 4px;">(Low fees)</span>
+            </div>
+        </div>
+
         <!-- Total Earnings Display -->
         <div class="earnings-section">
             <div class="earnings-card">
@@ -39,8 +48,8 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon">📈</div>
-                <div class="stat-label">Daily Return</div>
-                <div class="stat-value">2%</div>
+                <div class="stat-label">Returns</div>
+                <div class="stat-value">2-60%</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">🔒</div>
@@ -53,9 +62,9 @@
                 <div class="stat-value">$5</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">🏦</div>
-                <div class="stat-label">Min Withdraw</div>
-                <div class="stat-value">$2</div>
+                <div class="stat-icon">⛓️</div>
+                <div class="stat-label">Network</div>
+                <div class="stat-value" style="font-size: 12px;">Polygon</div>
             </div>
         </div>
 
@@ -66,7 +75,7 @@
                 <span id="walletText" class="disconnected">Wallet not connected</span>
             </div>
             <div class="wallet-input-group">
-                <input type="text" id="walletInput" placeholder="Enter your BSC wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
+                <input type="text" id="walletInput" placeholder="Enter your Polygon wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
                 <div style="display: flex; gap: 8px;">
                     <button class="action-btn primary" onclick="saveWallet()" id="saveWalletBtn" style="flex: 1; padding: 12px;">
                         <span class="btn-icon">💾</span>
@@ -79,6 +88,9 @@
                 </div>
             </div>
             <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #00ff87; margin-top: 8px; word-break: break-all; padding: 8px 12px; background: rgba(0,255,135,0.05); border-radius: 6px; border: 1px solid rgba(0,255,135,0.1);"></div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 6px; text-align: center;">
+                ⚠️ Only send USDT on Polygon network
+            </div>
         </div>
 
         <!-- 3 Planting Fields -->
@@ -177,19 +189,20 @@
         <!-- Investment Info -->
         <div class="info-card">
             <h3>💎 How It Works</h3>
-            <p>1. Enter your wallet address</p>
-            <p>2. Deposit $5+ USDT (BEP-20)</p>
+            <p>1. Enter your Polygon wallet address</p>
+            <p>2. Deposit $5+ USDT on Polygon network</p>
             <p>3. Choose a field and invest (max $100 per field)</p>
             <p>4. Choose lock period: 1, 7, or 30 days</p>
             <p>5. Your investment locks and earns profit</p>
             <p>6. When period ends, your funds unlock automatically</p>
             <p>7. Withdraw anytime (min $2, 10% fee)</p>
             <p>8. Refer friends and earn 5% of their deposits!</p>
+            <p style="color: #8247E5; margin-top: 8px; font-weight: 500;">⛓️ Powered by Polygon Network</p>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <p>🔒 Powered by BSC Blockchain</p>
+            <p>🔒 Powered by Polygon Blockchain</p>
             <p>© 2026 PlantUSDT. All rights reserved.</p>
         </div>
     </div>

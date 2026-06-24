@@ -6,12 +6,73 @@
     <title>💳 Deposit - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .network-badge-large {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(130, 71, 229, 0.15);
+            color: #8247E5;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .network-badge-large .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #8247E5;
+            display: inline-block;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .warning-box-critical {
+            background: rgba(255, 107, 107, 0.15);
+            border: 2px solid rgba(255, 107, 107, 0.4);
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 12px;
+        }
+        .warning-box-critical p {
+            font-size: 12px;
+            color: #ff6b6b;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .info-box-polygon {
+            background: rgba(130, 71, 229, 0.08);
+            border: 1px solid rgba(130, 71, 229, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        .info-box-polygon p {
+            font-size: 12px;
+            color: #a29bfe;
+            margin: 0;
+            line-height: 1.6;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <button class="back-btn" onclick="goBack()">←</button>
             <h1 style="color: #00ff87; font-size: 20px;">💳 Deposit</h1>
+        </div>
+
+        <!-- Network Badge -->
+        <div style="text-align: center;">
+            <div class="network-badge-large">
+                <span class="dot"></span>
+                🟣 Polygon Network (MATIC)
+                <span style="font-size: 11px; opacity: 0.7; font-weight: 400;">| Low fees</span>
+            </div>
         </div>
 
         <!-- Connected Wallet Display -->
@@ -21,34 +82,45 @@
                 <span id="connectedWalletDisplay" style="color: #00ff87; font-family: monospace; font-size: 12px; word-break: break-all;">Not connected</span>
             </p>
             <p style="font-size: 11px; color: #ffd93d; margin: 4px 0 0 0;">
-                ⚠️ Send USDT ONLY from this wallet!
+                ⚠️ Send USDT ONLY from this wallet on Polygon network!
             </p>
         </div>
 
         <div class="info-card">
             <h3>📋 Deposit Instructions</h3>
             <p style="font-size: 13px; color: #8892b0; line-height: 1.6;">
-                <strong>Network:</strong> BSC (BEP-20)<br>
-                <strong>Token:</strong> USDT<br>
-                <strong>Min Amount:</strong> $5 USDT
+                <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
+                <strong>Token:</strong> USDT (ERC-20)<br>
+                <strong>Contract:</strong> 0xc2132D05D31c914a87C6611C10748AEb04B58e8F<br>
+                <strong>Min Amount:</strong> $5 USDT<br>
+                <strong>Gas Fees:</strong> ~$0.001 (Super cheap!)
             </p>
 
             <div class="deposit-address-box" style="margin-top: 12px;">
-                <p style="font-size: 12px; color: #8892b0; margin-bottom: 4px;">📌 Address (BSC BEP-20):</p>
-                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);">
-                    <span id="addressText" style="user-select: all;">0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76</span>
+                <p style="font-size: 12px; color: #8892b0; margin-bottom: 4px;">📌 Deposit Address (Polygon USDT):</p>
+                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);" id="addressText">
+                    0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76
                 </div>
                 <button onclick="copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
             </div>
 
+            <!-- Polygon USDT Contract Info -->
+            <div class="info-box-polygon">
+                <p>
+                    🔍 <strong>USDT Contract on Polygon:</strong><br>
+                    <span style="font-family: monospace; font-size: 11px;">0xc2132D05D31c914a87C6611C10748AEb04B58e8F</span><br>
+                    <span style="font-size: 11px;">⚠️ Always verify you're sending USDT (not any other token)</span>
+                </p>
+            </div>
+
             <!-- 🔒 CRITICAL WARNING -->
-            <div style="margin-top: 12px; padding: 14px; background: rgba(255,107,107,0.15); border: 2px solid rgba(255,107,107,0.4); border-radius: 8px;">
-                <p style="font-size: 12px; color: #ff6b6b; margin: 0; line-height: 1.6;">
+            <div class="warning-box-critical">
+                <p>
                     ⚠️ <strong>CRITICAL WARNING:</strong><br><br>
-                    🔗 We will ONLY check your <strong>connected wallet</strong> for deposits.<br><br>
-                    📤 You must send USDT <strong>FROM YOUR CONNECTED WALLET</strong>.<br><br>
-                    ❌ If you send from a different wallet, <strong>YOUR FUNDS WILL BE LOST</strong> and cannot be recovered.<br><br>
-                    ✅ Always double-check that you are sending from the wallet shown above.
+                    🔗 We will ONLY check your <strong>connected wallet</strong> for deposits on Polygon.<br><br>
+                    📤 You must send USDT <strong>FROM YOUR CONNECTED WALLET</strong> on the Polygon network.<br><br>
+                    ❌ If you send from a different wallet or on a different network, <strong>YOUR FUNDS WILL BE LOST</strong> and cannot be recovered.<br><br>
+                    ✅ Always double-check that you are sending from the wallet shown above on Polygon network.
                 </p>
             </div>
 
@@ -56,23 +128,23 @@
             <div style="margin-top: 8px; padding: 10px; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); border-radius: 8px;">
                 <p style="font-size: 12px; color: #ffd93d; margin: 0; line-height: 1.6;">
                     🔒 <strong>How it works:</strong><br>
-                    We check the blockchain for incoming USDT from your connected wallet address.<br>
-                    If the sender address doesn't match, we cannot credit your balance.
+                    We check Polygonscan for incoming USDT from your connected wallet address.<br>
+                    If the sender address doesn't match or network is wrong, we cannot credit your balance.
                 </p>
             </div>
 
             <div style="margin-top: 12px; padding: 10px; background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); border-radius: 8px;">
                 <p style="font-size: 12px; color: #ff6b6b; margin: 0;">
-                    ⚠️ Only send USDT on BSC network! Sending other tokens may result in loss.
+                    ⚠️ Only send USDT on the Polygon network! Sending on other networks (BSC, Ethereum, etc.) will result in permanent loss.
                 </p>
             </div>
         </div>
 
         <!-- Amount Input -->
         <div class="form-group" style="margin: 16px 0;">
-            <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">💰 Deposit Amount (USDT)</label>
+            <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">💰 Deposit Amount (USDT on Polygon)</label>
             <input type="number" id="depositAmount" placeholder="Enter the exact amount you sent" min="5" step="0.01" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
-            <p style="font-size: 11px; color: #495670; margin-top: 4px;">Enter the exact amount you sent to help us detect your deposit faster.</p>
+            <p style="font-size: 11px; color: #495670; margin-top: 4px;">Enter the exact amount you sent to help us detect your deposit faster on Polygon.</p>
         </div>
 
         <!-- Deposit Status -->
@@ -80,7 +152,7 @@
 
         <!-- Check Deposit Button -->
         <button class="action-btn primary" onclick="checkDepositWithAmount()" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
-            🔍 I've Sent USDT
+            🔍 I've Sent USDT on Polygon
         </button>
 
         <button class="action-btn secondary" onclick="goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
@@ -89,13 +161,11 @@
     </div>
 
     <script>
-        // Load connected wallet on page load
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
 
-            // Get connected wallet
             const userId = tg.initDataUnsafe?.user?.id || '0';
             fetch(`https://plantusdt.ddns.net/api/get_wallet?telegram_id=${userId}`)
                 .then(response => response.json())
@@ -113,7 +183,6 @@
                     document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
                 });
 
-            // Amount input listener - show success when amount is entered
             const amountInput = document.getElementById('depositAmount');
             const statusDiv = document.getElementById('depositStatus');
             
@@ -121,11 +190,11 @@
                 amountInput.addEventListener('input', function() {
                     var amount = parseFloat(this.value);
                     if (amount >= 5) {
-                        statusDiv.innerHTML = '✅ Amount entered: $' + amount.toFixed(2) + ' USDT';
+                        statusDiv.innerHTML = '✅ Amount entered: $' + amount.toFixed(2) + ' USDT on Polygon';
                         statusDiv.className = 'deposit-status success';
                         statusDiv.style.display = 'block';
                     } else if (this.value && amount < 5) {
-                        statusDiv.innerHTML = '⚠️ Minimum deposit is $5 USDT';
+                        statusDiv.innerHTML = '⚠️ Minimum deposit is $5 USDT on Polygon';
                         statusDiv.className = 'deposit-status error';
                         statusDiv.style.display = 'block';
                     } else {
@@ -136,31 +205,16 @@
         });
 
         function copyAddress() {
-            // Clean address - remove any whitespace or line breaks
-            var addressElement = document.getElementById('addressText');
-            var address = addressElement ? addressElement.textContent.trim() : '';
-            
-            // If address is empty, try to get it from the displayed text
-            if (!address) {
-                var displayElement = document.querySelector('.address');
-                if (displayElement) {
-                    address = displayElement.textContent.trim();
-                }
-            }
-            
-            // Clean the address - remove any extra spaces, line breaks, or formatting
-            address = address.replace(/\s+/g, '').trim();
-            
-            if (address && address.startsWith('0x') && address.length === 42) {
+            var address = document.getElementById('addressText').textContent;
+            if (address) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(address).then(function() {
                         window.Telegram.WebApp.showPopup({
                             title: '✅ Copied!',
-                            message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                            message: 'Polygon wallet address copied.',
                             buttons: [{type: 'ok'}]
                         });
                     }).catch(function() {
-                        // Fallback method
                         var textArea = document.createElement('textarea');
                         textArea.value = address;
                         document.body.appendChild(textArea);
@@ -169,12 +223,11 @@
                         document.body.removeChild(textArea);
                         window.Telegram.WebApp.showPopup({
                             title: '✅ Copied!',
-                            message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                            message: 'Polygon wallet address copied.',
                             buttons: [{type: 'ok'}]
                         });
                     });
                 } else {
-                    // Fallback for older browsers
                     var textArea = document.createElement('textarea');
                     textArea.value = address;
                     document.body.appendChild(textArea);
@@ -183,16 +236,10 @@
                     document.body.removeChild(textArea);
                     window.Telegram.WebApp.showPopup({
                         title: '✅ Copied!',
-                        message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                        message: 'Polygon wallet address copied.',
                         buttons: [{type: 'ok'}]
                     });
                 }
-            } else {
-                window.Telegram.WebApp.showPopup({
-                    title: '❌ Error',
-                    message: 'Invalid address. Please try again.',
-                    buttons: [{type: 'ok'}]
-                });
             }
         }
     </script>

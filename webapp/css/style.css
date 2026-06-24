@@ -1,6 +1,6 @@
 /* ============================================
    PLANTUSDT - MAIN STYLESHEET
-   Dark Theme with Green Accents
+   Dark Theme with Green Accents + Polygon Purple
    ============================================ */
 
 * {
@@ -17,7 +17,7 @@ body {
     padding: 16px;
     background-image: 
         radial-gradient(ellipse at 20% 50%, rgba(0, 255, 135, 0.03) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 60%);
+        radial-gradient(ellipse at 80% 50%, rgba(130, 71, 229, 0.03) 0%, transparent 60%);
 }
 
 .container {
@@ -42,7 +42,7 @@ body {
 .logo {
     font-size: 22px;
     font-weight: 800;
-    background: linear-gradient(135deg, #00ff87, #00d4ff);
+    background: linear-gradient(135deg, #00ff87, #8247E5);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -71,6 +71,45 @@ body {
 }
 
 /* ============================================
+   NETWORK BADGE - POLYGON
+   ============================================ */
+
+.network-badge-container {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.network-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(130, 71, 229, 0.12);
+    border: 1px solid rgba(130, 71, 229, 0.2);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #a29bfe;
+}
+
+.network-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.network-dot.polygon {
+    background: #8247E5;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ============================================
    EARNINGS SECTION
    ============================================ */
 
@@ -79,7 +118,7 @@ body {
 }
 
 .earnings-card {
-    background: linear-gradient(135deg, rgba(0, 255, 135, 0.05), rgba(0, 212, 255, 0.05));
+    background: linear-gradient(135deg, rgba(0, 255, 135, 0.05), rgba(130, 71, 229, 0.05));
     border: 1px solid rgba(0, 255, 135, 0.15);
     border-radius: 16px;
     padding: 20px;
@@ -97,7 +136,7 @@ body {
 .earnings-amount {
     font-size: 32px;
     font-weight: 800;
-    background: linear-gradient(135deg, #00ff87, #00d4ff);
+    background: linear-gradient(135deg, #00ff87, #8247E5);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -140,7 +179,7 @@ body {
 }
 
 .stat-card:hover {
-    border-color: rgba(0, 255, 135, 0.2);
+    border-color: rgba(130, 71, 229, 0.3);
     transform: translateY(-2px);
 }
 
@@ -222,8 +261,8 @@ body {
 }
 
 .wallet-input-group input:focus {
-    border-color: #00ff87;
-    box-shadow: 0 0 20px rgba(0, 255, 135, 0.05);
+    border-color: #8247E5;
+    box-shadow: 0 0 20px rgba(130, 71, 229, 0.1);
 }
 
 .wallet-input-group input::placeholder {
@@ -266,12 +305,12 @@ body {
 }
 
 .field-card.active {
-    border-color: rgba(0, 255, 135, 0.3);
-    background: rgba(0, 255, 135, 0.03);
+    border-color: rgba(130, 71, 229, 0.3);
+    background: rgba(130, 71, 229, 0.03);
 }
 
 .field-card:hover {
-    border-color: rgba(0, 255, 135, 0.2);
+    border-color: rgba(130, 71, 229, 0.2);
 }
 
 .field-number {
@@ -292,7 +331,11 @@ body {
 }
 
 .field-status.available {
-    color: #00d4ff;
+    color: #8247E5;
+}
+
+.field-status.locked {
+    color: #ffd93d;
 }
 
 .field-amount {
@@ -320,9 +363,9 @@ body {
 }
 
 .field-timer.countdown {
-    color: #00d4ff;
-    border-color: rgba(0, 212, 255, 0.2);
-    background: rgba(0, 212, 255, 0.05);
+    color: #8247E5;
+    border-color: rgba(130, 71, 229, 0.2);
+    background: rgba(130, 71, 229, 0.05);
 }
 
 .field-timer.ready {
@@ -352,7 +395,7 @@ body {
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #00ff87, #00d4ff);
+    background: linear-gradient(90deg, #00ff87, #8247E5);
     border-radius: 2px;
     transition: width 0.5s ease;
 }
@@ -417,12 +460,12 @@ body {
 }
 
 .action-btn.primary {
-    background: linear-gradient(135deg, rgba(0, 255, 135, 0.15), rgba(0, 212, 255, 0.15));
+    background: linear-gradient(135deg, rgba(0, 255, 135, 0.15), rgba(130, 71, 229, 0.15));
     border-color: rgba(0, 255, 135, 0.2);
 }
 
 .action-btn.primary:hover {
-    background: linear-gradient(135deg, rgba(0, 255, 135, 0.25), rgba(0, 212, 255, 0.25));
+    background: linear-gradient(135deg, rgba(0, 255, 135, 0.25), rgba(130, 71, 229, 0.25));
 }
 
 .action-btn.warning {
@@ -595,7 +638,7 @@ body {
 .text-center { text-align: center; }
 .text-muted { color: #8892b0; }
 .text-green { color: #00ff87; }
-.text-blue { color: #00d4ff; }
+.text-purple { color: #8247E5; }
 
 .mt-8 { margin-top: 8px; }
 .mt-16 { margin-top: 16px; }
@@ -643,12 +686,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 135, 0.2);
+    background: rgba(130, 71, 229, 0.2);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 255, 135, 0.3);
+    background: rgba(130, 71, 229, 0.3);
 }
 
 /* ============================================
@@ -665,7 +708,7 @@ body {
     width: 20px;
     height: 20px;
     border: 2px solid rgba(0, 255, 135, 0.1);
-    border-top-color: #00ff87;
+    border-top-color: #8247E5;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -731,8 +774,8 @@ body {
 }
 
 .deposit-status.pending {
-    border: 1px solid rgba(0, 212, 255, 0.3);
-    color: #00d4ff;
+    border: 1px solid rgba(130, 71, 229, 0.3);
+    color: #8247E5;
 }
 
 /* ============================================
@@ -769,15 +812,15 @@ body {
 }
 
 .withdraw-form input:focus {
-    border-color: rgba(0, 255, 135, 0.3);
-    box-shadow: 0 0 20px rgba(0, 255, 135, 0.05);
+    border-color: rgba(130, 71, 229, 0.3);
+    box-shadow: 0 0 20px rgba(130, 71, 229, 0.05);
 }
 
 .withdraw-btn {
     padding: 14px;
     border-radius: 12px;
     border: none;
-    background: linear-gradient(135deg, #00ff87, #00cc6a);
+    background: linear-gradient(135deg, #00ff87, #8247E5);
     color: #0a0e17;
     font-size: 16px;
     font-weight: 700;
@@ -788,7 +831,7 @@ body {
 
 .withdraw-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 255, 135, 0.2);
+    box-shadow: 0 4px 20px rgba(130, 71, 229, 0.2);
 }
 
 .withdraw-btn:disabled {
@@ -820,13 +863,13 @@ body {
 }
 
 .filter-btn:hover {
-    border-color: rgba(0, 255, 135, 0.2);
+    border-color: rgba(130, 71, 229, 0.2);
 }
 
 .filter-btn.active {
-    background: rgba(0, 255, 135, 0.1);
-    border-color: #00ff87;
-    color: #00ff87;
+    background: rgba(130, 71, 229, 0.1);
+    border-color: #8247E5;
+    color: #a29bfe;
 }
 
 .history-list {
@@ -847,7 +890,7 @@ body {
 }
 
 .history-item:hover {
-    border-color: rgba(0, 255, 135, 0.1);
+    border-color: rgba(130, 71, 229, 0.1);
 }
 
 .history-icon {
@@ -918,7 +961,7 @@ body {
 
 .back-btn:hover {
     background: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(0, 255, 135, 0.2) !important;
+    border-color: rgba(130, 71, 229, 0.2) !important;
 }
 
 /* Header with back button */
@@ -953,8 +996,8 @@ input, textarea, select {
 
 /* Input focus state */
 input:focus, textarea:focus, select:focus {
-    border-color: #00ff87 !important;
-    box-shadow: 0 0 20px rgba(0, 255, 135, 0.05) !important;
+    border-color: #8247E5 !important;
+    box-shadow: 0 0 20px rgba(130, 71, 229, 0.05) !important;
     background: rgba(0, 0, 0, 0.6) !important;
 }
 
@@ -992,7 +1035,7 @@ input:disabled, textarea:disabled, select:disabled {
 }
 
 #withdrawForm input:focus {
-    border-color: #00ff87 !important;
+    border-color: #8247E5 !important;
 }
 
 /* Set wallet button */
@@ -1056,7 +1099,7 @@ input:disabled, textarea:disabled, select:disabled {
     padding: 14px !important;
     border-radius: 12px !important;
     border: none !important;
-    background: linear-gradient(135deg, #00ff87, #00cc6a) !important;
+    background: linear-gradient(135deg, #00ff87, #8247E5) !important;
     color: #0a0e17 !important;
     font-size: 16px !important;
     font-weight: 700 !important;
@@ -1067,7 +1110,7 @@ input:disabled, textarea:disabled, select:disabled {
 
 .withdraw-btn:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 4px 20px rgba(0, 255, 135, 0.2) !important;
+    box-shadow: 0 4px 20px rgba(130, 71, 229, 0.2) !important;
 }
 
 .withdraw-btn:disabled {
