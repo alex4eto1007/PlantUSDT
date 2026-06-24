@@ -67,14 +67,22 @@ class DepositScanner:
                         
                         if tx_to == self.project_wallet:
                             print(f"✅ DEBUG: MATCH FOUND! Processing...")
+                            print(f"🔍 DEBUG: tx hash = {tx.get('hash')[:10]}...")
+                            
                             existing = self.db.get_deposit_by_tx_hash(tx.get('hash'))
+                            print(f"🔍 DEBUG: existing = {existing}")
+                            
                             if existing:
                                 logger.info(f"⏭️ Deposit already processed: {tx.get('hash')}")
+                                print(f"⏭️ DEBUG: Already processed, skipping")
                                 continue
+                            
+                            print(f"🔍 DEBUG: Not processed yet, continuing...")
                             
                             amount = int(tx.get('value', '0')) / 10**self.decimals
                             logger.info(f"💰 Processing deposit: ${amount:.2f}")
-                            print(f"🔍 DEBUG: About to call _process_deposit for amount ${amount:.2f}")
+                            print(f"🔍 DEBUG: Amount = ${amount:.2f}")
+                            print(f"🔍 DEBUG: About to call _process_deposit")
                             
                             try:
                                 await self._process_deposit(
@@ -102,6 +110,7 @@ class DepositScanner:
     async def _process_deposit(self, user, amount, tx_hash, from_address, block_number, bot):
         """Process a verified deposit on Polygon"""
         try:
+            print(f"🔍 DEBUG: Entering _process_deposit for amount ${amount:.2f}")
             session = self.db.get_session()
             
             # REFRESH: Get a fresh user object from the session
