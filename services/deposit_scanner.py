@@ -172,7 +172,6 @@ class DepositScanner:
     async def _get_usdt_balance(self, wallet_address: str) -> float:
         """Get USDT balance on Polygon using Etherscan V2 API"""
         try:
-            # V2 API with chainid=137 for Polygon
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
             
             logger.info(f"🔍 Fetching balance from: {url}")
@@ -185,7 +184,8 @@ class DepositScanner:
                     if data and data.get('status') == '1':
                         result = data.get('result', '0')
                         if result and result != '0':
-                            balance = int(result) / 10**self.decimals
+                            # Convert to float and divide by decimals
+                            balance = float(result) / (10 ** self.decimals)
                             logger.info(f"💰 Balance found: ${balance:.2f} USDT")
                             return balance
                         else:
