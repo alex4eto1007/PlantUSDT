@@ -113,10 +113,13 @@ class DepositScanner:
             print(f"🔍 DEBUG: Entering _process_deposit for amount ${amount:.2f}")
             session = self.db.get_session()
             
-            # REFRESH: Get a fresh user object from the session
-            user = session.merge(user)
+            # Get fresh user from the session
+            user = session.query(User).filter_by(id=user.id).first()
+            if not user:
+                logger.error(f"User {user.id} not found in session")
+                session.close()
+                return
             
-            # DEBUG: Log the user's balance before update
             logger.info(f"🔍 DEBUG - User {user.telegram_id} balance BEFORE: ${user.balance:.2f}")
             print(f"🔍 DEBUG - User balance BEFORE: ${user.balance:.2f}")
             
@@ -136,14 +139,12 @@ class DepositScanner:
             )
             session.add(deposit)
             
-            # DEBUG: Log before balance update
             logger.info(f"🔍 DEBUG - Adding ${amount:.2f} to balance")
             print(f"🔍 DEBUG - Adding ${amount:.2f} to balance")
             
             user.balance += amount
             user.total_deposited += amount
             
-            # DEBUG: Log the user's balance after update
             logger.info(f"🔍 DEBUG - User {user.telegram_id} balance AFTER: ${user.balance:.2f}")
             print(f"🔍 DEBUG - User balance AFTER: ${user.balance:.2f}")
             
@@ -151,7 +152,6 @@ class DepositScanner:
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             print(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
-            # DEBUG: Verify commit worked
             logger.info(f"🔍 DEBUG - After commit, balance in object: ${user.balance:.2f}")
             print(f"🔍 DEBUG - After commit, balance in object: ${user.balance:.2f}")
             
