@@ -57,6 +57,23 @@
             margin: 0;
             line-height: 1.6;
         }
+        .deposit-timer-message {
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.2);
+            border-radius: 8px;
+        }
+        .deposit-timer-message p {
+            font-size: 13px;
+            color: #ffd93d;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .deposit-timer-message .sub-text {
+            font-size: 12px;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -95,6 +112,14 @@
                 <strong>Min Amount:</strong> $5 USDT<br>
                 <strong>Gas Fees:</strong> ~$0.001 (Super cheap!)
             </p>
+
+            <!-- ⏳ Deposit Processing Time Message -->
+            <div class="deposit-timer-message">
+                <p>
+                    ⏳ <strong>Deposits may take up to 5 minutes</strong> to be detected and credited.<br>
+                    <span class="sub-text">The scanner runs automatically every 5 minutes.</span>
+                </p>
+            </div>
 
             <div class="deposit-address-box" style="margin-top: 12px;">
                 <p style="font-size: 12px; color: #8892b0; margin-bottom: 4px;">📌 Deposit Address (Polygon USDT):</p>
