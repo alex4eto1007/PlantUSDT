@@ -77,16 +77,18 @@ class DepositScanner:
             
             if existing:
                 logger.info(f"✅ Deposit of ${expected_amount:.2f} already processed")
-                # Ensure balance is correct even if deposit was already processed
-                # Check if balance already includes this deposit
-                # If not, add it
-                if user:
-                    # Check if the deposit amount hasn't been added to balance
-                    # We'll check if the user's balance is less than expected
-                    # This is a safety check to ensure balance is correct
-                    logger.info(f"🔍 Ensuring balance is correct...")
-                    # The balance should already be updated, but we'll log it
-                    logger.info(f"📊 Current balance: ${user.balance:.2f}")
+                # 🔧 FORCE BALANCE UPDATE - Check if balance already includes this deposit
+                # Check if the user's balance is less than expected (meaning it wasn't added)
+                # We'll check if the deposit amount hasn't been added to balance
+                # Compare user's balance with total_deposited - total_invested + earnings
+                expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
+                if user.balance < expected_balance:
+                    logger.info(f"⚠️ Balance mismatch! Adding ${expected_amount:.2f} to balance")
+                    user.balance += expected_amount
+                    session.commit()
+                    logger.info(f"✅ Balance updated to: ${user.balance:.2f}")
+                else:
+                    logger.info(f"✅ Balance already correct: ${user.balance:.2f}")
                 return {'success': True, 'message': 'Deposit already processed'}
             
             # Check BOTH wallets
