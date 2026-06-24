@@ -46,7 +46,6 @@ async function loadUserData() {
 }
 
 function refreshData() {
-    // Visual feedback - show loading state
     var balanceEl = document.getElementById('balance');
     var totalEarningsEl = document.getElementById('totalEarnings');
     
@@ -57,7 +56,6 @@ function refreshData() {
         totalEarningsEl.textContent = '⏳ ...';
     }
     
-    // Refresh data after a small delay
     setTimeout(function() {
         loadUserData();
         loadSavedWallet();
@@ -445,19 +443,64 @@ async function investField(fieldNumber) {
     await investFieldWithLock(fieldNumber);
 }
 
+// ✅ IMPROVED COPY FUNCTION
 function copyAddress() {
-    var address = document.getElementById('addressText') ? document.getElementById('addressText').textContent : '';
-    if (address) {
-        navigator.clipboard.writeText(address).then(function() {
-            tg.showPopup({title:'✅ Copied!', message:'Wallet address copied.', buttons:[{type:'ok'}]});
-        }).catch(function() {
+    // Clean address - remove any whitespace or line breaks
+    var addressElement = document.getElementById('addressText');
+    var address = addressElement ? addressElement.textContent.trim() : '';
+    
+    // If address is empty, try to get it from the displayed text
+    if (!address) {
+        var displayElement = document.querySelector('.address');
+        if (displayElement) {
+            address = displayElement.textContent.trim();
+        }
+    }
+    
+    // Clean the address - remove any extra spaces, line breaks, or formatting
+    address = address.replace(/\s+/g, '').trim();
+    
+    if (address && address.startsWith('0x') && address.length === 42) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(address).then(function() {
+                tg.showPopup({
+                    title: '✅ Copied!',
+                    message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                    buttons: [{type: 'ok'}]
+                });
+            }).catch(function() {
+                // Fallback method
+                var textArea = document.createElement('textarea');
+                textArea.value = address;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                tg.showPopup({
+                    title: '✅ Copied!',
+                    message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                    buttons: [{type: 'ok'}]
+                });
+            });
+        } else {
+            // Fallback for older browsers
             var textArea = document.createElement('textarea');
             textArea.value = address;
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            tg.showPopup({title:'✅ Copied!', message:'Wallet address copied.', buttons:[{type:'ok'}]});
+            tg.showPopup({
+                title: '✅ Copied!',
+                message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                buttons: [{type: 'ok'}]
+            });
+        }
+    } else {
+        tg.showPopup({
+            title: '❌ Error',
+            message: 'Invalid address. Please try again.',
+            buttons: [{type: 'ok'}]
         });
     }
 }

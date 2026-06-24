@@ -35,8 +35,8 @@
 
             <div class="deposit-address-box" style="margin-top: 12px;">
                 <p style="font-size: 12px; color: #8892b0; margin-bottom: 4px;">📌 Address (BSC BEP-20):</p>
-                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);" id="addressText">
-                    0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76
+                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);">
+                    <span id="addressText" style="user-select: all;">0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76</span>
                 </div>
                 <button onclick="copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
             </div>
@@ -136,13 +136,27 @@
         });
 
         function copyAddress() {
-            var address = document.getElementById('addressText').textContent;
-            if (address) {
+            // Clean address - remove any whitespace or line breaks
+            var addressElement = document.getElementById('addressText');
+            var address = addressElement ? addressElement.textContent.trim() : '';
+            
+            // If address is empty, try to get it from the displayed text
+            if (!address) {
+                var displayElement = document.querySelector('.address');
+                if (displayElement) {
+                    address = displayElement.textContent.trim();
+                }
+            }
+            
+            // Clean the address - remove any extra spaces, line breaks, or formatting
+            address = address.replace(/\s+/g, '').trim();
+            
+            if (address && address.startsWith('0x') && address.length === 42) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(address).then(function() {
                         window.Telegram.WebApp.showPopup({
                             title: '✅ Copied!',
-                            message: 'Wallet address copied.',
+                            message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
                             buttons: [{type: 'ok'}]
                         });
                     }).catch(function() {
@@ -155,7 +169,7 @@
                         document.body.removeChild(textArea);
                         window.Telegram.WebApp.showPopup({
                             title: '✅ Copied!',
-                            message: 'Wallet address copied.',
+                            message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
                             buttons: [{type: 'ok'}]
                         });
                     });
@@ -169,10 +183,16 @@
                     document.body.removeChild(textArea);
                     window.Telegram.WebApp.showPopup({
                         title: '✅ Copied!',
-                        message: 'Wallet address copied.',
+                        message: 'Address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
                         buttons: [{type: 'ok'}]
                     });
                 }
+            } else {
+                window.Telegram.WebApp.showPopup({
+                    title: '❌ Error',
+                    message: 'Invalid address. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
             }
         }
     </script>
