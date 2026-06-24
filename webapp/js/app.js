@@ -443,13 +443,10 @@ async function investField(fieldNumber) {
     await investFieldWithLock(fieldNumber);
 }
 
-// ✅ IMPROVED COPY FUNCTION
 function copyAddress() {
-    // Clean address - remove any whitespace or line breaks
     var addressElement = document.getElementById('addressText');
     var address = addressElement ? addressElement.textContent.trim() : '';
     
-    // If address is empty, try to get it from the displayed text
     if (!address) {
         var displayElement = document.querySelector('.address');
         if (displayElement) {
@@ -457,7 +454,6 @@ function copyAddress() {
         }
     }
     
-    // Clean the address - remove any extra spaces, line breaks, or formatting
     address = address.replace(/\s+/g, '').trim();
     
     if (address && address.startsWith('0x') && address.length === 42) {
@@ -469,7 +465,6 @@ function copyAddress() {
                     buttons: [{type: 'ok'}]
                 });
             }).catch(function() {
-                // Fallback method
                 var textArea = document.createElement('textarea');
                 textArea.value = address;
                 document.body.appendChild(textArea);
@@ -483,7 +478,6 @@ function copyAddress() {
                 });
             });
         } else {
-            // Fallback for older browsers
             var textArea = document.createElement('textarea');
             textArea.value = address;
             document.body.appendChild(textArea);
@@ -576,7 +570,7 @@ async function checkDepositWithAmount() {
         statusDiv.className = 'deposit-status pending';
         statusDiv.style.display = 'block';
         try {
-            const response = await fetch(`${API_BASE}/api/check_deposit?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
+            const response = await fetch(`${API_BASE}/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
             const data = await response.json();
             if (data.success) {
                 statusDiv.innerHTML = '✅ Deposit detected! Balance updated.';
