@@ -134,11 +134,8 @@ function updateFields(data) {
         var timerEl = document.getElementById('field' + i + 'Timer');
         
         if (field) {
-            // For locked investments, show lock period instead of days
             var lockPeriod = field.lock_period || 30;
             var isLocked = field.is_locked || false;
-            
-            // Calculate remaining days
             var unlockDate = new Date(field.unlock_date);
             var now = new Date();
             var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
@@ -148,11 +145,9 @@ function updateFields(data) {
             amountEl.textContent = '$' + field.amount.toFixed(2);
             daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
             
-            // Show expected return if locked
             var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
             earnedEl.textContent = '$' + displayEarned.toFixed(2);
             
-            // Progress based on time remaining
             var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
@@ -356,15 +351,11 @@ async function setWallet() {
     }
 }
 
-// ============================================
-// LOCKED INVESTMENT FUNCTIONS
-// ============================================
-
 function calculateReturn(amount, days) {
     const multipliers = {
-        1: 1.02,   // 2%
-        7: 1.14,   // 14%
-        30: 1.60   // 60%
+        1: 1.02,
+        7: 1.14,
+        30: 1.60
     };
     const multiplier = multipliers[days] || 1.60;
     return amount * multiplier;
@@ -381,7 +372,6 @@ function getLockOptions() {
 async function investFieldWithLock(fieldNumber) {
     const userId = tgUser ? tgUser.id : '0';
     
-    // Show investment dialog with options
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
     
@@ -391,7 +381,6 @@ async function investFieldWithLock(fieldNumber) {
         return;
     }
     
-    // Show lock period options with calculated returns
     const options = getLockOptions();
     let message = '📊 Choose lock period:\n\n';
     options.forEach(opt => {
@@ -413,7 +402,6 @@ async function investFieldWithLock(fieldNumber) {
     const expectedReturn = calculateReturn(amountNum, days);
     const profit = expectedReturn - amountNum;
     
-    // Confirm with user
     tg.showPopup({
         title: '📊 Confirm Investment',
         message: `Field #${fieldNumber}\n\n💰 Amount: $${amountNum.toFixed(2)}\n⏱️ Lock Period: ${days} day${days > 1 ? 's' : ''}\n📈 Expected Return: $${expectedReturn.toFixed(2)}\n✅ Profit: +$${profit.toFixed(2)}`,
@@ -453,10 +441,25 @@ async function investFieldWithLock(fieldNumber) {
     });
 }
 
-// Keep original investField for compatibility with old system
 async function investField(fieldNumber) {
-    // Use the new locked investment system
     await investFieldWithLock(fieldNumber);
+}
+
+function copyAddress() {
+    var address = document.getElementById('addressText') ? document.getElementById('addressText').textContent : '';
+    if (address) {
+        navigator.clipboard.writeText(address).then(function() {
+            tg.showPopup({title:'✅ Copied!', message:'Wallet address copied.', buttons:[{type:'ok'}]});
+        }).catch(function() {
+            var textArea = document.createElement('textarea');
+            textArea.value = address;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            tg.showPopup({title:'✅ Copied!', message:'Wallet address copied.', buttons:[{type:'ok'}]});
+        });
+    }
 }
 
 async function copyReferral() {
@@ -487,15 +490,6 @@ async function copyReferral() {
     } catch (error) {
         console.error('Error getting referral code:', error);
         tg.showPopup({title: '❌ Error', message: 'Failed to get referral link.', buttons: [{type: 'ok'}]});
-    }
-}
-
-function copyAddress() {
-    var address = document.getElementById('addressText') ? document.getElementById('addressText').textContent : '';
-    if (address) {
-        navigator.clipboard.writeText(address).then(function() {
-            tg.showPopup({title:'✅ Copied!', message:'Wallet address copied.', buttons:[{type:'ok'}]});
-        });
     }
 }
 
@@ -569,7 +563,6 @@ function filterHistory(type) {
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
     var url2 = API_BASE + '/api/investments/' + userId;
     
-    // Fetch both APIs
     Promise.all([fetch(url1), fetch(url2)])
         .then(function(responses) { 
             return Promise.all(responses.map(function(r) { return r.json(); })); 
@@ -577,38 +570,30 @@ function filterHistory(type) {
         .then(function(data) {
             var allTransactions = [];
             
-            // Add regular transactions (deposits, withdrawals, earnings)
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
             
-            // Add investments
             if (data[1].transactions && data[1].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
             
-            // If no transactions at all
             if (allTransactions.length === 0) {
                 historyList.innerHTML = '<p class="empty-state">No transactions found.</p>';
                 return;
             }
             
-            // Filter by type if not 'all'
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) { 
-                    // Handle plural vs singular cases for deposits
                     if (type === 'deposits') {
                         return tx.type === 'deposit' || tx.type === 'deposits';
                     }
-                    // Handle plural vs singular cases for withdrawals
                     if (type === 'withdrawals') {
                         return tx.type === 'withdraw' || tx.type === 'withdrawal' || tx.type === 'withdrawals';
                     }
-                    // Handle plural vs singular cases for earnings
                     if (type === 'earnings') {
                         return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || tx.type === 'referral_earnings';
                     }
-                    // Handle plural vs singular cases for investments
                     if (type === 'investments') {
                         return tx.type === 'investment' || tx.type === 'investments';
                     }
@@ -616,7 +601,6 @@ function filterHistory(type) {
                 });
             }
             
-            // If filtered result is empty
             if (allTransactions.length === 0) {
                 var displayType = type;
                 if (type === 'deposits') displayType = 'deposit';
@@ -627,7 +611,6 @@ function filterHistory(type) {
                 return;
             }
             
-            // Sort by date (newest first)
             allTransactions.sort(function(a, b) { 
                 return new Date(b.date) - new Date(a.date); 
             });
@@ -650,7 +633,6 @@ function renderHistory(transactions) {
                    tx.type === 'investment' ? '🌱' : 
                    tx.type === 'referral_earnings' ? '🎁' : '💰';
         var status = tx.status || 'completed';
-        // Display raw date from API
         var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         if (tx.type === 'referral_earnings') {
@@ -662,7 +644,6 @@ function renderHistory(transactions) {
             amountDisplay = '$' + tx.amount.toFixed(2) + ' (Field ' + tx.field + ')';
         }
         
-        // Add status badge for pending withdrawals
         var statusBadge = '';
         if (tx.type === 'withdraw' && tx.status === 'pending') {
             statusBadge = ' ⏳';
@@ -681,7 +662,6 @@ function renderHistory(transactions) {
 }
 
 function updateFieldTimers() {
-    // Skip if we're on the history page
     if (document.getElementById('historyList')) {
         return;
     }

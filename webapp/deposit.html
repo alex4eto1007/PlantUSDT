@@ -35,13 +35,13 @@
 
             <div class="deposit-address-box" style="margin-top: 12px;">
                 <p style="font-size: 12px; color: #8892b0; margin-bottom: 4px;">📌 Address (BSC BEP-20):</p>
-                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);">
+                <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);" id="addressText">
                     0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76
                 </div>
                 <button onclick="copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
             </div>
 
-            <!-- 🔒 CRITICAL WARNING - Connected Wallet Only -->
+            <!-- 🔒 CRITICAL WARNING -->
             <div style="margin-top: 12px; padding: 14px; background: rgba(255,107,107,0.15); border: 2px solid rgba(255,107,107,0.4); border-radius: 8px;">
                 <p style="font-size: 12px; color: #ff6b6b; margin: 0; line-height: 1.6;">
                     ⚠️ <strong>CRITICAL WARNING:</strong><br><br>
@@ -112,7 +112,69 @@
                     document.getElementById('connectedWalletDisplay').textContent = '❌ Error loading wallet';
                     document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
                 });
+
+            // Amount input listener - show success when amount is entered
+            const amountInput = document.getElementById('depositAmount');
+            const statusDiv = document.getElementById('depositStatus');
+            
+            if (amountInput && statusDiv) {
+                amountInput.addEventListener('input', function() {
+                    var amount = parseFloat(this.value);
+                    if (amount >= 5) {
+                        statusDiv.innerHTML = '✅ Amount entered: $' + amount.toFixed(2) + ' USDT';
+                        statusDiv.className = 'deposit-status success';
+                        statusDiv.style.display = 'block';
+                    } else if (this.value && amount < 5) {
+                        statusDiv.innerHTML = '⚠️ Minimum deposit is $5 USDT';
+                        statusDiv.className = 'deposit-status error';
+                        statusDiv.style.display = 'block';
+                    } else {
+                        statusDiv.style.display = 'none';
+                    }
+                });
+            }
         });
+
+        function copyAddress() {
+            var address = document.getElementById('addressText').textContent;
+            if (address) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(address).then(function() {
+                        window.Telegram.WebApp.showPopup({
+                            title: '✅ Copied!',
+                            message: 'Wallet address copied.',
+                            buttons: [{type: 'ok'}]
+                        });
+                    }).catch(function() {
+                        // Fallback method
+                        var textArea = document.createElement('textarea');
+                        textArea.value = address;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        window.Telegram.WebApp.showPopup({
+                            title: '✅ Copied!',
+                            message: 'Wallet address copied.',
+                            buttons: [{type: 'ok'}]
+                        });
+                    });
+                } else {
+                    // Fallback for older browsers
+                    var textArea = document.createElement('textarea');
+                    textArea.value = address;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    window.Telegram.WebApp.showPopup({
+                        title: '✅ Copied!',
+                        message: 'Wallet address copied.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            }
+        }
     </script>
     <script src="js/app.js"></script>
 </body>
