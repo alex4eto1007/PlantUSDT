@@ -46,11 +46,7 @@ async function loadUserData() {
 }
 
 function refreshData() {
-    tg.showPopup({
-        title: '🔄 Refreshing...',
-        message: 'Updating your data...',
-        buttons: [{type: 'ok'}]
-    });
+    // Silent refresh - no popup
     loadUserData();
     loadSavedWallet();
 }
