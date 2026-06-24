@@ -13,15 +13,16 @@ class DepositScanner:
         self.db = DatabaseManager()
         self.api_key = Config.BSC_SCAN_API_KEY
         self.project_wallet = Config.WALLET_ADDRESS.lower()
+        self.usdt_contract = Config.USDT_CONTRACT
         self.scan_interval = 300  # 5 minutes
-        self.confirmations = 6  # BSC block confirmations
 
     async def scan_for_deposits(self, bot):
-        """Scan for new deposits on BSC - AUTO DETECTION"""
+        """Scan for new deposits using BSCScan API to get transaction hashes"""
         try:
             logger.info("🔍 Scanning for new deposits...")
             session = self.db.get_session()
 
+            # Get all users with wallet addresses
             users = session.query(User).filter(
                 User.wallet_address.isnot(None),
                 User.wallet_address != ''
@@ -32,73 +33,66 @@ class DepositScanner:
                 session.close()
                 return
 
+            # Get the last 50 token transfers to the project wallet
+            transfers = await self._get_recent_usdt_transfers()
+            if not transfers:
+                logger.warning("No recent USDT transfers found")
+                session.close()
+                return
+
+            # For each user, check if any transfer matches their wallet
             for user in users:
                 try:
                     user_wallet = user.wallet_address.lower()
                     
-                    # Get current USDT balance
-                    current_balance = await self._get_usdt_balance(user_wallet)
-                    logger.info(f"📊 User {user.telegram_id} USDT balance: ${current_balance:.2f}")
+                    # Find transfers from this user to the project wallet
+                    matching = [
+                        tx for tx in transfers
+                        if tx['from'].lower() == user_wallet
+                    ]
                     
-                    # Check the project wallet balance
-                    project_balance = await self._get_usdt_balance(self.project_wallet)
-                    logger.info(f"📊 Project wallet balance: ${project_balance:.2f}")
-                    
-                    # Calculate expected balance
-                    expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
-                    logger.info(f"📊 Expected balance: ${expected_balance:.2f}")
-                    logger.info(f"📊 Actual balance: ${user.balance:.2f}")
-                    
-                    # If user's balance is less than expected AND project wallet has funds
-                    if user.balance < expected_balance and project_balance >= 5:
-                        # Calculate the missing amount
-                        missing_amount = expected_balance - user.balance
-                        logger.info(f"⚠️ Balance mismatch! Missing: ${missing_amount:.2f}")
-                        
-                        # Check if we already have a deposit for this amount
+                    for tx in matching:
+                        # Check if this transaction is already processed
                         existing = session.query(Deposit).filter_by(
-                            user_id=user.id,
-                            amount=missing_amount
+                            tx_hash=tx['hash']
                         ).first()
-                        
                         if existing:
-                            logger.info(f"✅ Deposit of ${missing_amount:.2f} already exists, updating balance")
-                            user.balance += missing_amount
-                            session.commit()
-                            logger.info(f"✅ Balance updated to: ${user.balance:.2f}")
-                        else:
-                            # Process new deposit
-                            deposit = Deposit(
-                                user_id=user.id,
-                                amount=missing_amount,
-                                tx_hash=f"0xauto_{datetime.utcnow().timestamp()}",
-                                from_address=user_wallet,
-                                block_number=0,
-                                confirmed_at=datetime.utcnow(),
-                                processed=True
-                            )
-                            session.add(deposit)
-                            
-                            user.balance += missing_amount
-                            user.total_deposited += missing_amount
-                            
-                            session.commit()
-                            
-                            logger.info(f"✅ Auto-deposit detected for user {user.telegram_id}: ${missing_amount:.2f}")
-                            
-                            if bot:
-                                try:
-                                    await bot.send_message(
-                                        chat_id=user.telegram_id,
-                                        text=f"✅ **Auto-Deposit Detected!**\n\n"
-                                             f"💰 Amount: **${missing_amount:.2f} USDT**\n"
-                                             f"📊 Your balance: **${user.balance:.2f}**\n\n"
-                                             f"🌱 You can now invest in planting fields!",
-                                        parse_mode='Markdown'
-                                    )
-                                except Exception as e:
-                                    logger.error(f"Error sending notification: {e}")
-
+                            continue
+                        
+                        # Process new deposit
+                        amount = float(tx['value']) / 10**18
+                        deposit = Deposit(
+                            user_id=user.id,
+                            amount=amount,
+                            tx_hash=tx['hash'],
+                            from_address=tx['from'],
+                            block_number=tx['block_number'],
+                            confirmed_at=datetime.utcnow(),
+                            processed=True
+                        )
+                        session.add(deposit)
+                        
+                        # Update user balance
+                        user.balance += amount
+                        user.total_deposited += amount
+                        
+                        session.commit()
+                        
+                        logger.info(f"✅ New deposit detected for user {user.telegram_id}: ${amount:.2f} (tx: {tx['hash'][:10]}...)")
+                        
+                        if bot:
+                            try:
+                                await bot.send_message(
+                                    chat_id=user.telegram_id,
+                                    text=f"✅ **Deposit Detected!**\n\n"
+                                         f"💰 Amount: **${amount:.2f} USDT**\n"
+                                         f"📊 Your balance: **${user.balance:.2f}**\n\n"
+                                         f"🌱 You can now invest!",
+                                    parse_mode='Markdown'
+                                )
+                            except Exception as e:
+                                logger.error(f"Error sending notification: {e}")
+                
                 except Exception as e:
                     logger.error(f"Error processing user {user.telegram_id}: {e}")
                     continue
@@ -108,151 +102,72 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error in deposit scanner: {e}")
 
-    async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
-        """Check for a deposit by checking BOTH user's wallet AND project wallet"""
+    async def _get_recent_usdt_transfers(self):
+        """Fetch recent USDT token transfers to the project wallet from BSCScan"""
         try:
-            logger.info(f"🔍 Checking deposit for user {user_id}, expected: ${expected_amount:.2f}")
+            # Get current block number (approx)
+            current_block = await self._get_current_block()
+            if not current_block:
+                logger.error("Failed to get current block")
+                return []
             
-            session = self.db.get_session()
-
-            user = session.query(User).filter_by(telegram_id=user_id).first()
-            if not user:
-                logger.error(f"❌ User {user_id} not found")
-                session.close()
-                return {'success': False, 'message': 'User not found'}
+            start_block = current_block - 1000  # check last 1000 blocks
+            if start_block < 0:
+                start_block = 0
             
-            if not user.wallet_address:
-                logger.error(f"❌ User {user_id} has no wallet connected")
-                session.close()
-                return {'success': False, 'message': 'No wallet connected'}
-
-            user_wallet = user.wallet_address.lower()
-            logger.info(f"🔍 User wallet: {user_wallet}")
-            logger.info(f"📊 Current user balance in DB: ${user.balance:.2f}")
+            # BSCScan API endpoint for token transfers
+            url = (
+                f"{Config.BSC_SCAN_API}"
+                f"?module=account"
+                f"&action=tokentx"
+                f"&contractaddress={self.usdt_contract}"
+                f"&address={self.project_wallet}"
+                f"&startblock={start_block}"
+                f"&endblock={current_block}"
+                f"&sort=desc"
+                f"&apikey={self.api_key}"
+            )
             
-            # Check if we already processed a deposit for this user with this amount
-            existing = session.query(Deposit).filter_by(
-                user_id=user.id,
-                amount=expected_amount
-            ).first()
-            
-            if existing:
-                logger.info(f"✅ Deposit of ${expected_amount:.2f} already processed")
-                
-                # Force balance update if needed
-                expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
-                logger.info(f"📊 Expected balance: ${expected_balance:.2f}")
-                
-                if user.balance < expected_balance:
-                    logger.info(f"⚠️ Balance mismatch! Adding ${expected_amount:.2f} to balance")
-                    user.balance += expected_amount
-                    session.commit()
-                    logger.info(f"✅ Balance updated to: ${user.balance:.2f}")
-                    session.close()
-                    return {'success': True, 'message': 'Balance updated'}
-                else:
-                    logger.info(f"✅ Balance already correct: ${user.balance:.2f}")
-                    session.close()
-                    return {'success': True, 'message': 'Deposit already processed'}
-            
-            # Check BOTH wallets
-            user_balance = await self._get_usdt_balance(user_wallet)
-            project_balance = await self._get_usdt_balance(self.project_wallet)
-            
-            logger.info(f"📊 User wallet balance: ${user_balance:.2f}")
-            logger.info(f"📊 Project wallet balance: ${project_balance:.2f}")
-            
-            # Check if the project wallet has received the expected amount
-            if project_balance >= expected_amount:
-                # Process deposit
-                deposit = Deposit(
-                    user_id=user.id,
-                    amount=expected_amount,
-                    tx_hash=f"0xmanual_{datetime.utcnow().timestamp()}",
-                    from_address=user_wallet,
-                    block_number=0,
-                    confirmed_at=datetime.utcnow(),
-                    processed=True
-                )
-                session.add(deposit)
-
-                # Update user's balance
-                user.balance += expected_amount
-                user.total_deposited += expected_amount
-
-                session.commit()
-
-                logger.info(f"✅ Deposit detected for user {user_id}: ${expected_amount:.2f}")
-                logger.info(f"✅ New balance: ${user.balance:.2f}")
-
-                if bot:
-                    try:
-                        await bot.send_message(
-                            chat_id=user.telegram_id,
-                            text=f"✅ **Deposit Detected!**\n\n"
-                                 f"💰 Amount: **${expected_amount:.2f} USDT**\n"
-                                 f"📊 Your balance: **${user.balance:.2f}**\n\n"
-                                 f"🌱 You can now invest in planting fields!",
-                            parse_mode='Markdown'
-                        )
-                    except Exception as e:
-                        logger.error(f"Error sending deposit notification: {e}")
-
-                session.close()
-                return {'success': True, 'message': 'Deposit detected and processed'}
-            else:
-                session.close()
-                return {'success': False, 'message': f'No deposit found. Project balance: ${project_balance:.2f}'}
-
-        except Exception as e:
-            logger.error(f"Error checking deposit with amount: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            session.rollback()
-            return {'success': False, 'message': str(e)}
-
-    async def _get_usdt_balance(self, wallet_address: str) -> float:
-        """Get USDT balance for a wallet using BSC RPC"""
-        try:
-            usdt_contract = Config.USDT_CONTRACT
-            data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
-            
-            url = Config.BSC_RPC_URL
-            payload = {
-                "jsonrpc": "2.0",
-                "method": "eth_call",
-                "params": [
-                    {
-                        "to": usdt_contract,
-                        "data": data
-                    },
-                    "latest"
-                ],
-                "id": 1
-            }
+            logger.info(f"🔍 Fetching USDT transfers from BSCScan...")
             
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data and data.get('result'):
-                            balance_hex = data.get('result')
-                            balance = int(balance_hex, 16)
-                            result = balance / 10**18
-                            logger.info(f"✅ USDT balance: ${result:.2f}")
-                            return result
-                        else:
-                            logger.warning(f"⚠️ No result in response: {data}")
-                            return 0
-                    else:
-                        logger.error(f"❌ HTTP Error: {response.status}")
-                        return 0
+                async with session.get(url, timeout=30) as response:
+                    if response.status != 200:
+                        logger.error(f"BSCScan HTTP error: {response.status}")
+                        return []
+                    
+                    data = await response.json()
+                    if data.get('status') != '1':
+                        logger.warning(f"BSCScan API error: {data.get('message')}")
+                        return []
+                    
+                    transactions = data.get('result', [])
+                    logger.info(f"✅ Found {len(transactions)} USDT transfers")
+                    
+                    # Filter only transfers TO the project wallet (should already be filtered, but double-check)
+                    transfers = [
+                        {
+                            'hash': tx.get('hash'),
+                            'from': tx.get('from'),
+                            'to': tx.get('to'),
+                            'value': int(tx.get('value', 0)),
+                            'block_number': int(tx.get('blockNumber', 0)),
+                        }
+                        for tx in transactions
+                        if tx.get('to', '').lower() == self.project_wallet
+                    ]
+                    
+                    return transfers
+                    
+        except asyncio.TimeoutError:
+            logger.error("BSCScan timeout")
+            return []
         except Exception as e:
-            logger.error(f"❌ Error getting USDT balance: {e}")
-            return 0
+            logger.error(f"Error fetching transfers: {e}")
+            return []
 
     async def _get_current_block(self):
-        """Get the current BSC block number using BSC RPC"""
+        """Get current BSC block number via RPC"""
         try:
             url = Config.BSC_RPC_URL
             payload = {
@@ -262,11 +177,107 @@ class DepositScanner:
                 "id": 1
             }
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload) as response:
+                async with session.post(url, json=payload, timeout=10) as response:
                     data = await response.json()
                     if data and data.get('result'):
                         return int(data.get('result', '0'), 16)
                     return None
         except Exception as e:
-            logger.error(f"Error getting current block: {e}")
+            logger.error(f"Error getting block: {e}")
             return None
+
+    async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
+        """Fallback method: check project wallet balance (used when user clicks button)"""
+        try:
+            logger.info(f"🔍 Manual deposit check for user {user_id}, expected: ${expected_amount:.2f}")
+            session = self.db.get_session()
+
+            user = session.query(User).filter_by(telegram_id=user_id).first()
+            if not user:
+                return {'success': False, 'message': 'User not found'}
+            
+            if not user.wallet_address:
+                return {'success': False, 'message': 'No wallet connected'}
+
+            # First, try to find a recent transfer via BSCScan
+            transfers = await self._get_recent_usdt_transfers()
+            for tx in transfers:
+                if tx['from'].lower() == user.wallet_address.lower():
+                    # Check if already processed
+                    existing = session.query(Deposit).filter_by(tx_hash=tx['hash']).first()
+                    if existing:
+                        # Check if balance is correct
+                        expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
+                        if user.balance < expected_balance:
+                            user.balance += expected_amount
+                            session.commit()
+                            return {'success': True, 'message': 'Balance corrected'}
+                        return {'success': True, 'message': 'Deposit already processed'}
+                    
+                    # Process new deposit
+                    amount = float(tx['value']) / 10**18
+                    deposit = Deposit(
+                        user_id=user.id,
+                        amount=amount,
+                        tx_hash=tx['hash'],
+                        from_address=tx['from'],
+                        block_number=tx['block_number'],
+                        confirmed_at=datetime.utcnow(),
+                        processed=True
+                    )
+                    session.add(deposit)
+                    user.balance += amount
+                    user.total_deposited += amount
+                    session.commit()
+                    logger.info(f"✅ Deposit processed via manual check: ${amount:.2f}")
+                    return {'success': True, 'message': 'Deposit detected and processed'}
+
+            # Fallback to balance check
+            project_balance = await self._get_usdt_balance(self.project_wallet)
+            if project_balance >= expected_amount:
+                # Process as before (but this is less reliable)
+                deposit = Deposit(
+                    user_id=user.id,
+                    amount=expected_amount,
+                    tx_hash=f"0xmanual_{datetime.utcnow().timestamp()}",
+                    from_address=user.wallet_address,
+                    block_number=0,
+                    confirmed_at=datetime.utcnow(),
+                    processed=True
+                )
+                session.add(deposit)
+                user.balance += expected_amount
+                user.total_deposited += expected_amount
+                session.commit()
+                logger.info(f"✅ Deposit processed via balance fallback: ${expected_amount:.2f}")
+                return {'success': True, 'message': 'Deposit detected and processed'}
+            
+            return {'success': False, 'message': 'No new deposit found'}
+
+        except Exception as e:
+            logger.error(f"Error in check_deposit_with_amount: {e}")
+            session.rollback()
+            return {'success': False, 'message': str(e)}
+
+    async def _get_usdt_balance(self, wallet_address: str) -> float:
+        """Get USDT balance (for fallback)"""
+        try:
+            usdt_contract = Config.USDT_CONTRACT
+            data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
+            url = Config.BSC_RPC_URL
+            payload = {
+                "jsonrpc": "2.0",
+                "method": "eth_call",
+                "params": [{"to": usdt_contract, "data": data}, "latest"],
+                "id": 1
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, timeout=10) as response:
+                    data = await response.json()
+                    if data and data.get('result'):
+                        balance = int(data.get('result'), 16)
+                        return balance / 10**18
+                    return 0
+        except Exception as e:
+            logger.error(f"Error getting balance: {e}")
+            return 0
