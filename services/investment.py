@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from database.db_manager import DatabaseManager
 from database.models import Investment, User, DailyPayout
 from config.settings import Config
+from services.notifications import NotificationService
 import logging
 import requests
 
@@ -10,6 +11,7 @@ logger = logging.getLogger(__name__)
 class InvestmentService:
     def __init__(self):
         self.db = DatabaseManager()
+        self.notification_service = NotificationService()
         self.lock_multipliers = {
             1: 1.02,   # 2% for 1 day
             7: 1.14,   # 14% for 7 days
@@ -48,7 +50,17 @@ class InvestmentService:
             session.commit()
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount} on Polygon")
 
-            # --- SEND TELEGRAM NOTIFICATION VIA API ---
+            # --- SEND REFERRAL NOTIFICATION ---
+            try:
+                await self.notification_service.send_referral_notification(
+                    referrer_id=referrer.telegram_id,
+                    amount=referral_bonus,
+                    referred_user=user
+                )
+            except Exception as e:
+                logger.error(f"Error sending referral notification: {e}")
+
+            # --- SEND TELEGRAM NOTIFICATION VIA API (Legacy backup) ---
             logger.info("🔔🔔🔔 ENTERING NOTIFICATION SECTION 🔔🔔🔔")
             try:
                 logger.info(f"🔔 REFERRAL DEBUG: Attempting to send notification to {referrer.telegram_id}")
@@ -186,8 +198,23 @@ class InvestmentService:
 
                     session.commit()
 
+                    # --- SEND UNLOCK NOTIFICATION ---
+                    try:
+                        profit = investment.expected_return - investment.amount
+                        await self.notification_service.send_unlock_notification(
+                            user_id=user.telegram_id,
+                            field_number=investment.field_number,
+                            amount=investment.amount,
+                            profit=profit,
+                            lock_period=investment.lock_period
+                        )
+                    except Exception as e:
+                        logger.error(f"Error sending unlock notification: {e}")
+
+                    # Process referral earnings
                     await self.process_referral_earnings(investment)
 
+                    # Send Telegram message (legacy)
                     try:
                         from bot.main import application
                         if application and application.bot:
