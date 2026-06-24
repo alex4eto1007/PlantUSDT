@@ -46,9 +46,22 @@ async function loadUserData() {
 }
 
 function refreshData() {
-    // Silent refresh - no popup
-    loadUserData();
-    loadSavedWallet();
+    // Visual feedback - show loading state
+    var balanceEl = document.getElementById('balance');
+    var totalEarningsEl = document.getElementById('totalEarnings');
+    
+    if (balanceEl) {
+        balanceEl.textContent = '⏳ ...';
+    }
+    if (totalEarningsEl) {
+        totalEarningsEl.textContent = '⏳ ...';
+    }
+    
+    // Refresh data after a small delay
+    setTimeout(function() {
+        loadUserData();
+        loadSavedWallet();
+    }, 300);
 }
 
 async function updateReferralStats(userId) {
