@@ -75,11 +75,7 @@ class DepositScanner:
             user_wallet = user.wallet_address.lower()
             logger.info(f"🔍 User wallet: {user_wallet}")
             
-            # Check the USDT balance of the PROJECT WALLET
-            project_balance = await self._get_usdt_balance(self.project_wallet)
-            logger.info(f"📊 Project wallet USDT balance: ${project_balance:.2f}")
-            
-            # Check if we already processed a deposit for this user
+            # Check if we already processed a deposit for this user with this amount
             existing = session.query(Deposit).filter_by(
                 user_id=user.id,
                 amount=expected_amount
@@ -88,6 +84,10 @@ class DepositScanner:
             if existing:
                 logger.info(f"✅ Deposit of ${expected_amount:.2f} already processed")
                 return {'success': True, 'message': 'Deposit already processed'}
+            
+            # Check the USDT balance of the PROJECT WALLET
+            project_balance = await self._get_usdt_balance(self.project_wallet)
+            logger.info(f"📊 Project wallet USDT balance: ${project_balance:.2f}")
             
             # Check if the project wallet has received the expected amount
             if project_balance >= expected_amount:
