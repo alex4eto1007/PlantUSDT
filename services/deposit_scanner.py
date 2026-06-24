@@ -214,12 +214,14 @@ class DepositScanner:
                 f"&apikey={self.api_key}"
             )
 
+            logger.info(f"🔍 FULL URL: {url}")
             logger.info(f"🔍 Checking Etherscan V2: {url[:100]}...")
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers={"User-Agent": "Mozilla/5.0"}) as response:
                     if response.status == 200:
                         data = await response.json()
+                        logger.info(f"🔍 API Response: {data}")
                         if data.get('status') == '1':
                             transactions = data.get('result', [])
                             filtered = [
@@ -236,7 +238,7 @@ class DepositScanner:
                             logger.info(f"✅ Found {len(filtered)} USDT transactions to project wallet")
                             return filtered
                         else:
-                            logger.warning(f"Etherscan returned: {data.get('message')}")
+                            logger.warning(f"Etherscan returned: {data}")
                             return []
                     else:
                         logger.error(f"Etherscan returned status: {response.status}")
@@ -293,7 +295,7 @@ class DepositScanner:
                                 logger.info(f"✅ Found {len(filtered)} matching transactions")
                             return filtered
                         else:
-                            logger.warning(f"Etherscan returned: {data.get('message')}")
+                            logger.warning(f"Etherscan returned: {data}")
                             return []
                     else:
                         logger.error(f"Etherscan returned status: {response.status}")
