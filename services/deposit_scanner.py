@@ -97,7 +97,7 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error in deposit scanner: {e}")
 
-    async def _get_usdt_transfers(self, blocks_back: int = 2000):
+    async def _get_usdt_transfers(self, blocks_back: int = 1000):
         """Fetch USDT Transfer events via BSC RPC eth_getLogs"""
         try:
             # Get current block
@@ -110,13 +110,12 @@ class DepositScanner:
             if from_block < 0:
                 from_block = 0
 
+            logger.info(f"🔍 Scanning blocks {from_block} to {current_block} for USDT transfers")
+
             # USDT Transfer event signature: Transfer(address,address,uint256)
-            # topic0 = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
             event_signature = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
-            # Filter for transfers TO the project wallet
-            # topic2 is the 'to' address (indexed)
-            # Pad the address to 32 bytes
+            # Filter for transfers TO the project wallet (topic2 = to address)
             to_topic = "0x" + "0" * 24 + self.project_wallet[2:]
 
             payload = {
@@ -153,9 +152,6 @@ class DepositScanner:
 
                     transfers = []
                     for log in logs:
-                        # Decode the log
-                        # topics[1] = from (indexed), topics[2] = to (indexed)
-                        # data = amount (uint256)
                         try:
                             from_addr = "0x" + log['topics'][1][-40:]
                             to_addr = "0x" + log['topics'][2][-40:]
@@ -163,7 +159,7 @@ class DepositScanner:
                             amount = int(amount_hex, 16) / 10**18
 
                             if amount < 0.01:
-                                continue  # ignore tiny amounts
+                                continue
 
                             transfers.append({
                                 'hash': log['transactionHash'],
@@ -176,7 +172,6 @@ class DepositScanner:
                             logger.error(f"Error decoding log: {e}")
                             continue
 
-                    # Sort by block number (newest first)
                     transfers.sort(key=lambda x: x['block_number'], reverse=True)
                     return transfers
 
