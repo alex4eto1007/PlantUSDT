@@ -170,11 +170,12 @@ class DepositScanner:
             return False
 
     async def _get_usdt_balance(self, wallet_address: str) -> float:
-        """Get USDT balance on Polygon using Etherscan V2 API (FREE)"""
+        """Get USDT balance on Polygon using Polygonscan API (FREE)"""
         try:
-            url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
+            # Use Polygonscan directly instead of V2
+            url = f"https://api.polygonscan.com/api?module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
             
-            logger.info(f"🔍 Fetching balance from: {url}")
+            logger.info(f"🔍 Fetching balance from Polygonscan: {url}")
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=10) as response:
@@ -191,7 +192,7 @@ class DepositScanner:
                             logger.info(f"💰 Balance is zero or empty")
                             return 0.0
                     else:
-                        logger.error(f"❌ API V2 error: {data.get('message', 'Unknown error')}")
+                        logger.error(f"❌ API error: {data.get('message', 'Unknown error')}")
                         return 0.0
         except Exception as e:
             logger.error(f"❌ Balance error on Polygon: {e}")
