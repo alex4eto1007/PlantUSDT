@@ -24,7 +24,7 @@ application = None
 # Initialize services
 db = DatabaseManager()
 investment_service = InvestmentService()
-wallet_service = WalletService()
+wallet_service = WalletService()  # Now uses Polygon
 scheduler = SchedulerService()
 deposit_scanner = DepositScanner()
 
@@ -149,7 +149,8 @@ Use /app to open the Mini App!"""
                         chat_id=referrer.telegram_id,
                         text=f"🎉 **New Referral!**\n\n"
                              f"@{existing_user.username or 'User'} accepted your referral!\n"
-                             f"💡 You will earn 5% from their future deposits!"
+                             f"💡 You will earn 5% from their future deposits!\n"
+                             f"⛓️ Network: Polygon"
                     )
                 except Exception as e:
                     logger.error(f"Error notifying referrer: {e}")
@@ -195,7 +196,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌾 Invest in planting fields\n"
         "📊 View your earnings\n"
         "👥 Manage referrals\n\n"
-        "Start growing your USDT today! 🚀",
+        "Start growing your USDT today on Polygon! 🚀",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
