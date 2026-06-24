@@ -230,16 +230,33 @@ def get_user():
         fields = []
         for inv in investments:
             if inv.is_active or not inv.is_completed:
-                next_payout = inv.next_payout_date
-                fields.append({
-                    'field_number': inv.field_number,
-                    'amount': inv.amount,
-                    'total_return': inv.total_return,
-                    'paid_out': inv.paid_out,
-                    'start_date': inv.start_date.isoformat(),
-                    'is_active': inv.is_active,
-                    'next_payout_date': next_payout.isoformat() if next_payout else None
-                })
+                # For locked investments, use unlock_date instead of next_payout_date
+                if hasattr(inv, 'is_locked') and inv.is_locked:
+                    unlock_date = inv.unlock_date
+                    fields.append({
+                        'field_number': inv.field_number,
+                        'amount': inv.amount,
+                        'total_return': inv.expected_return or 0,
+                        'paid_out': inv.paid_out or 0,
+                        'start_date': inv.start_date.isoformat(),
+                        'is_active': inv.is_active,
+                        'unlock_date': unlock_date.isoformat() if unlock_date else None,
+                        'lock_period': inv.lock_period or 30,
+                        'expected_return': inv.expected_return or 0,
+                        'is_locked': inv.is_locked
+                    })
+                else:
+                    # Fallback for old investments
+                    next_payout = inv.next_payout_date if hasattr(inv, 'next_payout_date') else None
+                    fields.append({
+                        'field_number': inv.field_number,
+                        'amount': inv.amount,
+                        'total_return': inv.total_return,
+                        'paid_out': inv.paid_out,
+                        'start_date': inv.start_date.isoformat(),
+                        'is_active': inv.is_active,
+                        'next_payout_date': next_payout.isoformat() if next_payout else None
+                    })
         
         # Get referrals (level 1 only for display)
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
@@ -292,7 +309,7 @@ def get_real_history():
                 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # Get earnings (daily payouts)
+        # Get earnings (daily payouts - for old system)
         payouts = session.query(DailyPayout).filter_by(user_id=user.id).all()
         for p in payouts:
             transactions.append({
@@ -341,14 +358,22 @@ def get_investments(telegram_id):
         investments = session.query(Investment).filter_by(user_id=user.id).all()
         transactions = []
         for inv in investments:
+            # Determine the return amount
+            if hasattr(inv, 'expected_return') and inv.expected_return:
+                total_return = inv.expected_return
+            else:
+                total_return = inv.total_return or 0
+            
             transactions.append({
                 'type': 'investment',
                 'amount': inv.amount,
                 'status': 'active' if inv.is_active else 'completed',
                 'date': inv.start_date.strftime('%Y-%m-%d %H:%M'),
                 'field': inv.field_number,
-                'paid_out': inv.paid_out,
-                'total_return': inv.total_return
+                'paid_out': inv.paid_out or 0,
+                'total_return': total_return,
+                'lock_period': inv.lock_period if hasattr(inv, 'lock_period') else 30,
+                'is_locked': inv.is_locked if hasattr(inv, 'is_locked') else False
             })
         
         return jsonify({'transactions': transactions})
@@ -394,13 +419,22 @@ def invest():
         total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
         now = datetime.utcnow()
         
+        # For now, use 30 days as default lock period
+        lock_period = 30
+        expected_return = amount * 1.60  # 60% return for 30 days
+        unlock_date = now + timedelta(days=lock_period)
+        
         investment = Investment(
             user_id=user.id,
             field_number=field_number,
             amount=amount,
             total_return=total_return,
             end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
-            next_payout_date=now + timedelta(hours=24)
+            next_payout_date=now + timedelta(hours=24),
+            lock_period=lock_period,
+            unlock_date=unlock_date,
+            expected_return=expected_return,
+            is_locked=True
         )
         session.add(investment)
         
@@ -411,7 +445,85 @@ def invest():
         
         return jsonify({
             'success': True,
-            'message': f'Successfully invested ${amount} in Field #{field_number}'
+            'message': f'Successfully invested ${amount} in Field #{field_number} (locked for {lock_period} days)'
+        })
+    finally:
+        session.close()
+
+@app.route('/api/invest_locked', methods=['POST'])
+def invest_locked():
+    """New endpoint for locked investments with 1, 7, or 30 day options"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    field_number = data.get('field_number')
+    amount = data.get('amount')
+    lock_period = data.get('lock_period', 30)
+    
+    if not telegram_id or not field_number or not amount or not lock_period:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    # Validate lock period
+    if lock_period not in [1, 7, 30]:
+        return jsonify({'success': False, 'message': 'Lock period must be 1, 7, or 30 days'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        if user.balance < amount:
+            return jsonify({'success': False, 'message': 'Insufficient balance'})
+        
+        if amount < 5 or amount > 100:
+            return jsonify({'success': False, 'message': 'Amount must be between $5 and $100'})
+        
+        existing = session.query(Investment).filter_by(
+            user_id=user.id,
+            field_number=field_number,
+            is_active=True
+        ).first()
+        
+        if existing:
+            return jsonify({'success': False, 'message': f'Field #{field_number} is already active'})
+        
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        
+        # Calculate return based on lock period
+        multipliers = {1: 1.02, 7: 1.14, 30: 1.60}
+        multiplier = multipliers.get(lock_period, 1.60)
+        expected_return = amount * multiplier
+        unlock_date = now + timedelta(days=lock_period)
+        
+        investment = Investment(
+            user_id=user.id,
+            field_number=field_number,
+            amount=amount,
+            lock_period=lock_period,
+            unlock_date=unlock_date,
+            expected_return=expected_return,
+            start_date=now,
+            end_date=unlock_date,
+            is_active=True,
+            is_locked=True,
+            completed_at=None,
+            principal_returned=False
+        )
+        session.add(investment)
+        
+        user.balance -= amount
+        user.total_invested += amount
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully invested ${amount} in Field #{field_number}',
+            'lock_period': lock_period,
+            'expected_return': expected_return,
+            'unlock_date': unlock_date.isoformat()
         })
     finally:
         session.close()
@@ -437,11 +549,6 @@ def check_deposit_with_amount():
             )
         )
         loop.close()
-        
-        # If deposit was found and processed, update the user's data
-        if result.get('success'):
-            # Balance was already updated in the scanner
-            pass
         
         return jsonify(result)
     except Exception as e:
