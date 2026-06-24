@@ -22,7 +22,7 @@ class Config:
     # ============================================
     USDT_CONTRACT = os.getenv("USDT_CONTRACT", "0x55d398326f99059fF775485246999027B3197955")
     BSC_RPC_URL = os.getenv("BSC_RPC_URL", "https://bsc-dataseed.binance.org/")
-    BSC_SCAN_API = os.getenv("BSC_SCAN_API", "https://api.bscscan.com/v2/api")  # ✅ UPDATED TO V2
+    BSC_SCAN_API = os.getenv("BSC_SCAN_API", "https://api.bscscan.com/api")
     BSC_SCAN_API_KEY = os.getenv("BSC_SCAN_API_KEY")
     WALLET_ADDRESS = os.getenv("WALLET_ADDRESS", "0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76")
 
