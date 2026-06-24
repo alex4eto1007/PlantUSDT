@@ -22,7 +22,6 @@ class DepositScanner:
             logger.info("🔍 Scanning for new deposits...")
             session = self.db.get_session()
 
-            # Get all users with wallet addresses
             users = session.query(User).filter(
                 User.wallet_address.isnot(None),
                 User.wallet_address != ''
@@ -32,15 +31,11 @@ class DepositScanner:
                 logger.info("No users with wallets found")
                 return
 
-            # Check each user's wallet for deposits
             for user in users:
                 try:
                     user_wallet = user.wallet_address.lower()
-                    
-                    # Get current USDT balance of the user's wallet
                     current_balance = await self._get_usdt_balance(user_wallet)
                     logger.info(f"📊 User {user.telegram_id} USDT balance: ${current_balance:.2f}")
-
                 except Exception as e:
                     logger.error(f"Error processing user {user.telegram_id}: {e}")
                     continue
@@ -53,7 +48,7 @@ class DepositScanner:
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
         """Check for a deposit by checking BOTH user's wallet AND project wallet"""
         try:
-            logger.info(f"🔍 Checking deposit for user {user_id}, expected: ${expected_amount:.2f}")
+            logger.info(f"🔍🔍🔍 DEBUG: check_deposit_with_amount called for user {user_id}, amount ${expected_amount:.2f}")
             
             session = self.db.get_session()
 
@@ -68,6 +63,7 @@ class DepositScanner:
 
             user_wallet = user.wallet_address.lower()
             logger.info(f"🔍 User wallet: {user_wallet}")
+            logger.info(f"📊 Current user balance in DB: ${user.balance:.2f}")
             
             # Check if we already processed a deposit for this user with this amount
             existing = session.query(Deposit).filter_by(
@@ -77,22 +73,28 @@ class DepositScanner:
             
             if existing:
                 logger.info(f"✅ Deposit of ${expected_amount:.2f} already processed")
-                # 🔧 FORCE BALANCE UPDATE - Check if balance already includes this deposit
-                # Check if the user's balance is less than expected (meaning it wasn't added)
-                # We'll check if the deposit amount hasn't been added to balance
-                # Compare user's balance with total_deposited - total_invested + earnings
+                logger.info(f"📊 Current balance: ${user.balance:.2f}")
+                logger.info(f"📊 Total deposited: ${user.total_deposited:.2f}")
+                logger.info(f"📊 Total invested: ${user.total_invested:.2f}")
+                
+                # Force balance update if needed
                 expected_balance = user.total_deposited - user.total_invested + user.total_earnings_all_time
+                logger.info(f"📊 Expected balance: ${expected_balance:.2f}")
+                
                 if user.balance < expected_balance:
                     logger.info(f"⚠️ Balance mismatch! Adding ${expected_amount:.2f} to balance")
                     user.balance += expected_amount
                     session.commit()
                     logger.info(f"✅ Balance updated to: ${user.balance:.2f}")
+                    return {'success': True, 'message': 'Balance updated'}
                 else:
                     logger.info(f"✅ Balance already correct: ${user.balance:.2f}")
-                return {'success': True, 'message': 'Deposit already processed'}
+                    return {'success': True, 'message': 'Deposit already processed'}
             
             # Check BOTH wallets
+            logger.info(f"🔍 Checking user wallet balance...")
             user_balance = await self._get_usdt_balance(user_wallet)
+            logger.info(f"🔍 Checking project wallet balance...")
             project_balance = await self._get_usdt_balance(self.project_wallet)
             
             logger.info(f"📊 User wallet balance: ${user_balance:.2f}")
@@ -100,6 +102,8 @@ class DepositScanner:
             
             # Check if the project wallet has received the expected amount
             if project_balance >= expected_amount:
+                logger.info(f"✅ Project wallet has sufficient balance: ${project_balance:.2f} >= ${expected_amount:.2f}")
+                
                 # Process deposit
                 deposit = Deposit(
                     user_id=user.id,
@@ -120,6 +124,7 @@ class DepositScanner:
 
                 logger.info(f"✅ Deposit detected for user {user_id}: ${expected_amount:.2f}")
                 logger.info(f"✅ New balance: ${user.balance:.2f}")
+                logger.info(f"✅ New total_deposited: ${user.total_deposited:.2f}")
 
                 if bot:
                     try:
@@ -137,7 +142,8 @@ class DepositScanner:
                 session.close()
                 return {'success': True, 'message': 'Deposit detected and processed'}
             else:
-                return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} found. Project balance: ${project_balance:.2f}'}
+                logger.info(f"❌ Project wallet balance insufficient: ${project_balance:.2f} < ${expected_amount:.2f}")
+                return {'success': False, 'message': f'No deposit found. Project balance: ${project_balance:.2f}'}
 
         except Exception as e:
             logger.error(f"Error checking deposit with amount: {e}")
@@ -149,11 +155,7 @@ class DepositScanner:
     async def _get_usdt_balance(self, wallet_address: str) -> float:
         """Get USDT balance for a wallet using BSC RPC"""
         try:
-            # USDT contract address
             usdt_contract = Config.USDT_CONTRACT
-            
-            # ERC-20 balanceOf function signature
-            # balanceOf(address) = 0x70a08231
             data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
             
             url = Config.BSC_RPC_URL
@@ -175,7 +177,6 @@ class DepositScanner:
                     if response.status == 200:
                         data = await response.json()
                         if data and data.get('result'):
-                            # Convert hex to decimal
                             balance_hex = data.get('result')
                             balance = int(balance_hex, 16)
                             result = balance / 10**18
