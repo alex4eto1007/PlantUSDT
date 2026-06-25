@@ -32,7 +32,7 @@ deposit_scanner = DepositScanner()
 db.create_tables()
 
 # Vercel URL for Mini App with cache-busting
-VERCEL_URL = "https://plant-usdt.vercel.app?v=3"
+VERCEL_URL = "https://plant-usdt.vercel.app?t=1782404049
 
 # Admin check function
 def is_admin(user_id: int) -> bool:
