@@ -15,8 +15,8 @@ class InvestmentService:
         # Updated multipliers: 1 day 2%, 7 days 15%, 30 days 65%
         self.lock_multipliers = {
             1: 1.02,    # 2% return
-            7: 1.15,    # 15% return (was 14%)
-            30: 1.65    # 65% return (was 60%)
+            7: 1.15,    # 15% return
+            30: 1.65    # 65% return
         }
 
     def calculate_return(self, amount: float, lock_period: int) -> float:
@@ -182,45 +182,46 @@ class InvestmentService:
 
             for investment in unlocked:
                 try:
-                    # Mark as unlocked
+                    # Get the user FIRST and attach to session
+                    user = session.query(User).filter_by(id=investment.user_id).first()
+                    if not user:
+                        logger.error(f"User {investment.user_id} not found")
+                        continue
+
+                    # Mark investment as unlocked
                     investment.is_locked = False
                     investment.is_active = False
                     investment.is_completed = True
                     investment.completed_at = now
                     investment.principal_returned = True
 
-                    # Get the user
-                    user = session.query(User).filter_by(id=investment.user_id).first()
-                    if user:
-                        # Update balance
-                        user.balance += investment.expected_return
-                        user.total_earned += investment.expected_return
-                        user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
-                        user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
-                        
-                        # Commit to save changes
-                        session.commit()
-                        logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f} (Field {investment.field_number})")
-                        
-                        # Send unlock notification
-                        try:
-                            profit = investment.expected_return - investment.amount
-                            await self.notification_service.send_unlock_notification(
-                                user_id=user.telegram_id,
-                                field_number=investment.field_number,
-                                amount=investment.amount,
-                                profit=profit,
-                                lock_period=investment.lock_period
-                            )
-                        except Exception as e:
-                            logger.error(f"Error sending unlock notification: {e}")
-                    else:
-                        logger.error(f"User {investment.user_id} not found for investment {investment.id}")
+                    # Update the user's balance
+                    user.balance += investment.expected_return
+                    user.total_earned += investment.expected_return
+                    user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
+                    user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
+
+                    # COMMIT - this saves both the investment AND user changes
+                    session.commit()
+                    logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f} (Field {investment.field_number})")
+
+                    # Send notification
+                    try:
+                        profit = investment.expected_return - investment.amount
+                        await self.notification_service.send_unlock_notification(
+                            user_id=user.telegram_id,
+                            field_number=investment.field_number,
+                            amount=investment.amount,
+                            profit=profit,
+                            lock_period=investment.lock_period
+                        )
+                    except Exception as e:
+                        logger.error(f"Error sending unlock notification: {e}")
 
                     # Process referral earnings
                     await self.process_referral_earnings(investment)
 
-                    # Send Telegram message (legacy)
+                    # Send Telegram message
                     try:
                         from bot.main import application
                         if application and application.bot:
@@ -245,7 +246,7 @@ class InvestmentService:
                         logger.error(f"Error sending completion notification: {e}")
 
                 except Exception as e:
-                    logger.error(f"Error processing investment {investment.id} on Polygon: {e}")
+                    logger.error(f"Error processing investment {investment.id}: {e}")
                     session.rollback()
                     continue
 
@@ -258,8 +259,8 @@ class InvestmentService:
         """Get available lock periods with their returns"""
         return [
             {'days': 1, 'return_percent': 2, 'multiplier': 1.02},
-            {'days': 7, 'return_percent': 15, 'multiplier': 1.15},   # was 14%
-            {'days': 30, 'return_percent': 65, 'multiplier': 1.65}   # was 60%
+            {'days': 7, 'return_percent': 15, 'multiplier': 1.15},
+            {'days': 30, 'return_percent': 65, 'multiplier': 1.65}
         ]
 
     def get_investment_status(self, user_id: int):
