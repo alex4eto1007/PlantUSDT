@@ -32,7 +32,7 @@ deposit_scanner = DepositScanner()
 db.create_tables()
 
 # Vercel URL for Mini App with cache-busting
-VERCEL_URL = "https://plant-usdt.vercel.app?v=4"
+VERCEL_URL = "https://plant-usdt.vercel.app?v=2"
 
 # Admin check function
 def is_admin(user_id: int) -> bool:
@@ -226,12 +226,12 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
         text += f"🔒 Fee (10%): ${w.fee:.2f} USDT\n"
         text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
-        text += f"🏦 Wallet: {w.wallet_address[:10]}...{w.wallet_address[-8:]}\n"
+        text += f"🏦 Wallet: `{w.wallet_address}`\n"
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
         text += f"Status: ⏳ Pending\n"
         text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, parse_mode='Markdown')
 
 async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
