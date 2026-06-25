@@ -226,12 +226,12 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
         text += f"🔒 Fee (10%): ${w.fee:.2f} USDT\n"
         text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
-        text += f"🏦 Wallet: `{w.wallet_address}`\n"
+        text += f"🏦 Wallet: <code>{w.wallet_address}</code>\n"
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
         text += f"Status: ⏳ Pending\n"
         text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
 
-    await update.message.reply_text(text, parse_mode='Markdown')
+    await update.message.reply_text(text, parse_mode='HTML')
 
 async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
