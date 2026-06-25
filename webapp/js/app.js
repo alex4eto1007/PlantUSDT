@@ -351,21 +351,25 @@ async function setWallet() {
     }
 }
 
+// ============================================
+// INVESTMENT FUNCTIONS - UPDATED PERCENTAGES
+// ============================================
+
 function calculateReturn(amount, days) {
     const multipliers = {
-        1: 1.02,
-        7: 1.14,
-        30: 1.60
+        1: 1.02,    // 2%
+        7: 1.15,    // 15% (was 14%)
+        30: 1.65    // 65% (was 60%)
     };
-    const multiplier = multipliers[days] || 1.60;
+    const multiplier = multipliers[days] || 1.65;
     return amount * multiplier;
 }
 
 function getLockOptions() {
     return [
         { days: 1, returnPercent: 2 },
-        { days: 7, returnPercent: 14 },
-        { days: 30, returnPercent: 60 }
+        { days: 7, returnPercent: 15 },   // was 14
+        { days: 30, returnPercent: 65 }   // was 60
     ];
 }
 
@@ -444,6 +448,10 @@ async function investFieldWithLock(fieldNumber) {
 async function investField(fieldNumber) {
     await investFieldWithLock(fieldNumber);
 }
+
+// ============================================
+// ADDRESS COPY AND REFERRAL
+// ============================================
 
 function copyAddress() {
     var addressElement = document.getElementById('addressText');
@@ -532,6 +540,10 @@ async function copyReferral() {
     }
 }
 
+// ============================================
+// DEPOSIT FUNCTIONS
+// ============================================
+
 async function checkDeposit() {
     var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
@@ -588,6 +600,10 @@ async function checkDepositWithAmount() {
         }
     }
 }
+
+// ============================================
+// HISTORY FUNCTIONS
+// ============================================
 
 function filterHistory(type) {
     var buttons = document.querySelectorAll('.filter-btn');
@@ -700,6 +716,10 @@ function renderHistory(transactions) {
     historyList.innerHTML = html;
 }
 
+// ============================================
+// TIMER FUNCTIONS
+// ============================================
+
 function updateFieldTimers() {
     if (document.getElementById('historyList')) {
         return;
@@ -768,6 +788,10 @@ function stopCountdownTimer() {
     }
 }
 
+// ============================================
+// EVENT LISTENERS
+// ============================================
+
 function setupEventListeners() {
     var withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
@@ -817,6 +841,7 @@ function setupEventListeners() {
     }
 }
 
+// Expose functions globally
 window.navigateTo = navigateTo;
 window.goBack = goBack;
 window.refreshData = refreshData;
