@@ -18,11 +18,11 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///plantusdt.db")
 
     # ============================================
-    # POLYGON WALLET (Etherscan V2 API)
+    # POLYGON WALLET (Polygonscan API)
     # ============================================
     USDT_CONTRACT = os.getenv("USDT_CONTRACT", "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
     POLYGON_RPC_URL = os.getenv("POLYGON_RPC_URL", "https://polygon-rpc.com")
-    POLYGONSCAN_API_URL = os.getenv("POLYGONSCAN_API_URL", "https://api.etherscan.io/v2/api")
+    POLYGONSCAN_API_URL = os.getenv("POLYGONSCAN_API_URL", "https://api.polygonscan.com/api")
     POLYGON_CHAIN_ID = os.getenv("POLYGON_CHAIN_ID", "137")
     ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")
     WALLET_ADDRESS = os.getenv("WALLET_ADDRESS", "0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76")
@@ -36,10 +36,11 @@ class Config:
     MIN_INVESTMENT = float(os.getenv("MIN_INVESTMENT", 5))
     MAX_FIELD_AMOUNT = float(os.getenv("MAX_FIELD_AMOUNT", 100))
 
+    # Updated multipliers: 1 day 2%, 7 days 15%, 30 days 65%
     LOCK_MULTIPLIERS = {
-        1: 1.02,
-        7: 1.14,
-        30: 1.60
+        1: 1.02,    # 2% return
+        7: 1.15,    # 15% return (was 14%)
+        30: 1.65    # 65% return (was 60%)
     }
 
     # ============================================

@@ -12,15 +12,16 @@ class InvestmentService:
     def __init__(self):
         self.db = DatabaseManager()
         self.notification_service = NotificationService()
+        # Updated multipliers: 1 day 2%, 7 days 15%, 30 days 65%
         self.lock_multipliers = {
-            1: 1.02,   # 2% for 1 day
-            7: 1.14,   # 14% for 7 days
-            30: 1.60   # 60% for 30 days
+            1: 1.02,    # 2% return
+            7: 1.15,    # 15% return (was 14%)
+            30: 1.65    # 65% return (was 60%)
         }
 
     def calculate_return(self, amount: float, lock_period: int) -> float:
         """Calculate the total return based on lock period"""
-        multiplier = self.lock_multipliers.get(lock_period, 1.60)
+        multiplier = self.lock_multipliers.get(lock_period, 1.65)
         return round(amount * multiplier, 2)
 
     async def process_referral_earnings(self, investment):
@@ -181,35 +182,40 @@ class InvestmentService:
 
             for investment in unlocked:
                 try:
+                    # Mark as unlocked
                     investment.is_locked = False
                     investment.is_active = False
                     investment.is_completed = True
                     investment.completed_at = now
                     investment.principal_returned = True
 
+                    # Get the user
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if user:
+                        # Update balance
                         user.balance += investment.expected_return
                         user.total_earned += investment.expected_return
                         user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
                         user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
                         
-                        logger.info(f"✅ User {user.telegram_id} received ${investment.expected_return:.2f} from Field {investment.field_number} on Polygon")
-
-                    session.commit()
-
-                    # --- SEND UNLOCK NOTIFICATION ---
-                    try:
-                        profit = investment.expected_return - investment.amount
-                        await self.notification_service.send_unlock_notification(
-                            user_id=user.telegram_id,
-                            field_number=investment.field_number,
-                            amount=investment.amount,
-                            profit=profit,
-                            lock_period=investment.lock_period
-                        )
-                    except Exception as e:
-                        logger.error(f"Error sending unlock notification: {e}")
+                        # Commit to save changes
+                        session.commit()
+                        logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f} (Field {investment.field_number})")
+                        
+                        # Send unlock notification
+                        try:
+                            profit = investment.expected_return - investment.amount
+                            await self.notification_service.send_unlock_notification(
+                                user_id=user.telegram_id,
+                                field_number=investment.field_number,
+                                amount=investment.amount,
+                                profit=profit,
+                                lock_period=investment.lock_period
+                            )
+                        except Exception as e:
+                            logger.error(f"Error sending unlock notification: {e}")
+                    else:
+                        logger.error(f"User {investment.user_id} not found for investment {investment.id}")
 
                     # Process referral earnings
                     await self.process_referral_earnings(investment)
@@ -252,8 +258,8 @@ class InvestmentService:
         """Get available lock periods with their returns"""
         return [
             {'days': 1, 'return_percent': 2, 'multiplier': 1.02},
-            {'days': 7, 'return_percent': 14, 'multiplier': 1.14},
-            {'days': 30, 'return_percent': 60, 'multiplier': 1.60}
+            {'days': 7, 'return_percent': 15, 'multiplier': 1.15},   # was 14%
+            {'days': 30, 'return_percent': 65, 'multiplier': 1.65}   # was 60%
         ]
 
     def get_investment_status(self, user_id: int):

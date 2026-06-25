@@ -297,6 +297,22 @@ def get_real_history():
                 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
             })
         
+        # Get completed investments (unlocks)
+        completed_investments = session.query(Investment).filter_by(
+            user_id=user.id,
+            is_completed=True
+        ).all()
+        for inv in completed_investments:
+            if inv.completed_at:
+                profit = inv.expected_return - inv.amount
+                transactions.append({
+                    'type': 'earnings',
+                    'amount': profit,
+                    'status': 'completed',
+                    'date': inv.completed_at.strftime('%Y-%m-%d %H:%M'),
+                    'description': f'Field #{inv.field_number} unlocked'
+                })
+        
         # Get earnings (daily payouts - legacy, keep for compatibility)
         payouts = session.query(DailyPayout).filter_by(user_id=user.id).all()
         for p in payouts:
@@ -463,8 +479,8 @@ def invest_locked():
         now = datetime.utcnow()
         
         # Calculate return based on lock period
-        multipliers = {1: 1.02, 7: 1.14, 30: 1.60}
-        multiplier = multipliers.get(lock_period, 1.60)
+        multipliers = {1: 1.02, 7: 1.15, 30: 1.65}
+        multiplier = multipliers.get(lock_period, 1.65)
         expected_return = amount * multiplier
         unlock_date = now + timedelta(days=lock_period)
         
