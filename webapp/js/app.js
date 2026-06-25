@@ -602,10 +602,12 @@ async function checkDepositWithAmount() {
 }
 
 // ============================================
-// HISTORY FUNCTIONS - FIXED
+// HISTORY FUNCTIONS - FIXED WITH ALERT
 // ============================================
 
 function filterHistory(type) {
+    alert('filterHistory called with type: ' + type);  // <-- DEBUG ALERT
+    
     var buttons = document.querySelectorAll('.filter-btn');
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active');
@@ -624,6 +626,9 @@ function filterHistory(type) {
             return Promise.all(responses.map(function(r) { return r.json(); })); 
         })
         .then(function(data) {
+            console.log('Data[0] (real_history):', data[0]);
+            console.log('Data[1] (investments):', data[1]);
+            
             var allTransactions = [];
             
             // Add real history transactions
@@ -639,6 +644,8 @@ function filterHistory(type) {
                 });
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
+            
+            console.log('All transactions:', allTransactions);
             
             if (allTransactions.length === 0) {
                 historyList.innerHTML = '<p class="empty-state">No transactions found on Polygon.</p>';
