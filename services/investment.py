@@ -182,7 +182,6 @@ class InvestmentService:
 
             for investment in unlocked:
                 try:
-                    # Get the user FIRST and attach to session
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if not user:
                         logger.error(f"User {investment.user_id} not found")
@@ -195,19 +194,29 @@ class InvestmentService:
                     investment.completed_at = now
                     investment.principal_returned = True
 
-                    # Update the user's balance
+                    # Update user's balance
                     user.balance += investment.expected_return
                     user.total_earned += investment.expected_return
                     user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
                     user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
 
-                    # COMMIT - this saves both the investment AND user changes
+                    # Create a DailyPayout record for the profit (so it appears in history)
+                    profit = investment.expected_return - investment.amount
+                    payout = DailyPayout(
+                        user_id=user.id,
+                        investment_id=investment.id,
+                        amount=profit,
+                        day_number=investment.lock_period,
+                        paid_at=now
+                    )
+                    session.add(payout)
+
+                    # Commit everything
                     session.commit()
                     logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f} (Field {investment.field_number})")
 
-                    # Send notification
+                    # Send unlock notification
                     try:
-                        profit = investment.expected_return - investment.amount
                         await self.notification_service.send_unlock_notification(
                             user_id=user.telegram_id,
                             field_number=investment.field_number,
@@ -225,7 +234,6 @@ class InvestmentService:
                     try:
                         from bot.main import application
                         if application and application.bot:
-                            profit = investment.expected_return - investment.amount
                             message = (
                                 f"🎉 **Investment Completed!**\n\n"
                                 f"Your investment in **Field #{investment.field_number}** has been completed!\n\n"

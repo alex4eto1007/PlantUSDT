@@ -230,8 +230,6 @@ def get_user():
         fields = []
         for inv in investments:
             if inv.is_active or not inv.is_completed:
-                # For locked investments, there is no next_payout_date
-                # They unlock all at once when unlock_date is reached
                 fields.append({
                     'field_number': inv.field_number,
                     'amount': inv.amount,
@@ -239,7 +237,7 @@ def get_user():
                     'paid_out': inv.paid_out or 0,
                     'start_date': inv.start_date.isoformat(),
                     'is_active': inv.is_active,
-                    'next_payout_date': None,  # No daily payouts for locked investments
+                    'next_payout_date': None,
                     'lock_period': inv.lock_period,
                     'unlock_date': inv.unlock_date.isoformat() if inv.unlock_date else None,
                     'is_locked': inv.is_locked,
@@ -297,23 +295,7 @@ def get_real_history():
                 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # Get completed investments (unlocks)
-        completed_investments = session.query(Investment).filter_by(
-            user_id=user.id,
-            is_completed=True
-        ).all()
-        for inv in completed_investments:
-            if inv.completed_at:
-                profit = inv.expected_return - inv.amount
-                transactions.append({
-                    'type': 'earnings',
-                    'amount': profit,
-                    'status': 'completed',
-                    'date': inv.completed_at.strftime('%Y-%m-%d %H:%M'),
-                    'description': f'Field #{inv.field_number} unlocked'
-                })
-        
-        # Get earnings (daily payouts - legacy, keep for compatibility)
+        # Get earnings (DailyPayout records - includes unlocks)
         payouts = session.query(DailyPayout).filter_by(user_id=user.id).all()
         for p in payouts:
             transactions.append({
