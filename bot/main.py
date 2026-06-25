@@ -31,8 +31,8 @@ deposit_scanner = DepositScanner()
 # Create tables
 db.create_tables()
 
-# Vercel URL for Mini App
-VERCEL_URL = "https://plant-usdt.vercel.app"
+# Vercel URL for Mini App with cache-busting
+VERCEL_URL = "https://plant-usdt.vercel.app?v=2"
 
 # Admin check function
 def is_admin(user_id: int) -> bool:
@@ -73,12 +73,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
 
-Grow your USDT with returns up to 60% on Polygon network!
+Grow your USDT with returns up to 65% on Polygon network!
 
 💰 INVESTMENT DETAILS:
 • 🌿 1 Day: 2% return
-• 🌿 7 Days: 14% return  
-• 🌿 30 Days: 60% return
+• 🌿 7 Days: 15% return  
+• 🌿 30 Days: 65% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
 • 🔒 Platform fee: 10% on withdrawals

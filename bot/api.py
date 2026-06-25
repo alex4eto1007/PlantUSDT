@@ -478,7 +478,7 @@ def invest_locked():
         from datetime import datetime, timedelta
         now = datetime.utcnow()
         
-        # Calculate return based on lock period
+        # Calculate return based on lock period (updated: 2%, 15%, 65%)
         multipliers = {1: 1.02, 7: 1.15, 30: 1.65}
         multiplier = multipliers.get(lock_period, 1.65)
         expected_return = amount * multiplier
