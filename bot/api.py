@@ -3,6 +3,7 @@ from flask_cors import CORS
 import sys
 import os
 import asyncio
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,10 +14,33 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Configure CORS properly - single header with specific origins
+# ============================================
+# API CACHING
+# ============================================
+cache = {}
+CACHE_TTL = 5  # 5 seconds
+
+def get_cached_user(telegram_id):
+    key = f"user_{telegram_id}"
+    if key in cache:
+        data, timestamp = cache[key]
+        if time.time() - timestamp < CACHE_TTL:
+            return data
+    return None
+
+def set_cached_user(telegram_id, data):
+    cache[f"user_{telegram_id}"] = (data, time.time())
+
+def clear_user_cache(telegram_id):
+    key = f"user_{telegram_id}"
+    if key in cache:
+        del cache[key]
+
+# ============================================
+# CORS CONFIGURATION
+# ============================================
 CORS(app, origins=["https://plant-usdt.vercel.app", "https://plantusdt.vercel.app"])
 
-# Add CORS headers to every response (single header)
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', 'https://plant-usdt.vercel.app')
@@ -64,22 +88,21 @@ def save_wallet():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # If empty, disconnect
         if not wallet_address:
             user.wallet_address = ''
             session.commit()
+            clear_user_cache(telegram_id)
             return jsonify({'success': True, 'message': 'Wallet disconnected'})
         
-        # Validate
         if not wallet_address.startswith('0x') or len(wallet_address) != 42:
             return jsonify({'success': False, 'message': 'Invalid wallet address'})
         
-        # Block project wallet
         if wallet_address.lower() == PROJECT_WALLET.lower():
             return jsonify({'success': False, 'message': 'This is the project wallet on Polygon. Please enter your own wallet address.'})
         
         user.wallet_address = wallet_address
         session.commit()
+        clear_user_cache(telegram_id)
         return jsonify({'success': True, 'message': 'Wallet saved successfully'})
     finally:
         session.close()
@@ -99,7 +122,6 @@ def withdraw():
     if not telegram_id or not amount or not address:
         return jsonify({'success': False, 'message': 'Missing required fields'})
     
-    # Block withdrawal to project wallet
     if address.lower() == PROJECT_WALLET.lower():
         return jsonify({'success': False, 'message': 'Cannot withdraw to project wallet on Polygon. Please use your own wallet address.'})
     
@@ -110,18 +132,15 @@ def withdraw():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Check balance
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'})
         
         if amount < 2:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $2'})
         
-        # Calculate fee and net amount
         fee = amount * 0.10
         net_amount = amount - fee
         
-        # Create withdrawal
         withdrawal = Withdrawal(
             user_id=user.id,
             amount=amount,
@@ -132,10 +151,10 @@ def withdraw():
         )
         session.add(withdrawal)
         
-        # Deduct from balance
         user.balance -= amount
         
         session.commit()
+        clear_user_cache(telegram_id)
         return jsonify({'success': True, 'message': 'Withdrawal request submitted'})
     finally:
         session.close()
@@ -161,18 +180,14 @@ def get_referral_code():
 
 @app.route('/api/referral_stats/<int:telegram_id>', methods=['GET'])
 def get_referral_stats(telegram_id):
-    """Get referral statistics - single level only"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Level 1 referrals only (no multi-tier)
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
-        
-        # Get earnings from the referrer's deposit earnings
         level1_earnings = user.referral_deposit_earnings or 0
         
         return jsonify({
@@ -206,12 +221,17 @@ def get_user():
             'level2_count': 0
         })
     
+    # Check cache first
+    cached = get_cached_user(telegram_id)
+    if cached:
+        return jsonify(cached)
+    
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
         
         if not user:
-            return jsonify({
+            response = {
                 'success': True,
                 'balance': 0,
                 'total_invested': 0,
@@ -223,9 +243,10 @@ def get_user():
                 'total_earnings': 0,
                 'level1_count': 0,
                 'level2_count': 0
-            })
+            }
+            set_cached_user(telegram_id, response)
+            return jsonify(response)
         
-        # Get investments (locked investments)
         investments = session.query(Investment).filter_by(user_id=user.id).all()
         fields = []
         for inv in investments:
@@ -244,7 +265,6 @@ def get_user():
                     'expected_return': inv.expected_return
                 })
         
-        # Get referrals (level 1 only for display)
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         level2_count = 0
@@ -253,7 +273,7 @@ def get_user():
         investment_earnings = user.investment_earnings_all_time or 0
         total_earnings = referral_earned + investment_earnings
         
-        return jsonify({
+        response = {
             'success': True,
             'balance': user.balance,
             'total_invested': user.total_invested or 0,
@@ -265,7 +285,10 @@ def get_user():
             'total_earnings': total_earnings,
             'level1_count': level1_count,
             'level2_count': level2_count
-        })
+        }
+        
+        set_cached_user(telegram_id, response)
+        return jsonify(response)
     finally:
         session.close()
 
@@ -285,7 +308,6 @@ def get_real_history():
         
         transactions = []
         
-        # Get deposits
         deposits = session.query(Deposit).filter_by(user_id=user.id).all()
         for d in deposits:
             transactions.append({
@@ -295,7 +317,6 @@ def get_real_history():
                 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # Get earnings (DailyPayout records - includes unlocks)
         payouts = session.query(DailyPayout).filter_by(user_id=user.id).all()
         for p in payouts:
             transactions.append({
@@ -305,7 +326,6 @@ def get_real_history():
                 'date': p.paid_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # Get referral earnings
         referral_earnings = user.referral_deposit_earnings or 0
         if referral_earnings > 0:
             transactions.append({
@@ -315,7 +335,6 @@ def get_real_history():
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
         
-        # Get withdrawals
         withdrawals = session.query(Withdrawal).filter_by(user_id=user.id).all()
         for w in withdrawals:
             transactions.append({
@@ -325,7 +344,6 @@ def get_real_history():
                 'date': w.created_at.strftime('%Y-%m-%d %H:%M')
             })
         
-        # Sort by date (newest first)
         transactions.sort(key=lambda x: x['date'], reverse=True)
         
         return jsonify({'transactions': transactions})
@@ -334,7 +352,6 @@ def get_real_history():
 
 @app.route('/api/investments/<int:telegram_id>', methods=['GET'])
 def get_investments(telegram_id):
-    """Get investment history for a user"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -411,6 +428,7 @@ def invest():
         user.total_invested += amount
         
         session.commit()
+        clear_user_cache(telegram_id)
         
         return jsonify({
             'success': True,
@@ -421,7 +439,6 @@ def invest():
 
 @app.route('/api/invest_locked', methods=['POST'])
 def invest_locked():
-    """New endpoint for locked investments with 1, 7, or 30 day options"""
     data = request.json
     telegram_id = data.get('telegram_id')
     field_number = data.get('field_number')
@@ -431,7 +448,6 @@ def invest_locked():
     if not telegram_id or not field_number or not amount or not lock_period:
         return jsonify({'success': False, 'message': 'Missing required fields'})
     
-    # Validate lock period
     if lock_period not in [1, 7, 30]:
         return jsonify({'success': False, 'message': 'Lock period must be 1, 7, or 30 days'})
     
@@ -460,7 +476,6 @@ def invest_locked():
         from datetime import datetime, timedelta
         now = datetime.utcnow()
         
-        # Calculate return based on lock period (2%, 15%, 65%)
         multipliers = {1: 1.02, 7: 1.15, 30: 1.65}
         multiplier = multipliers.get(lock_period, 1.65)
         expected_return = amount * multiplier
@@ -486,6 +501,7 @@ def invest_locked():
         user.total_invested += amount
         
         session.commit()
+        clear_user_cache(telegram_id)
         
         return jsonify({
             'success': True,
@@ -499,7 +515,6 @@ def invest_locked():
 
 @app.route('/api/check_deposit_with_amount', methods=['GET'])
 def check_deposit_with_amount():
-    """Check for a deposit with a specific expected amount - MANUAL CHECK"""
     telegram_id = request.args.get('telegram_id')
     expected_amount = request.args.get('expected_amount', type=float)
     
@@ -507,17 +522,19 @@ def check_deposit_with_amount():
         return jsonify({'success': False, 'message': 'Missing required fields'})
     
     try:
-        # Use the deposit scanner with amount filtering
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
             deposit_scanner.check_deposit_with_amount(
                 int(telegram_id),
                 expected_amount,
-                None  # bot will be passed from main when called from scheduler
+                None
             )
         )
         loop.close()
+        
+        if result.get('success'):
+            clear_user_cache(telegram_id)
         
         return jsonify(result)
     except Exception as e:

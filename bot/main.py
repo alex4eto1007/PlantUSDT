@@ -9,7 +9,22 @@ from services.deposit_scanner import DepositScanner
 from services.scheduler import SchedulerService
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+# ============================================
+# RATE LIMITING
+# ============================================
+user_requests = defaultdict(list)
+
+def check_rate_limit(user_id: int, limit: int = 10, period: int = 60) -> bool:
+    """Check if user has exceeded rate limit (10 requests per 60 seconds)"""
+    now = datetime.utcnow()
+    user_requests[user_id] = [t for t in user_requests[user_id] if (now - t).seconds < period]
+    if len(user_requests[user_id]) >= limit:
+        return False
+    user_requests[user_id].append(now)
+    return True
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -45,6 +60,12 @@ def is_admin(user_id: int) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    # Rate limiting
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
     now = datetime.utcnow()
 
     logger.info(f"START COMMAND - User: {user.id}, Args: {context.args}")
@@ -184,6 +205,12 @@ Use /app to open the Mini App!"""
 # ============================================
 
 async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
     keyboard = [[
         InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))
     ]]
@@ -207,6 +234,11 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -235,6 +267,11 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -292,6 +329,11 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -313,6 +355,11 @@ Example:
 
 async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
