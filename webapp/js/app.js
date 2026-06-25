@@ -602,7 +602,7 @@ async function checkDepositWithAmount() {
 }
 
 // ============================================
-// HISTORY FUNCTIONS
+// HISTORY FUNCTIONS - FIXED
 // ============================================
 
 function filterHistory(type) {
@@ -615,6 +615,7 @@ function filterHistory(type) {
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     var userId = tgUser ? tgUser.id : '0';
     
+    // Fetch both real history and investments
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
     var url2 = API_BASE + '/api/investments/' + userId;
     
@@ -625,11 +626,17 @@ function filterHistory(type) {
         .then(function(data) {
             var allTransactions = [];
             
+            // Add real history transactions
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
             
+            // Add investment transactions - ensure type is 'investment'
             if (data[1].transactions && data[1].transactions.length > 0) {
+                data[1].transactions.forEach(function(tx) {
+                    // Make sure type is set to 'investment'
+                    tx.type = 'investment';
+                });
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
             
@@ -638,6 +645,7 @@ function filterHistory(type) {
                 return;
             }
             
+            // Filter by type
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) { 
                     if (type === 'deposits') {
