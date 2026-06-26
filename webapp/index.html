@@ -7,7 +7,23 @@
     <link rel="stylesheet" href="css/style.css?v=13">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Adsgram Interstitial Ad -->
-    <script src="https://adsgram.ai/js/adsgram.js"></script>
+    <script src="https://cdn.adsgram.ai/js/adsgram.js"></script>
+    <script>
+        // Fallback if CDN fails
+        if (typeof window.adsgram === 'undefined') {
+            var script = document.createElement('script');
+            script.src = 'https://telegram.org/js/adsgram.js';
+            script.onload = function() {
+                console.log('✅ Adsgram loaded from Telegram fallback');
+            };
+            script.onerror = function() {
+                console.log('❌ Adsgram failed to load from both sources');
+            };
+            document.head.appendChild(script);
+        } else {
+            console.log('✅ Adsgram loaded from CDN');
+        }
+    </script>
 </head>
 <body>
     <div class="container">
