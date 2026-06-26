@@ -109,14 +109,21 @@ Grow your USDT with returns up to 65% on Polygon network!
 👥 REFERRAL BONUS:
 Share your referral link and earn 5% from your friends' deposits!
 
-Commands:
-/help - Show this help
+📋 COMMANDS:
+/start - Start the bot
+/app - Open Mini App
+/help - Show all commands
 /balance - Check your balance
 /status - Check your investments
 /support - Contact support
-/app - Open Mini App
 
-Use /app to open the Mini App!"""
+💡 Open the Mini App for full features!
+   - Deposit USDT
+   - Invest in fields
+   - Track earnings
+   - Refer friends
+
+🔗 Mini App: https://plant-usdt.vercel.app"""
 
         keyboard = [
             [InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]
