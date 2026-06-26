@@ -435,8 +435,18 @@ async function investFieldWithLock(fieldNumber) {
                     });
                     
                     // 📢 Show interstitial ad after successful investment
+                    console.log("📢 Trying to show ad after investment...");
                     if (window.showInterstitialAd) {
+                        console.log("📢 showInterstitialAd exists, calling it...");
                         await window.showInterstitialAd();
+                        console.log("📢 Ad function returned");
+                    } else {
+                        console.log("📢 showInterstitialAd not found!");
+                        tg.showPopup({
+                            title: '🔍 Ad Debug',
+                            message: 'showInterstitialAd function not found!',
+                            buttons: [{type: 'ok'}]
+                        });
                     }
                     
                     loadUserData();
@@ -610,15 +620,6 @@ async function checkDepositWithAmount() {
 // ============================================
 // WITHDRAWAL FUNCTIONS WITH AD
 // ============================================
-
-// The withdrawal ad will be shown after successful withdrawal submission
-// Add this to the withdrawal success handler:
-
-// In the withdraw form submit handler (inside setupEventListeners):
-// After data.success, add:
-// if (window.showInterstitialAd) {
-//     await window.showInterstitialAd();
-// }
 
 // ============================================
 // HISTORY FUNCTIONS - FIXED
@@ -854,11 +855,15 @@ function setupEventListeners() {
                         tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
                         // 📢 Show interstitial ad after successful withdrawal
+                        console.log("📢 Trying to show ad after withdrawal...");
                         if (window.showInterstitialAd) {
+                            console.log("📢 showInterstitialAd exists, calling it...");
                             window.showInterstitialAd().then(function() {
+                                console.log("📢 Ad function returned");
                                 loadUserData();
                             });
                         } else {
+                            console.log("📢 showInterstitialAd not found!");
                             loadUserData();
                         }
                         
