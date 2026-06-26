@@ -6,8 +6,12 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
-const AD_REWARD = 0.0015; // $0.0015 per ad
+const AD_REWARD = 0.0015; // $0.0015 per rewarded ad
 let timerInterval = null;
+
+// Interstitial ad counter
+let pageViewCount = 0;
+const INTERSTITIAL_INTERVAL = 3; // Show after every 3 page changes
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -27,7 +31,21 @@ function navigateTo(page) {
         'history': 'history.html',
         'index': 'index.html'
     };
-    if (pages[page]) window.location.href = pages[page];
+    if (pages[page]) {
+        // Increment page view counter
+        pageViewCount++;
+        
+        // Show interstitial after every 3 page changes
+        if (pageViewCount % INTERSTITIAL_INTERVAL === 0) {
+            if (window.showInterstitialAd) {
+                console.log("📢 Showing interstitial ad after page change...");
+                // Don't await - let navigation happen
+                window.showInterstitialAd();
+            }
+        }
+        
+        window.location.href = pages[page];
+    }
 }
 
 function goBack() { window.history.back(); }
@@ -360,7 +378,7 @@ async function setWallet() {
 }
 
 // ============================================
-// INVESTMENT FUNCTIONS - UPDATED PERCENTAGES
+// INVESTMENT FUNCTIONS
 // ============================================
 
 function calculateReturn(amount, days) {
@@ -442,10 +460,16 @@ async function investFieldWithLock(fieldNumber) {
                         buttons:[{type:'ok'}]
                     });
                     
-                    // 📢 Show rewarded ad after investment
+                    // 📢 Show rewarded ad after investment (user gets $0.0015)
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after investment...");
                         await window.watchRewardedAd();
+                    }
+                    
+                    // 📢 Show interstitial ad after investment (100% profit for project)
+                    if (window.showInterstitialAd) {
+                        console.log("📢 Showing interstitial ad after investment...");
+                        await window.showInterstitialAd();
                     }
                     
                     loadUserData();
@@ -614,10 +638,12 @@ async function checkDepositWithAmount() {
             statusDiv.className = 'deposit-status error';
         }
     }
+    
+    // No interstitial ads after deposit
 }
 
 // ============================================
-// HISTORY FUNCTIONS - FIXED
+// HISTORY FUNCTIONS
 // ============================================
 
 function filterHistory(type) {
@@ -849,7 +875,7 @@ function setupEventListeners() {
                     if (data.success) {
                         tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
-                        // 📢 Show rewarded ad after withdrawal
+                        // 📢 Show rewarded ad after withdrawal (user gets $0.0015)
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after withdrawal...");
                             window.watchRewardedAd().then(function() {
@@ -857,6 +883,12 @@ function setupEventListeners() {
                             });
                         } else {
                             loadUserData();
+                        }
+                        
+                        // 📢 Show interstitial ad after withdrawal (100% profit for project)
+                        if (window.showInterstitialAd) {
+                            console.log("📢 Showing interstitial ad after withdrawal...");
+                            window.showInterstitialAd();
                         }
                         
                         if (amountInput) amountInput.value = '';
@@ -893,7 +925,7 @@ async function canWatchAd() {
 }
 
 /**
- * Credit ad reward to user
+ * Credit ad reward to user (only for rewarded ads)
  */
 async function creditAdReward() {
     const userId = tgUser ? tgUser.id : '0';
