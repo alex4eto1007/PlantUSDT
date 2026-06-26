@@ -433,6 +433,12 @@ async function investFieldWithLock(fieldNumber) {
                         message:`Invested $${amountNum.toFixed(2)} in Field #${fieldNumber} on Polygon!\n🔒 Locked for ${days} days.\n📈 Expected return: $${expectedReturn.toFixed(2)}`,
                         buttons:[{type:'ok'}]
                     });
+                    
+                    // 📢 Show interstitial ad after successful investment
+                    if (window.showInterstitialAd) {
+                        await window.showInterstitialAd();
+                    }
+                    
                     loadUserData();
                 } else {
                     tg.showPopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
@@ -602,12 +608,23 @@ async function checkDepositWithAmount() {
 }
 
 // ============================================
-// HISTORY FUNCTIONS - FIXED (Alert Removed)
+// WITHDRAWAL FUNCTIONS WITH AD
+// ============================================
+
+// The withdrawal ad will be shown after successful withdrawal submission
+// Add this to the withdrawal success handler:
+
+// In the withdraw form submit handler (inside setupEventListeners):
+// After data.success, add:
+// if (window.showInterstitialAd) {
+//     await window.showInterstitialAd();
+// }
+
+// ============================================
+// HISTORY FUNCTIONS - FIXED
 // ============================================
 
 function filterHistory(type) {
-    // Alert removed - was for debugging only
-    
     var buttons = document.querySelectorAll('.filter-btn');
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active');
@@ -636,7 +653,6 @@ function filterHistory(type) {
             // Add investment transactions - ensure type is 'investment'
             if (data[1].transactions && data[1].transactions.length > 0) {
                 data[1].transactions.forEach(function(tx) {
-                    // Make sure type is set to 'investment'
                     tx.type = 'investment';
                 });
                 allTransactions = allTransactions.concat(data[1].transactions);
@@ -836,7 +852,16 @@ function setupEventListeners() {
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
                     if (data.success) {
                         tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
-                        loadUserData();
+                        
+                        // 📢 Show interstitial ad after successful withdrawal
+                        if (window.showInterstitialAd) {
+                            window.showInterstitialAd().then(function() {
+                                loadUserData();
+                            });
+                        } else {
+                            loadUserData();
+                        }
+                        
                         if (amountInput) amountInput.value = '';
                     } else {
                         tg.showPopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
