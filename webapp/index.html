@@ -20,7 +20,7 @@
                 </button>
                 <div class="balance-display">
                     <span class="balance-label">💰 Balance</span>
-                    <span class="balance-amount" id="balance">$0.00</span>
+                    <span class="balance-amount" id="balance">$0.000</span>
                 </div>
             </div>
         </div>
@@ -38,10 +38,10 @@
         <div class="earnings-section">
             <div class="earnings-card">
                 <div class="earnings-label">📈 Total Earnings</div>
-                <div class="earnings-amount" id="totalEarnings">$0.00</div>
+                <div class="earnings-amount" id="totalEarnings">$0.000</div>
                 <div class="earnings-details">
-                    <span>From Investments: <strong id="investmentEarnings">$0.00</strong></span>
-                    <span>From Referrals: <strong id="referralEarningsDisplay">$0.00</strong></span>
+                    <span>From Investments: <strong id="investmentEarnings">$0.000</strong></span>
+                    <span>From Referrals: <strong id="referralEarningsDisplay">$0.000</strong></span>
                 </div>
             </div>
         </div>
@@ -102,14 +102,14 @@
             <div class="field-card" id="field1">
                 <div class="field-number">🌾 Field #1</div>
                 <div class="field-status" id="field1Status">Available</div>
-                <div class="field-amount" id="field1Amount">$0.00</div>
+                <div class="field-amount" id="field1Amount">$0.000</div>
                 <div class="field-timer" id="field1Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field1Progress" style="width: 0%"></div>
                 </div>
                 <div class="field-details">
                     <span>Days: <span id="field1Days">0/30</span></span>
-                    <span>Earned: <span id="field1Earned">$0.00</span></span>
+                    <span>Earned: <span id="field1Earned">$0.000</span></span>
                 </div>
                 <button class="action-btn primary" onclick="investField(1)">🌱 Plant Now</button>
             </div>
@@ -118,14 +118,14 @@
             <div class="field-card" id="field2">
                 <div class="field-number">🌾 Field #2</div>
                 <div class="field-status" id="field2Status">Available</div>
-                <div class="field-amount" id="field2Amount">$0.00</div>
+                <div class="field-amount" id="field2Amount">$0.000</div>
                 <div class="field-timer" id="field2Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field2Progress" style="width: 0%"></div>
                 </div>
                 <div class="field-details">
                     <span>Days: <span id="field2Days">0/30</span></span>
-                    <span>Earned: <span id="field2Earned">$0.00</span></span>
+                    <span>Earned: <span id="field2Earned">$0.000</span></span>
                 </div>
                 <button class="action-btn primary" onclick="investField(2)">🌱 Plant Now</button>
             </div>
@@ -134,14 +134,14 @@
             <div class="field-card" id="field3">
                 <div class="field-number">🌾 Field #3</div>
                 <div class="field-status" id="field3Status">Available</div>
-                <div class="field-amount" id="field3Amount">$0.00</div>
+                <div class="field-amount" id="field3Amount">$0.000</div>
                 <div class="field-timer" id="field3Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress">
                     <div class="progress-bar" id="field3Progress" style="width: 0%"></div>
                 </div>
                 <div class="field-details">
                     <span>Days: <span id="field3Days">0/30</span></span>
-                    <span>Earned: <span id="field3Earned">$0.00</span></span>
+                    <span>Earned: <span id="field3Earned">$0.000</span></span>
                 </div>
                 <button class="action-btn primary" onclick="investField(3)">🌱 Plant Now</button>
             </div>
@@ -173,7 +173,7 @@
             </div>
             <div class="referral-stats">
                 <span>Total Referrals: <strong id="referralCount">0</strong></span>
-                <span>Total Earned: <strong id="referralEarned">$0.00</strong></span>
+                <span>Total Earned: <strong id="referralEarned">$0.000</strong></span>
             </div>
             
             <div class="referral-details">
@@ -183,7 +183,7 @@
                 </div>
                 <div class="referral-detail-row">
                     <span>💰 Earnings from deposits:</span>
-                    <strong id="level1Earnings">$0.00</strong>
+                    <strong id="level1Earnings">$0.000</strong>
                 </div>
             </div>
         </div>
@@ -261,7 +261,7 @@
                 try {
                     if (typeof window.Adsgram === 'undefined') {
                         console.log("📢 Adsgram not loaded");
-                        resolve({ done: false, error: true });
+                        resolve({ done: false, error: true, description: 'Adsgram not loaded' });
                         return;
                     }
 
@@ -274,19 +274,17 @@
                     rewardedController.show()
                         .then((result) => {
                             console.log("📢 Rewarded ad result:", result);
-                            if (result.done && !result.error) {
-                                console.log(`🎁 User earned $${AD_REWARD} USDT!`);
-                                // The reward is credited in app.js
-                            }
+                            // result.done = true if watched till the end OR closed in interstitial format
+                            // result.error = true if there was an error
                             resolve(result);
                         })
                         .catch((result) => {
                             console.log("📢 Rewarded ad error:", result);
-                            resolve(result);
+                            resolve({ done: false, error: true, description: result });
                         });
                 } catch (e) {
                     console.log("📢 Rewarded ad exception:", e);
-                    resolve({ done: false, error: true });
+                    resolve({ done: false, error: true, description: e.message });
                 }
             });
         }

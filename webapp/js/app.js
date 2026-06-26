@@ -70,9 +70,9 @@ async function updateReferralStats(userId) {
         const data = await response.json();
         if (data.success) {
             document.getElementById('referralCount').textContent = data.total_referrals || 0;
-            document.getElementById('referralEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);
+            document.getElementById('referralEarned').textContent = '$' + (data.total_earnings || 0).toFixed(3);
             document.getElementById('level1Count').textContent = data.level1_count || 0;
-            document.getElementById('level1Earnings').textContent = '$' + (data.level1_earnings || 0).toFixed(2);
+            document.getElementById('level1Earnings').textContent = '$' + (data.level1_earnings || 0).toFixed(3);
             
             var level2Section = document.getElementById('level2Section');
             if (level2Section) level2Section.style.display = 'none';
@@ -85,22 +85,22 @@ async function updateReferralStats(userId) {
 function updateUI(data) {
     var balanceEl = document.getElementById('balance');
     if (balanceEl) {
-        balanceEl.textContent = '$' + (data.balance || 0).toFixed(2);
+        balanceEl.textContent = '$' + (data.balance || 0).toFixed(3);
     }
     
     var totalEarningsEl = document.getElementById('totalEarnings');
     if (totalEarningsEl) {
-        totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(2);
+        totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
     }
     
     var investmentEarningsEl = document.getElementById('investmentEarnings');
     if (investmentEarningsEl) {
-        investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(2);
+        investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(3);
     }
     
     var referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
     if (referralEarningsDisplayEl) {
-        referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(2);
+        referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(3);
     }
 }
 
@@ -111,10 +111,10 @@ function updateDashboardUI(data) {
     var dashDeposited = document.getElementById('dashDeposited');
     var dashReferrals = document.getElementById('dashReferrals');
 
-    if (dashBalance) dashBalance.textContent = '$' + (data.balance || 0).toFixed(2);
-    if (dashInvested) dashInvested.textContent = '$' + (data.total_invested || 0).toFixed(2);
-    if (dashEarned) dashEarned.textContent = '$' + (data.total_earnings || 0).toFixed(2);
-    if (dashDeposited) dashDeposited.textContent = '$' + (data.total_deposited || 0).toFixed(2);
+    if (dashBalance) dashBalance.textContent = '$' + (data.balance || 0).toFixed(3);
+    if (dashInvested) dashInvested.textContent = '$' + (data.total_invested || 0).toFixed(3);
+    if (dashEarned) dashEarned.textContent = '$' + (data.total_earnings || 0).toFixed(3);
+    if (dashDeposited) dashDeposited.textContent = '$' + (data.total_deposited || 0).toFixed(3);
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
 }
 
@@ -142,11 +142,11 @@ function updateFields(data) {
             
             statusEl.textContent = isLocked ? '🔒 Locked' : '🟢 Active';
             statusEl.className = isLocked ? 'field-status locked' : 'field-status active';
-            amountEl.textContent = '$' + field.amount.toFixed(2);
+            amountEl.textContent = '$' + field.amount.toFixed(3);
             daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
             
             var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
-            earnedEl.textContent = '$' + displayEarned.toFixed(2);
+            earnedEl.textContent = '$' + displayEarned.toFixed(3);
             
             var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
@@ -164,9 +164,9 @@ function updateFields(data) {
         } else {
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
-            amountEl.textContent = '$0.00';
+            amountEl.textContent = '$0.000';
             daysEl.textContent = '0 days';
-            earnedEl.textContent = '$0.00';
+            earnedEl.textContent = '$0.000';
             progressEl.style.width = '0%';
             cardEl.className = 'field-card';
             btnEl.textContent = '🌱 Plant Now';
@@ -704,9 +704,9 @@ function renderHistory(transactions) {
             displayText = 'Referral Bonus';
         }
         
-        var amountDisplay = '$' + tx.amount.toFixed(2);
+        var amountDisplay = '$' + tx.amount.toFixed(3);
         if (tx.type === 'investment' && tx.field) {
-            amountDisplay = '$' + tx.amount.toFixed(2) + ' (Field ' + tx.field + ')';
+            amountDisplay = '$' + tx.amount.toFixed(3) + ' (Field ' + tx.field + ')';
         }
         
         var statusBadge = '';
@@ -914,17 +914,18 @@ async function watchRewardedAd() {
         return false;
     }
 
-    // Check if ad function exists
     if (!window.showRewardedAd) {
         console.log('📢 Rewarded ad not available');
         return false;
     }
 
-    // Show ad
+    // Show ad and wait for result
     const result = await window.showRewardedAd();
+    console.log('📢 Ad result:', result);
     
+    // Check if user watched till the end
     if (result.done && !result.error) {
-        // Credit reward
+        // User watched the ad
         const credited = await creditAdReward();
         if (credited) {
             tg.showPopup({
@@ -934,9 +935,31 @@ async function watchRewardedAd() {
             });
             loadUserData();
             return true;
+        } else {
+            tg.showPopup({
+                title: '⚠️ Reward Failed',
+                message: 'Could not credit reward. Please try again later.',
+                buttons: [{type: 'ok'}]
+            });
+            return false;
         }
+    } else if (result.error) {
+        // Ad error – no reward
+        tg.showPopup({
+            title: '❌ Ad Error',
+            message: 'There was an error playing the ad. No reward was given.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
+    } else {
+        // Ad was skipped or not completed
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nClick on the ad or wait for it to finish.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
     }
-    return false;
 }
 
 // Expose ad functions
