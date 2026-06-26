@@ -20,6 +20,27 @@
             font-weight: 500;
             margin-left: 8px;
         }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .dashboard-grid .stat-card {
+            padding: 14px 8px;
+        }
+        .dashboard-grid .stat-value {
+            font-size: 16px;
+        }
+        .dashboard-grid .stat-label {
+            font-size: 9px;
+        }
+        .ad-stat-highlight {
+            border: 1px solid rgba(0, 212, 255, 0.3) !important;
+            background: rgba(0, 212, 255, 0.05) !important;
+        }
+        .ad-stat-highlight .stat-value {
+            color: #00d4ff !important;
+        }
     </style>
 </head>
 <body>
@@ -33,31 +54,36 @@
         <div id="loadingMessage" class="loading-text">Loading your data...</div>
 
         <div id="dashboardStats" style="display: none;">
-            <div class="stats-grid">
+            <div class="stats-grid dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-icon">💰</div>
                     <div class="stat-label">Balance</div>
-                    <div class="stat-value" id="dashBalance">$0.00</div>
+                    <div class="stat-value" id="dashBalance">$0.000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">🌱</div>
                     <div class="stat-label">Invested</div>
-                    <div class="stat-value" id="dashInvested">$0.00</div>
+                    <div class="stat-value" id="dashInvested">$0.000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">📈</div>
                     <div class="stat-label">Earned</div>
-                    <div class="stat-value" id="dashEarned">$0.00</div>
+                    <div class="stat-value" id="dashEarned">$0.000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">💳</div>
                     <div class="stat-label">Deposited</div>
-                    <div class="stat-value" id="dashDeposited">$0.00</div>
+                    <div class="stat-value" id="dashDeposited">$0.000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">👥</div>
                     <div class="stat-label">Referrals</div>
                     <div class="stat-value" id="dashReferrals">0</div>
+                </div>
+                <div class="stat-card ad-stat-highlight">
+                    <div class="stat-icon">📺</div>
+                    <div class="stat-label">From Ads</div>
+                    <div class="stat-value" id="dashAdEarnings">$0.000</div>
                 </div>
             </div>
 
@@ -98,11 +124,12 @@
                 document.getElementById('dashboardStats').style.display = 'block';
 
                 if (data.success) {
-                    document.getElementById('dashBalance').textContent = '$' + (data.balance || 0).toFixed(2);
-                    document.getElementById('dashInvested').textContent = '$' + (data.total_invested || 0).toFixed(2);
-                    document.getElementById('dashEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);
-                    document.getElementById('dashDeposited').textContent = '$' + (data.total_deposited || 0).toFixed(2);
+                    document.getElementById('dashBalance').textContent = '$' + (data.balance || 0).toFixed(3);
+                    document.getElementById('dashInvested').textContent = '$' + (data.total_invested || 0).toFixed(3);
+                    document.getElementById('dashEarned').textContent = '$' + (data.total_earnings || 0).toFixed(3);
+                    document.getElementById('dashDeposited').textContent = '$' + (data.total_deposited || 0).toFixed(3);
                     document.getElementById('dashReferrals').textContent = data.referrals || 0;
+                    document.getElementById('dashAdEarnings').textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
                 } else {
                     document.getElementById('loadingMessage').textContent = '❌ Error loading data';
                     document.getElementById('loadingMessage').className = 'error-text';

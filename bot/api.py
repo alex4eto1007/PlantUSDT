@@ -221,7 +221,8 @@ def get_user():
             'referral_earned': 0,
             'investment_earnings': 0,
             'total_earnings': 0,
-            'level1_count': 0
+            'level1_count': 0,
+            'total_ad_earnings': 0
         })
     
     # Check cache first
@@ -244,7 +245,8 @@ def get_user():
                 'referral_earned': 0,
                 'investment_earnings': 0,
                 'total_earnings': 0,
-                'level1_count': 0
+                'level1_count': 0,
+                'total_ad_earnings': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -272,7 +274,7 @@ def get_user():
         
         referral_earned = user.referral_earnings_all_time or 0
         investment_earnings = user.investment_earnings_all_time or 0
-        total_earnings = referral_earned + investment_earnings
+        total_earnings = referral_earned + investment_earnings + (user.total_ad_earnings or 0)
         
         response = {
             'success': True,
@@ -284,7 +286,8 @@ def get_user():
             'referral_earned': referral_earned,
             'investment_earnings': investment_earnings,
             'total_earnings': total_earnings,
-            'level1_count': level1_count
+            'level1_count': level1_count,
+            'total_ad_earnings': user.total_ad_earnings or 0
         }
         
         set_cached_user(telegram_id, response)
@@ -331,6 +334,15 @@ def get_real_history():
             transactions.append({
                 'type': 'referral_earnings',
                 'amount': referral_earnings,
+                'status': 'completed',
+                'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
+            })
+        
+        # Add ad earnings to history
+        if user.total_ad_earnings and user.total_ad_earnings > 0:
+            transactions.append({
+                'type': 'ad_earnings',
+                'amount': user.total_ad_earnings,
                 'status': 'completed',
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })

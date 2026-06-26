@@ -104,6 +104,11 @@ function updateUI(data) {
     if (referralEarningsDisplayEl) {
         referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(3);
     }
+    
+    var adEarningsDisplayEl = document.getElementById('adEarningsDisplay');
+    if (adEarningsDisplayEl) {
+        adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
+    }
 }
 
 function updateDashboardUI(data) {
@@ -698,12 +703,16 @@ function renderHistory(transactions) {
         var icon = tx.type === 'deposit' ? '📥' : 
                    tx.type === 'withdraw' ? '📤' : 
                    tx.type === 'investment' ? '🌱' : 
-                   tx.type === 'referral_earnings' ? '🎁' : '💰';
+                   tx.type === 'referral_earnings' ? '🎁' : 
+                   tx.type === 'ad_earnings' ? '📺' : '💰';
         var status = tx.status || 'completed';
         var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         if (tx.type === 'referral_earnings') {
             displayText = 'Referral Bonus';
+        }
+        if (tx.type === 'ad_earnings') {
+            displayText = 'Ad Earnings';
         }
         
         var amountDisplay = '$' + tx.amount.toFixed(3);
