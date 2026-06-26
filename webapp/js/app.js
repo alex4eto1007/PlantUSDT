@@ -6,6 +6,7 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+const AD_REWARD = 0.0015; // $0.0015 per rewarded ad
 let timerInterval = null;
 
 // Interstitial ad counter
@@ -31,23 +32,28 @@ function navigateTo(page) {
         'index': 'index.html'
     };
     if (pages[page]) {
-        // Increment page view counter
         pageViewCount++;
-        
-        // Show interstitial after every 3 page changes
         if (pageViewCount % INTERSTITIAL_INTERVAL === 0) {
             if (window.showInterstitialAd) {
                 console.log("📢 Showing interstitial ad after page change...");
-                // Don't await - let navigation happen
                 window.showInterstitialAd();
             }
         }
-        
         window.location.href = pages[page];
     }
 }
 
-function goBack() { window.history.back(); }
+function goBack() {
+    // Increment counter for back navigation as well
+    pageViewCount++;
+    if (pageViewCount % INTERSTITIAL_INTERVAL === 0) {
+        if (window.showInterstitialAd) {
+            console.log("📢 Showing interstitial ad on back...");
+            window.showInterstitialAd();
+        }
+    }
+    window.history.back();
+}
 
 async function loadUserData() {
     try {
@@ -642,7 +648,7 @@ async function checkDepositWithAmount() {
 }
 
 // ============================================
-// HISTORY FUNCTIONS
+// HISTORY FUNCTIONS - FIXED
 // ============================================
 
 function filterHistory(type) {
@@ -690,7 +696,9 @@ function filterHistory(type) {
                         return tx.type === 'withdraw' || tx.type === 'withdrawal' || tx.type === 'withdrawals';
                     }
                     if (type === 'earnings') {
-                        return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || tx.type === 'referral_earnings';
+                        // Include all earnings types: earnings, referral_earnings, ad_earnings
+                        return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || 
+                               tx.type === 'referral_earnings' || tx.type === 'ad_earnings';
                     }
                     if (type === 'investments') {
                         return tx.type === 'investment' || tx.type === 'investments';
