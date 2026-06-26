@@ -6,7 +6,6 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
-const AD_REWARD = 0.0015; // $0.0015 per rewarded ad
 let timerInterval = null;
 
 // Interstitial ad counter
