@@ -7,23 +7,7 @@
     <link rel="stylesheet" href="css/style.css?v=13">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Adsgram Interstitial Ad -->
-    <script src="https://cdn.adsgram.ai/js/adsgram.js"></script>
-    <script>
-        // Fallback if CDN fails
-        if (typeof window.adsgram === 'undefined') {
-            var script = document.createElement('script');
-            script.src = 'https://telegram.org/js/adsgram.js';
-            script.onload = function() {
-                console.log('✅ Adsgram loaded from Telegram fallback');
-            };
-            script.onerror = function() {
-                console.log('❌ Adsgram failed to load from both sources');
-            };
-            document.head.appendChild(script);
-        } else {
-            console.log('✅ Adsgram loaded from CDN');
-        }
-    </script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -225,7 +209,7 @@
         </div>
     </div>
 
-    <!-- Adsgram Interstitial Ad (with Adblocker Fallback) -->
+    <!-- Adsgram Interstitial Ad -->
     <script>
         // Initialize Adsgram
         const AD_UNIT_ID = "int-36264";
@@ -234,37 +218,24 @@
         function showInterstitialAd() {
             return new Promise((resolve) => {
                 try {
-                    // Check if adsgram is loaded
-                    if (typeof window.adsgram === 'undefined') {
-                        console.log("📢 Adsgram not loaded (adblocker or network issue)");
-                        // Still resolve so the app continues
-                        resolve();
-                        return;
-                    }
-                    
-                    const AdController = window.adsgram.AdController;
-                    if (!AdController) {
-                        console.log("📢 AdController not available");
+                    // Check if Adsgram is loaded
+                    if (typeof window.Adsgram === 'undefined') {
+                        console.log("📢 Adsgram not loaded");
                         resolve();
                         return;
                     }
 
                     if (!adController) {
-                        adController = new AdController({
-                            blockId: AD_UNIT_ID,
-                            onShow: () => console.log("📢 Ad shown"),
-                            onError: (error) => {
-                                console.log("📢 Ad error:", error);
-                                resolve();
-                            },
-                            onClose: () => {
-                                console.log("📢 Ad closed");
-                                resolve();
-                            }
-                        });
+                        adController = window.Adsgram.init({ blockId: AD_UNIT_ID });
                     }
 
-                    adController.show();
+                    adController.show().then((result) => {
+                        console.log("📢 Ad result:", result);
+                        resolve();
+                    }).catch((result) => {
+                        console.log("📢 Ad error:", result);
+                        resolve();
+                    });
                 } catch (e) {
                     console.log("📢 Ad exception:", e);
                     resolve();
@@ -274,7 +245,7 @@
 
         // Make it globally available
         window.showInterstitialAd = showInterstitialAd;
-        console.log("✅ Adsgram script loaded");
+        console.log("✅ Adsgram initialized");
     </script>
 
     <script src="js/app.js?v=13"></script>
