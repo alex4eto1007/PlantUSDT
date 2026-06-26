@@ -191,7 +191,14 @@ function updateFields(data) {
                 is_locked: isLocked,
                 lock_period: lockPeriod
             };
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             amountEl.textContent = '$0.000';
@@ -222,13 +229,27 @@ async function updateReferral(data) {
                 if (result.success && result.referral_code) {
                     referralLink.textContent = 'https://t.me/PlantUSDT_bot?start=' + result.referral_code;
                     referralLink.style.color = '#ccd6f0';
-                } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                     referralLink.textContent = 'Error loading referral link';
                 }
             } catch (error) {
                 referralLink.textContent = 'Error loading referral link';
             }
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             referralLink.textContent = '⚠️ Save wallet to get referral link';
             referralLink.style.color = '#ff6b6b';
         }
@@ -262,7 +283,14 @@ async function saveWallet() {
             tg.showPopup({title:'✅ Wallet Saved!', message:'Polygon wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
             updateWalletUI(walletAddress);
             loadUserData();
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             tg.showPopup({title:'❌ Error', message:data.message || 'Failed to save wallet.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
@@ -337,7 +365,14 @@ async function disconnectWallet() {
                 if (data.success) {
                     resetWalletUI();
                     tg.showPopup({title:'✅ Disconnected', message:'Polygon wallet disconnected.', buttons:[{type:'ok'}]});
-                } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                     tg.showPopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
@@ -372,7 +407,14 @@ async function setWallet() {
                 withdrawAddress.value = data.wallet_address;
                 tg.showPopup({title:'✅ Wallet Loaded!', message:'Polygon wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
             }
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             tg.showPopup({title:'❌ No Wallet Found', message:'Please save a Polygon wallet address first.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
@@ -477,7 +519,14 @@ async function investFieldWithLock(fieldNumber) {
                     }
                     
                     loadUserData();
-                } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                     tg.showPopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
@@ -530,7 +579,14 @@ function copyAddress() {
                     buttons: [{type: 'ok'}]
                 });
             });
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             var textArea = document.createElement('textarea');
             textArea.value = address;
             document.body.appendChild(textArea);
@@ -544,6 +600,13 @@ function copyAddress() {
             });
         }
     } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
         tg.showPopup({
             title: '❌ Error',
             message: 'Invalid address. Please try again.',
@@ -574,7 +637,14 @@ async function copyReferral() {
             }).catch(function() {
                 tg.showPopup({title: '📋 Referral Link', message: link, buttons: [{type: 'ok'}]});
             });
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             tg.showPopup({title: '❌ Error', message: 'Could not get referral code.', buttons: [{type: 'ok'}]});
         }
     } catch (error) {
@@ -598,7 +668,14 @@ async function checkDeposit() {
             if (data.success) {
                 statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
                 loadUserData();
-            } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                 statusDiv.innerHTML = '⏳ No new deposits found on Polygon.';
             }
         } catch (error) {
@@ -633,7 +710,14 @@ async function checkDepositWithAmount() {
                 statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
                 statusDiv.className = 'deposit-status success';
                 loadUserData();
-            } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                 statusDiv.innerHTML = '⏳ No new deposits found on Polygon. Please wait a few minutes and try again.';
                 statusDiv.className = 'deposit-status pending';
             }
@@ -809,7 +893,14 @@ function updateFieldTimers() {
         if (timeLeft <= 0) {
             timerEl.textContent = '🟢 Unlocked! (UTC)';
             timerEl.className = 'field-timer ready';
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
@@ -818,7 +909,14 @@ function updateFieldTimers() {
             var timeString = '';
             if (days > 0) {
                 timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                 timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
             }
             timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
@@ -887,7 +985,14 @@ function setupEventListeners() {
                             window.watchRewardedAd().then(function() {
                                 loadUserData();
                             });
-                        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                             loadUserData();
                         }
                         
@@ -898,7 +1003,14 @@ function setupEventListeners() {
                         }
                         
                         if (amountInput) amountInput.value = '';
-                    } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
                         tg.showPopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
                     }
                 })
@@ -989,7 +1101,14 @@ async function watchRewardedAd() {
             loadUserData();
             loadAdStats();
             return true;
-        } else {
+    } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
             tg.showPopup({
                 title: '⚠️ Reward Failed',
                 message: 'Could not credit reward. Please try again later.',
@@ -1006,6 +1125,13 @@ async function watchRewardedAd() {
         });
         return false;
     } else {
+        // Ad was skipped or not completed – SHOW WARNING
+        tg.showPopup({
+            title: '⚠️ Ad Not Completed',
+            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
         // Ad was skipped or not completed
         tg.showPopup({
             title: '⚠️ Ad Not Completed',
