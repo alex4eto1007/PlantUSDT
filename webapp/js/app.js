@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedWallet();
     setupEventListeners();
     startCountdownTimer();
+    loadAdStats();
 });
 
 function navigateTo(page) {
@@ -61,6 +62,7 @@ function refreshData() {
     setTimeout(function() {
         loadUserData();
         loadSavedWallet();
+        loadAdStats();
     }, 300);
 }
 
@@ -962,9 +964,55 @@ async function watchRewardedAd() {
     }
 }
 
-// Expose ad functions
-window.watchRewardedAd = watchRewardedAd;
-window.canWatchAd = canWatchAd;
+// ============================================
+// AD STATS FUNCTIONS
+// ============================================
+
+/**
+ * Load ad stats for the user
+ */
+async function loadAdStats() {
+    const userId = tgUser ? tgUser.id : '0';
+    try {
+        const response = await fetch(`${API_BASE}/api/can_watch_ad?telegram_id=${userId}`);
+        const data = await response.json();
+        
+        const adsTodayEl = document.getElementById('adsToday');
+        const adEarningsEl = document.getElementById('adEarnings');
+        
+        if (adsTodayEl) {
+            adsTodayEl.textContent = (data.watched_today || 0) + ' / 100';
+        }
+        if (adEarningsEl) {
+            // Fetch total ad earnings from user data
+            const userResponse = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
+            const userData = await userResponse.json();
+            adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
+        }
+        
+        // Update button state if limit reached
+        const watchBtn = document.getElementById('watchAdBtn');
+        const statusEl = document.getElementById('adStatus');
+        if (watchBtn && !data.can_watch) {
+            watchBtn.disabled = true;
+            watchBtn.style.opacity = '0.5';
+            watchBtn.textContent = '⏳ Daily Limit Reached';
+            if (statusEl) {
+                statusEl.textContent = '✅ You\'ve watched all 100 ads today! Come back tomorrow.';
+                statusEl.style.display = 'block';
+            }
+        } else if (watchBtn) {
+            watchBtn.disabled = false;
+            watchBtn.style.opacity = '1';
+            watchBtn.textContent = '▶️ Watch Ad & Earn $0.002';
+            if (statusEl) {
+                statusEl.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading ad stats:', error);
+    }
+}
 
 // Expose functions globally
 window.navigateTo = navigateTo;
@@ -980,3 +1028,6 @@ window.filterHistory = filterHistory;
 window.saveWallet = saveWallet;
 window.disconnectWallet = disconnectWallet;
 window.setWallet = setWallet;
+window.watchRewardedAd = watchRewardedAd;
+window.canWatchAd = canWatchAd;
+window.loadAdStats = loadAdStats;

@@ -592,6 +592,55 @@ body {
 }
 
 /* ============================================
+   AD SECTION
+   ============================================ */
+
+.ad-section {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 255, 135, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.ad-section h3 {
+    font-size: 18px;
+    margin-bottom: 4px;
+    color: #ccd6f0;
+}
+
+.ad-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0 16px;
+}
+
+.ad-stat-box {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+}
+
+.ad-stat-label {
+    display: block;
+    font-size: 11px;
+    color: #8892b0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ad-stat-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #00ff87;
+    margin-top: 2px;
+}
+
+/* ============================================
    INFO CARD
    ============================================ */
 
