@@ -14,7 +14,7 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True)
-    telegram_id = Column(Integer, unique=True, nullable=False)
+    telegram_id = Column(BigInteger, unique=True, nullable=False)
     username = Column(String(100))
     first_name = Column(String(100))
     wallet_address = Column(String(100))
@@ -37,6 +37,12 @@ class User(Base):
     referral_earnings = Column(Float, default=0.0)
     can_be_referred = Column(Boolean, default=True)
     referred_at = Column(DateTime, nullable=True)
+    
+    # Ad tracking
+    ads_watched_today = Column(Integer, default=0)
+    last_ad_date = Column(DateTime, nullable=True)
+    total_ads_watched = Column(Integer, default=0)
+    total_ad_earnings = Column(Float, default=0.0)
     
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
@@ -89,7 +95,7 @@ class Deposit(Base):
     block_number = Column(BigInteger)
     confirmed_at = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
-    network = Column(String(20), default="polygon")  # Track which network deposit came from
+    network = Column(String(20), default="polygon")
     
     user = relationship("User", back_populates="deposits")
 
@@ -116,6 +122,6 @@ class Withdrawal(Base):
     tx_hash = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime)
-    network = Column(String(20), default="polygon")  # Track which network withdrawal was on
+    network = Column(String(20), default="polygon")
     
     user = relationship("User", back_populates="withdrawals")

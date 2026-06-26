@@ -358,8 +358,8 @@ async function setWallet() {
 function calculateReturn(amount, days) {
     const multipliers = {
         1: 1.02,    // 2%
-        7: 1.15,    // 15% (was 14%)
-        30: 1.65    // 65% (was 60%)
+        7: 1.15,    // 15%
+        30: 1.65    // 65%
     };
     const multiplier = multipliers[days] || 1.65;
     return amount * multiplier;
@@ -368,8 +368,8 @@ function calculateReturn(amount, days) {
 function getLockOptions() {
     return [
         { days: 1, returnPercent: 2 },
-        { days: 7, returnPercent: 15 },   // was 14
-        { days: 30, returnPercent: 65 }   // was 60
+        { days: 7, returnPercent: 15 },
+        { days: 30, returnPercent: 65 }
     ];
 }
 
@@ -434,19 +434,10 @@ async function investFieldWithLock(fieldNumber) {
                         buttons:[{type:'ok'}]
                     });
                     
-                    // 📢 Show interstitial ad after successful investment
-                    console.log("📢 Trying to show ad after investment...");
-                    if (window.showInterstitialAd) {
-                        console.log("📢 showInterstitialAd exists, calling it...");
-                        await window.showInterstitialAd();
-                        console.log("📢 Ad function returned");
-                    } else {
-                        console.log("📢 showInterstitialAd not found!");
-                        tg.showPopup({
-                            title: '🔍 Ad Debug',
-                            message: 'showInterstitialAd function not found!',
-                            buttons: [{type: 'ok'}]
-                        });
+                    // 📢 Show rewarded ad after investment
+                    if (window.watchRewardedAd) {
+                        console.log("📢 Showing rewarded ad after investment...");
+                        await window.watchRewardedAd();
                     }
                     
                     loadUserData();
@@ -618,10 +609,6 @@ async function checkDepositWithAmount() {
 }
 
 // ============================================
-// WITHDRAWAL FUNCTIONS WITH AD
-// ============================================
-
-// ============================================
 // HISTORY FUNCTIONS - FIXED
 // ============================================
 
@@ -635,7 +622,6 @@ function filterHistory(type) {
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     var userId = tgUser ? tgUser.id : '0';
     
-    // Fetch both real history and investments
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
     var url2 = API_BASE + '/api/investments/' + userId;
     
@@ -646,12 +632,10 @@ function filterHistory(type) {
         .then(function(data) {
             var allTransactions = [];
             
-            // Add real history transactions
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
             
-            // Add investment transactions - ensure type is 'investment'
             if (data[1].transactions && data[1].transactions.length > 0) {
                 data[1].transactions.forEach(function(tx) {
                     tx.type = 'investment';
@@ -664,7 +648,6 @@ function filterHistory(type) {
                 return;
             }
             
-            // Filter by type
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) { 
                     if (type === 'deposits') {
@@ -854,16 +837,13 @@ function setupEventListeners() {
                     if (data.success) {
                         tg.showPopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
-                        // 📢 Show interstitial ad after successful withdrawal
-                        console.log("📢 Trying to show ad after withdrawal...");
-                        if (window.showInterstitialAd) {
-                            console.log("📢 showInterstitialAd exists, calling it...");
-                            window.showInterstitialAd().then(function() {
-                                console.log("📢 Ad function returned");
+                        // 📢 Show rewarded ad after withdrawal
+                        if (window.watchRewardedAd) {
+                            console.log("📢 Showing rewarded ad after withdrawal...");
+                            window.watchRewardedAd().then(function() {
                                 loadUserData();
                             });
                         } else {
-                            console.log("📢 showInterstitialAd not found!");
                             loadUserData();
                         }
                         
@@ -880,6 +860,88 @@ function setupEventListeners() {
         });
     }
 }
+
+// ============================================
+// AD REWARD FUNCTIONS
+// ============================================
+
+/**
+ * Check if user can watch ads today (100/day limit)
+ */
+async function canWatchAd() {
+    const userId = tgUser ? tgUser.id : '0';
+    try {
+        const response = await fetch(`${API_BASE}/api/can_watch_ad?telegram_id=${userId}`);
+        const data = await response.json();
+        return data.can_watch || false;
+    } catch (error) {
+        console.error('Error checking ad limit:', error);
+        return false;
+    }
+}
+
+/**
+ * Credit ad reward to user
+ */
+async function creditAdReward() {
+    const userId = tgUser ? tgUser.id : '0';
+    try {
+        const response = await fetch(`${API_BASE}/api/credit_ad_reward`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: userId })
+        });
+        const data = await response.json();
+        return data.success || false;
+    } catch (error) {
+        console.error('Error crediting ad reward:', error);
+        return false;
+    }
+}
+
+/**
+ * Show rewarded ad and credit bonus
+ */
+async function watchRewardedAd() {
+    // Check daily limit
+    const canWatch = await canWatchAd();
+    if (!canWatch) {
+        tg.showPopup({
+            title: '⚠️ Daily Limit Reached',
+            message: 'You have watched 100 ads today. Come back tomorrow!',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
+    }
+
+    // Check if ad function exists
+    if (!window.showRewardedAd) {
+        console.log('📢 Rewarded ad not available');
+        return false;
+    }
+
+    // Show ad
+    const result = await window.showRewardedAd();
+    
+    if (result.done && !result.error) {
+        // Credit reward
+        const credited = await creditAdReward();
+        if (credited) {
+            tg.showPopup({
+                title: '🎁 Bonus Earned!',
+                message: `You earned $${window.AD_REWARD || 0.002} USDT for watching the ad!`,
+                buttons: [{type: 'ok'}]
+            });
+            loadUserData();
+            return true;
+        }
+    }
+    return false;
+}
+
+// Expose ad functions
+window.watchRewardedAd = watchRewardedAd;
+window.canWatchAd = canWatchAd;
 
 // Expose functions globally
 window.navigateTo = navigateTo;

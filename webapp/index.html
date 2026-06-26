@@ -6,7 +6,7 @@
     <title>🌱 PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css?v=13">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Adsgram Interstitial Ad -->
+    <!-- Adsgram Ads -->
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 </head>
 <body>
@@ -209,42 +209,92 @@
         </div>
     </div>
 
-    <!-- Adsgram Interstitial Ad -->
+    <!-- Adsgram Ads -->
     <script>
-        // Initialize Adsgram
-        const AD_UNIT_ID = "int-36271";
-        let adController = null;
+        // Ad Block IDs
+        const INTERSTITIAL_ID = "int-36282";
+        const REWARDED_ID = "36283";
+        const AD_REWARD = 0.002; // $0.002 per ad
+        
+        let interstitialController = null;
+        let rewardedController = null;
 
+        /**
+         * Show Interstitial Ad (No reward)
+         */
         function showInterstitialAd() {
             return new Promise((resolve) => {
                 try {
-                    // Check if Adsgram is loaded
                     if (typeof window.Adsgram === 'undefined') {
                         console.log("📢 Adsgram not loaded");
-                        resolve();
+                        resolve({ done: false, error: true });
                         return;
                     }
 
-                    if (!adController) {
-                        adController = window.Adsgram.init({ blockId: AD_UNIT_ID });
+                    if (!interstitialController) {
+                        interstitialController = window.Adsgram.init({ 
+                            blockId: INTERSTITIAL_ID 
+                        });
                     }
 
-                    adController.show().then((result) => {
-                        console.log("📢 Ad result:", result);
-                        resolve();
-                    }).catch((result) => {
-                        console.log("📢 Ad error:", result);
-                        resolve();
-                    });
+                    interstitialController.show()
+                        .then((result) => {
+                            console.log("📢 Interstitial ad result:", result);
+                            resolve(result);
+                        })
+                        .catch((result) => {
+                            console.log("📢 Interstitial ad error:", result);
+                            resolve(result);
+                        });
                 } catch (e) {
-                    console.log("📢 Ad exception:", e);
-                    resolve();
+                    console.log("📢 Interstitial ad exception:", e);
+                    resolve({ done: false, error: true });
                 }
             });
         }
 
-        // Make it globally available
+        /**
+         * Show Rewarded Ad (User gets $0.002 USDT)
+         */
+        function showRewardedAd() {
+            return new Promise((resolve) => {
+                try {
+                    if (typeof window.Adsgram === 'undefined') {
+                        console.log("📢 Adsgram not loaded");
+                        resolve({ done: false, error: true });
+                        return;
+                    }
+
+                    if (!rewardedController) {
+                        rewardedController = window.Adsgram.init({ 
+                            blockId: REWARDED_ID 
+                        });
+                    }
+
+                    rewardedController.show()
+                        .then((result) => {
+                            console.log("📢 Rewarded ad result:", result);
+                            if (result.done && !result.error) {
+                                console.log(`🎁 User earned $${AD_REWARD} USDT!`);
+                                // The reward is credited in app.js
+                            }
+                            resolve(result);
+                        })
+                        .catch((result) => {
+                            console.log("📢 Rewarded ad error:", result);
+                            resolve(result);
+                        });
+                } catch (e) {
+                    console.log("📢 Rewarded ad exception:", e);
+                    resolve({ done: false, error: true });
+                }
+            });
+        }
+
+        // Make them globally available
         window.showInterstitialAd = showInterstitialAd;
+        window.showRewardedAd = showRewardedAd;
+        window.AD_REWARD = AD_REWARD;
         console.log("✅ Adsgram initialized");
     </script>
 

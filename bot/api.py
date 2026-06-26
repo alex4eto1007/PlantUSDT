@@ -180,14 +180,18 @@ def get_referral_code():
 
 @app.route('/api/referral_stats/<int:telegram_id>', methods=['GET'])
 def get_referral_stats(telegram_id):
+    """Get referral statistics - single level only"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
+        # Level 1 referrals only
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
+        
+        # Get earnings from the referrer's deposit earnings
         level1_earnings = user.referral_deposit_earnings or 0
         
         return jsonify({
@@ -217,8 +221,7 @@ def get_user():
             'referral_earned': 0,
             'investment_earnings': 0,
             'total_earnings': 0,
-            'level1_count': 0,
-            'level2_count': 0
+            'level1_count': 0
         })
     
     # Check cache first
@@ -241,8 +244,7 @@ def get_user():
                 'referral_earned': 0,
                 'investment_earnings': 0,
                 'total_earnings': 0,
-                'level1_count': 0,
-                'level2_count': 0
+                'level1_count': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -267,7 +269,6 @@ def get_user():
         
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
-        level2_count = 0
         
         referral_earned = user.referral_earnings_all_time or 0
         investment_earnings = user.investment_earnings_all_time or 0
@@ -283,8 +284,7 @@ def get_user():
             'referral_earned': referral_earned,
             'investment_earnings': investment_earnings,
             'total_earnings': total_earnings,
-            'level1_count': level1_count,
-            'level2_count': level2_count
+            'level1_count': level1_count
         }
         
         set_cached_user(telegram_id, response)
@@ -352,6 +352,7 @@ def get_real_history():
 
 @app.route('/api/investments/<int:telegram_id>', methods=['GET'])
 def get_investments(telegram_id):
+    """Get investment history for a user"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -439,6 +440,7 @@ def invest():
 
 @app.route('/api/invest_locked', methods=['POST'])
 def invest_locked():
+    """New endpoint for locked investments with 1, 7, or 30 day options"""
     data = request.json
     telegram_id = data.get('telegram_id')
     field_number = data.get('field_number')
@@ -515,6 +517,7 @@ def invest_locked():
 
 @app.route('/api/check_deposit_with_amount', methods=['GET'])
 def check_deposit_with_amount():
+    """Check for a deposit with a specific expected amount - MANUAL CHECK"""
     telegram_id = request.args.get('telegram_id')
     expected_amount = request.args.get('expected_amount', type=float)
     
@@ -539,6 +542,78 @@ def check_deposit_with_amount():
         return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+# ============================================
+# AD REWARD ENDPOINTS
+# ============================================
+
+@app.route('/api/can_watch_ad', methods=['GET'])
+def can_watch_ad():
+    """Check if user can watch ads today (100/day limit)"""
+    telegram_id = request.args.get('telegram_id', '0')
+    if telegram_id == '0':
+        return jsonify({'can_watch': False})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'can_watch': False})
+        
+        # Reset counter if it's a new day
+        now = datetime.utcnow()
+        if user.last_ad_date and user.last_ad_date.date() != now.date():
+            user.ads_watched_today = 0
+        
+        can_watch = user.ads_watched_today < 100
+        return jsonify({'can_watch': can_watch, 'watched_today': user.ads_watched_today})
+    finally:
+        session.close()
+
+@app.route('/api/credit_ad_reward', methods=['POST'])
+def credit_ad_reward():
+    """Credit $0.002 USDT for watching an ad"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    if not telegram_id:
+        return jsonify({'success': False, 'message': 'Missing telegram_id'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        # Reset counter if new day
+        now = datetime.utcnow()
+        if user.last_ad_date and user.last_ad_date.date() != now.date():
+            user.ads_watched_today = 0
+        
+        # Check limit
+        if user.ads_watched_today >= 100:
+            return jsonify({'success': False, 'message': 'Daily limit reached'})
+        
+        # Credit reward
+        reward = 0.002
+        user.balance += reward
+        user.ads_watched_today += 1
+        user.total_ads_watched = (user.total_ads_watched or 0) + 1
+        user.total_ad_earnings = (user.total_ad_earnings or 0) + reward
+        user.last_ad_date = now
+        
+        session.commit()
+        clear_user_cache(telegram_id)
+        return jsonify({
+            'success': True,
+            'reward': reward,
+            'balance': user.balance,
+            'ads_today': user.ads_watched_today
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
