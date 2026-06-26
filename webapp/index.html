@@ -195,8 +195,8 @@
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">
-                Watch a short ad and earn <strong>$0.002 USDT</strong> each time!
-                <br><span style="font-size: 12px; opacity: 0.7;">Max 100 ads per day</span>
+                Watch a short ad and earn <strong>$0.0015 USDT</strong> each time!
+                <br><span style="font-size: 12px; opacity: 0.7;">Max 100 ads per day • All rewards help sustain the project 🌱</span>
             </p>
 
             <div class="ad-stats">
@@ -211,10 +211,13 @@
             </div>
 
             <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
-                ▶️ Watch Ad & Earn $0.002
+                ▶️ Watch Ad & Earn $0.0015
             </button>
 
             <div id="adStatus" style="margin-top: 10px; font-size: 13px; color: #ffd93d; text-align: center; display: none;"></div>
+            <p style="font-size: 11px; color: #495670; margin-top: 8px; text-align: center;">
+                💚 All rewards help sustain the project. Every little bit counts!
+            </p>
         </div>
 
         <!-- Investment Info -->
@@ -243,7 +246,7 @@
         // Ad Block IDs
         const INTERSTITIAL_ID = "int-36282";
         const REWARDED_ID = "36283";
-        const AD_REWARD = 0.002; // $0.002 per ad
+        const AD_REWARD = 0.0015; // $0.0015 per ad
         
         let interstitialController = null;
         let rewardedController = null;
@@ -283,7 +286,7 @@
         }
 
         /**
-         * Show Rewarded Ad (User gets $0.002 USDT)
+         * Show Rewarded Ad (User gets $0.0015 USDT)
          */
         function showRewardedAd() {
             return new Promise((resolve) => {
@@ -303,8 +306,6 @@
                     rewardedController.show()
                         .then((result) => {
                             console.log("📢 Rewarded ad result:", result);
-                            // result.done = true if watched till the end OR closed in interstitial format
-                            // result.error = true if there was an error
                             resolve(result);
                         })
                         .catch((result) => {

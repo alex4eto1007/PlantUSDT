@@ -584,7 +584,7 @@ def can_watch_ad():
 
 @app.route('/api/credit_ad_reward', methods=['POST'])
 def credit_ad_reward():
-    """Credit $0.002 USDT for watching an ad"""
+    """Credit $0.0015 USDT for watching an ad"""
     data = request.json
     telegram_id = data.get('telegram_id')
     if not telegram_id:
@@ -605,8 +605,8 @@ def credit_ad_reward():
         if user.ads_watched_today >= 100:
             return jsonify({'success': False, 'message': 'Daily limit reached'})
         
-        # Credit reward
-        reward = 0.002
+        # Credit reward (flat rate)
+        reward = 0.0015
         user.balance += reward
         user.ads_watched_today += 1
         user.total_ads_watched = (user.total_ads_watched or 0) + 1

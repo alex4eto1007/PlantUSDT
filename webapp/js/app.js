@@ -6,6 +6,7 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+const AD_REWARD = 0.0015; // $0.0015 per ad
 let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -873,7 +874,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - STRICT CHECK
+// AD REWARD FUNCTIONS
 // ============================================
 
 /**
@@ -944,7 +945,7 @@ async function watchRewardedAd() {
         if (credited) {
             tg.showPopup({
                 title: '🎁 Bonus Earned!',
-                message: `You earned $${window.AD_REWARD || 0.002} USDT for watching the ad!`,
+                message: `You earned $${AD_REWARD} USDT for watching the ad!`,
                 buttons: [{type: 'ok'}]
             });
             loadUserData();
@@ -1017,7 +1018,7 @@ async function loadAdStats() {
         } else if (watchBtn) {
             watchBtn.disabled = false;
             watchBtn.style.opacity = '1';
-            watchBtn.textContent = '▶️ Watch Ad & Earn $0.002';
+            watchBtn.textContent = '▶️ Watch Ad & Earn $0.0015';
             if (statusEl) {
                 statusEl.style.display = 'none';
             }
