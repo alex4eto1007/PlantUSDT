@@ -864,7 +864,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS
+// AD REWARD FUNCTIONS - STRICT CHECK
 // ============================================
 
 /**
@@ -902,7 +902,7 @@ async function creditAdReward() {
 }
 
 /**
- * Show rewarded ad and credit bonus
+ * Show rewarded ad and credit bonus ONLY if user watches till end
  */
 async function watchRewardedAd() {
     // Check daily limit
@@ -925,9 +925,12 @@ async function watchRewardedAd() {
     const result = await window.showRewardedAd();
     console.log('📢 Ad result:', result);
     
-    // Check if user watched till the end
-    if (result.done && !result.error) {
-        // User watched the ad
+    // STRICT CHECK: Only credit if:
+    // 1. result.done === true (watched till the end)
+    // 2. result.error === false (no error)
+    // 3. result.state === 'destroy' (ad was fully completed)
+    if (result.done && !result.error && result.state === 'destroy') {
+        // User watched the ad till the end
         const credited = await creditAdReward();
         if (credited) {
             tg.showPopup({
@@ -936,6 +939,7 @@ async function watchRewardedAd() {
                 buttons: [{type: 'ok'}]
             });
             loadUserData();
+            loadAdStats();
             return true;
         } else {
             tg.showPopup({
