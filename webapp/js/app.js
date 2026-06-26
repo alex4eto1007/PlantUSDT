@@ -1002,7 +1002,7 @@ async function watchRewardedAd() {
         if (credited) {
             safePopup({
                 title: '🎁 Bonus Earned!',
-                message: `You earned $${window.AD_REWARD || 0.0015} USDT for watching the ad!`,
+                message: `You earned $${window.AD_REWARD || 0.0015} USDT for watching the ad!\n\n💡 Tip: Clicking on ads helps support the project and may earn you higher rewards in the future!`,
                 buttons: [{type: 'ok'}]
             });
             loadUserData();
