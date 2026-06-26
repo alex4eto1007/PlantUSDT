@@ -182,6 +182,7 @@ class InvestmentService:
 
             for investment in unlocked:
                 try:
+                    # Get the user FIRST and attach to session
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if not user:
                         logger.error(f"User {investment.user_id} not found")
@@ -194,7 +195,7 @@ class InvestmentService:
                     investment.completed_at = now
                     investment.principal_returned = True
 
-                    # Update user's balance
+                    # Update the user's balance
                     user.balance += investment.expected_return
                     user.total_earned += investment.expected_return
                     user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
@@ -211,7 +212,7 @@ class InvestmentService:
                     )
                     session.add(payout)
 
-                    # Commit everything
+                    # COMMIT - this saves both the investment AND user changes
                     session.commit()
                     logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f} (Field {investment.field_number})")
 
