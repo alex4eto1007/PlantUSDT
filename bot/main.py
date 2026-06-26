@@ -109,6 +109,13 @@ Grow your USDT with returns up to 65% on Polygon network!
 👥 REFERRAL BONUS:
 Share your referral link and earn 5% from your friends' deposits!
 
+Commands:
+/help - Show this help
+/balance - Check your balance
+/status - Check your investments
+/support - Contact support
+/app - Open Mini App
+
 Use /app to open the Mini App!"""
 
         keyboard = [
@@ -226,6 +233,98 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Start growing your USDT today on Polygon! 🚀",
         reply_markup=reply_markup,
         parse_mode='Markdown'
+    )
+
+# ============================================
+# INTERACTIVE COMMANDS (for Adsgram approval)
+# ============================================
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+
+    help_text = """🌱 **PlantUSDT Help**
+
+Commands:
+/start - Start the bot
+/app - Open Mini App
+/help - Show this help
+/balance - Check your balance
+/status - Check your investments
+/support - Contact support
+
+💡 Open the Mini App for full features!
+   - Deposit USDT
+   - Invest in fields
+   - Track earnings
+   - Refer friends
+
+🔗 Mini App: https://plant-usdt.vercel.app"""
+
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
+async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+
+    user_data = db.get_user(user.id)
+    if user_data:
+        # Check if user has any active investments
+        investments = db.get_active_investments_by_user(user_data.id)
+        locked_amount = sum(inv.amount for inv in investments)
+        
+        await update.message.reply_text(
+            f"💰 **Your Balance**\n\n"
+            f"Available: **${user_data.balance:.2f}** USDT\n"
+            f"Locked in investments: **${locked_amount:.2f}** USDT\n"
+            f"Total deposited: **${user_data.total_deposited:.2f}** USDT\n"
+            f"Total earned: **${user_data.total_earned:.2f}** USDT\n"
+            f"⛓️ Network: Polygon"
+        )
+    else:
+        await update.message.reply_text("❌ User not found. Please /start first.")
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+
+    user_data = db.get_user(user.id)
+    if not user_data:
+        await update.message.reply_text("❌ User not found. Please /start first.")
+        return
+    
+    investments = db.get_active_investments_by_user(user_data.id)
+    if not investments:
+        await update.message.reply_text("🌱 You have no active investments.")
+        return
+    
+    text = "📊 **Your Active Investments**\n\n"
+    for inv in investments:
+        text += f"🌾 Field #{inv.field_number}: **${inv.amount:.2f}** USDT (Locked)\n"
+    
+    await update.message.reply_text(text, parse_mode='Markdown')
+
+async def support_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+
+    await update.message.reply_text(
+        "📧 **Contact Support**\n\n"
+        "For help, contact: @Alex_PlantUSDT\n\n"
+        "Or open the Mini App and use the support feature.\n\n"
+        "💡 If you have issues with deposits, please include your transaction hash."
     )
 
 # ============================================
@@ -405,6 +504,10 @@ def main():
         # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("balance", balance_command))
+        application.add_handler(CommandHandler("status", status_command))
+        application.add_handler(CommandHandler("support", support_command))
 
         # Admin commands
         application.add_handler(CommandHandler("pending", pending_withdrawals))
