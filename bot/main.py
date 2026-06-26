@@ -75,6 +75,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     existing_user = db.get_user(user.id)
 
     if not existing_user:
+        # NEW USER - Create account with referral
         referred_by = None
         if context.args and len(context.args) > 0:
             referral_code = context.args[0]
@@ -132,63 +133,54 @@ Use /app to open the Mini App!"""
         await update.message.reply_text(welcome_text, reply_markup=reply_markup)
         return
 
-    if context.args and len(context.args) > 0 and existing_user.can_be_referred and existing_user.referred_by is None:
+    # ============================================
+    # REFERRAL HANDLING - ONLY FOR NEW USERS
+    # SILENTLY IGNORE FOR EXISTING USERS
+    # ============================================
+    if context.args and len(context.args) > 0:
         referral_code = context.args[0]
-        logger.info(f"Existing user {user.id} trying to accept referral: {referral_code}")
+        
+        # Only process if user can still be referred
+        if existing_user.can_be_referred and existing_user.referred_by is None:
+            seconds_since_creation = (now - existing_user.created_at).total_seconds()
+            
+            if seconds_since_creation <= 180:  # 3 minutes
+                referrer = db.get_user_by_referral_code(referral_code)
+                if referrer and referrer.id != existing_user.id:
+                    # Apply referral
+                    session = db.get_session()
+                    user_obj = session.query(User).filter_by(telegram_id=user.id).first()
+                    referrer_obj = session.query(User).filter_by(id=referrer.id).first()
+                    
+                    if user_obj and referrer_obj:
+                        user_obj.referred_by = referrer.id
+                        user_obj.referred_at = now
+                        user_obj.can_be_referred = False
+                        session.commit()
+                        
+                        await update.message.reply_text(
+                            f"✅ You have been successfully referred by @{referrer_obj.username or 'User'}! 🎉\n\n"
+                            f"Welcome to the PlantUSDT community! 🌱\n\n"
+                            f"💡 Your referrer will earn 5% from your future deposits!"
+                        )
+                        
+                        try:
+                            await context.bot.send_message(
+                                chat_id=referrer.telegram_id,
+                                text=f"🎉 **New Referral!**\n\n"
+                                     f"@{existing_user.username or 'User'} accepted your referral!\n"
+                                     f"💡 You will earn 5% from their future deposits!"
+                            )
+                        except Exception as e:
+                            logger.error(f"Error notifying referrer: {e}")
+                        
+                        session.close()
+                        return
+                    session.close()
+            # If referral window expired, silently ignore (no error message)
+        # If user already has a referrer, silently ignore
 
-        seconds_since_creation = (now - existing_user.created_at).total_seconds()
-
-        if seconds_since_creation <= 180:
-            referrer = db.get_user_by_referral_code(referral_code)
-            if referrer and referrer.id != existing_user.id:
-                if referrer.id == existing_user.id:
-                    await update.message.reply_text("❌ You cannot refer yourself!")
-                    return
-
-                session = db.get_session()
-                user_obj = session.query(User).filter_by(telegram_id=user.id).first()
-                referrer_obj = session.query(User).filter_by(id=referrer.id).first()
-
-                if user_obj and referrer_obj:
-                    user_obj.referred_by = referrer.id
-                    user_obj.referred_at = now
-                    user_obj.can_be_referred = False
-                    session.commit()
-                    logger.info(f"Referral saved: {user.id} referred by {referrer.id}")
-                else:
-                    logger.error(f"Could not find user or referrer in session")
-                    session.rollback()
-
-                await update.message.reply_text(
-                    f"✅ You have been successfully referred by @{referrer_obj.username or 'User'}! 🎉\n\n"
-                    f"Welcome to the PlantUSDT community! 🌱\n\n"
-                    f"💡 Your referrer will earn 5% from your future deposits!"
-                )
-
-                try:
-                    await context.bot.send_message(
-                        chat_id=referrer.telegram_id,
-                        text=f"🎉 **New Referral!**\n\n"
-                             f"@{existing_user.username or 'User'} accepted your referral!\n"
-                             f"💡 You will earn 5% from their future deposits!\n"
-                             f"⛓️ Network: Polygon"
-                    )
-                except Exception as e:
-                    logger.error(f"Error notifying referrer: {e}")
-
-                return
-            else:
-                await update.message.reply_text("❌ Invalid referral code or referrer not found.")
-                return
-        else:
-            await update.message.reply_text(
-                f"❌ Sorry, you can only accept a referral within 3 minutes of creating your account.\n\n"
-                f"Your account was created on {existing_user.created_at.strftime('%d/%m/%Y %H:%M:%S')} UTC.\n"
-                f"You are {int(seconds_since_creation)} seconds old.\n"
-                f"The referral window is only 3 minutes."
-            )
-            return
-
+    # Regular welcome back message
     keyboard = [
         [InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]
     ]
