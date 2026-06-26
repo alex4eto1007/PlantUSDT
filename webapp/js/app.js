@@ -7,40 +7,23 @@ const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
-// ============================================
 
+// ============================================
 // SAFE POPUP – Works on both Web & Mobile
-
 // ============================================
-
 function safePopup(options) {
-
     try {
-
         if (typeof tg !== 'undefined' && tg.showPopup) {
-
-            safePopup(options);
-
+            tg.showPopup(options);
         } else {
-
             const message = typeof options === 'string' 
-
                 ? options 
-
-                : options.title + '
-
-' + options.message;
-
+                : options.title + '\n\n' + options.message;
             alert(message);
-
         }
-
     } catch (e) {
-
         alert(options.message || options);
-
     }
-
 }
 
 // Interstitial ad counter
@@ -78,7 +61,6 @@ function navigateTo(page) {
 }
 
 function goBack() {
-    // Increment counter for back navigation as well
     pageViewCount++;
     if (pageViewCount % INTERSTITIAL_INTERVAL === 0) {
         if (window.showInterstitialAd) {
@@ -226,14 +208,7 @@ function updateFields(data) {
                 is_locked: isLocked,
                 lock_period: lockPeriod
             };
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             amountEl.textContent = '$0.000';
@@ -264,27 +239,13 @@ async function updateReferral(data) {
                 if (result.success && result.referral_code) {
                     referralLink.textContent = 'https://t.me/PlantUSDT_bot?start=' + result.referral_code;
                     referralLink.style.color = '#ccd6f0';
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+                } else {
                     referralLink.textContent = 'Error loading referral link';
                 }
             } catch (error) {
                 referralLink.textContent = 'Error loading referral link';
             }
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             referralLink.textContent = '⚠️ Save wallet to get referral link';
             referralLink.style.color = '#ff6b6b';
         }
@@ -318,14 +279,7 @@ async function saveWallet() {
             safePopup({title:'✅ Wallet Saved!', message:'Polygon wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
             updateWalletUI(walletAddress);
             loadUserData();
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             safePopup({title:'❌ Error', message:data.message || 'Failed to save wallet.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
@@ -400,14 +354,7 @@ async function disconnectWallet() {
                 if (data.success) {
                     resetWalletUI();
                     safePopup({title:'✅ Disconnected', message:'Polygon wallet disconnected.', buttons:[{type:'ok'}]});
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+                } else {
                     safePopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
@@ -442,14 +389,7 @@ async function setWallet() {
                 withdrawAddress.value = data.wallet_address;
                 safePopup({title:'✅ Wallet Loaded!', message:'Polygon wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
             }
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             safePopup({title:'❌ No Wallet Found', message:'Please save a Polygon wallet address first.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
@@ -541,27 +481,20 @@ async function investFieldWithLock(fieldNumber) {
                         buttons:[{type:'ok'}]
                     });
                     
-                    // 📢 Show rewarded ad after investment (user gets $0.0015)
+                    // 📢 Show rewarded ad after investment
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after investment...");
                         await window.watchRewardedAd();
                     }
                     
-                    // 📢 Show interstitial ad after investment (100% profit for project)
+                    // 📢 Show interstitial ad after investment
                     if (window.showInterstitialAd) {
                         console.log("📢 Showing interstitial ad after investment...");
                         await window.showInterstitialAd();
                     }
                     
                     loadUserData();
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+                } else {
                     safePopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
@@ -614,14 +547,7 @@ function copyAddress() {
                     buttons: [{type: 'ok'}]
                 });
             });
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             var textArea = document.createElement('textarea');
             textArea.value = address;
             document.body.appendChild(textArea);
@@ -635,13 +561,6 @@ function copyAddress() {
             });
         }
     } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
         safePopup({
             title: '❌ Error',
             message: 'Invalid address. Please try again.',
@@ -672,14 +591,7 @@ async function copyReferral() {
             }).catch(function() {
                 safePopup({title: '📋 Referral Link', message: link, buttons: [{type: 'ok'}]});
             });
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             safePopup({title: '❌ Error', message: 'Could not get referral code.', buttons: [{type: 'ok'}]});
         }
     } catch (error) {
@@ -703,14 +615,7 @@ async function checkDeposit() {
             if (data.success) {
                 statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
                 loadUserData();
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+            } else {
                 statusDiv.innerHTML = '⏳ No new deposits found on Polygon.';
             }
         } catch (error) {
@@ -745,14 +650,7 @@ async function checkDepositWithAmount() {
                 statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
                 statusDiv.className = 'deposit-status success';
                 loadUserData();
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+            } else {
                 statusDiv.innerHTML = '⏳ No new deposits found on Polygon. Please wait a few minutes and try again.';
                 statusDiv.className = 'deposit-status pending';
             }
@@ -761,12 +659,10 @@ async function checkDepositWithAmount() {
             statusDiv.className = 'deposit-status error';
         }
     }
-    
-    // No interstitial ads after deposit
 }
 
 // ============================================
-// HISTORY FUNCTIONS - FIXED
+// HISTORY FUNCTIONS
 // ============================================
 
 function filterHistory(type) {
@@ -814,7 +710,6 @@ function filterHistory(type) {
                         return tx.type === 'withdraw' || tx.type === 'withdrawal' || tx.type === 'withdrawals';
                     }
                     if (type === 'earnings') {
-                        // Include all earnings types: earnings, referral_earnings, ad_earnings
                         return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || 
                                tx.type === 'referral_earnings' || tx.type === 'ad_earnings';
                     }
@@ -928,14 +823,7 @@ function updateFieldTimers() {
         if (timeLeft <= 0) {
             timerEl.textContent = '🟢 Unlocked! (UTC)';
             timerEl.className = 'field-timer ready';
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
@@ -944,14 +832,7 @@ function updateFieldTimers() {
             var timeString = '';
             if (days > 0) {
                 timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+            } else {
                 timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
             }
             timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
@@ -1014,38 +895,24 @@ function setupEventListeners() {
                     if (data.success) {
                         safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
-                        // 📢 Show rewarded ad after withdrawal (user gets $0.0015)
+                        // 📢 Show rewarded ad after withdrawal
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after withdrawal...");
                             window.watchRewardedAd().then(function() {
                                 loadUserData();
                             });
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+                        } else {
                             loadUserData();
                         }
                         
-                        // 📢 Show interstitial ad after withdrawal (100% profit for project)
+                        // 📢 Show interstitial ad after withdrawal
                         if (window.showInterstitialAd) {
                             console.log("📢 Showing interstitial ad after withdrawal...");
                             window.showInterstitialAd();
                         }
                         
                         if (amountInput) amountInput.value = '';
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+                    } else {
                         safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
                     }
                 })
@@ -1113,6 +980,11 @@ async function watchRewardedAd() {
 
     if (!window.showRewardedAd) {
         console.log('📢 Rewarded ad not available');
+        safePopup({
+            title: '❌ Ad Not Available',
+            message: 'No ads available right now. Please try again later.',
+            buttons: [{type: 'ok'}]
+        });
         return false;
     }
 
@@ -1130,20 +1002,13 @@ async function watchRewardedAd() {
         if (credited) {
             safePopup({
                 title: '🎁 Bonus Earned!',
-                message: `You earned $${AD_REWARD} USDT for watching the ad!`,
+                message: `You earned $${window.AD_REWARD || 0.0015} USDT for watching the ad!`,
                 buttons: [{type: 'ok'}]
             });
             loadUserData();
             loadAdStats();
             return true;
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
+        } else {
             safePopup({
                 title: '⚠️ Reward Failed',
                 message: 'Could not credit reward. Please try again later.',
@@ -1164,13 +1029,6 @@ async function watchRewardedAd() {
         safePopup({
             title: '⚠️ Ad Not Completed',
             message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
-        // Ad was skipped or not completed
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nClick on the ad or wait for it to finish.',
             buttons: [{type: 'ok'}]
         });
         return false;
