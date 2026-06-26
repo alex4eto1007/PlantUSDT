@@ -57,3 +57,5 @@ instance/
 
 # Deployment
 *.pid
+.vercel
+.env*
