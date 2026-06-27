@@ -4,6 +4,7 @@ import sys
 import os
 import asyncio
 import time
+import logging
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,6 +14,7 @@ from sqlalchemy import func
 from datetime import datetime
 
 app = Flask(__name__)
+logger = logging.getLogger(__name__)
 
 # ============================================
 # API CACHING
@@ -187,11 +189,8 @@ def get_referral_stats(telegram_id):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Level 1 referrals only
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
-        
-        # Get earnings from the referrer's deposit earnings
         level1_earnings = user.referral_deposit_earnings or 0
         
         return jsonify({
@@ -225,7 +224,6 @@ def get_user():
             'total_ad_earnings': 0
         })
     
-    # Check cache first
     cached = get_cached_user(telegram_id)
     if cached:
         return jsonify(cached)
@@ -338,7 +336,6 @@ def get_real_history():
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
         
-        # Add ad earnings to history
         if user.total_ad_earnings and user.total_ad_earnings > 0:
             transactions.append({
                 'type': 'ad_earnings',
@@ -572,7 +569,6 @@ def can_watch_ad():
         if not user:
             return jsonify({'can_watch': False})
         
-        # Reset counter if it's a new day
         now = datetime.utcnow()
         if user.last_ad_date and user.last_ad_date.date() != now.date():
             user.ads_watched_today = 0
@@ -596,16 +592,13 @@ def credit_ad_reward():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Reset counter if new day
         now = datetime.utcnow()
         if user.last_ad_date and user.last_ad_date.date() != now.date():
             user.ads_watched_today = 0
         
-        # Check limit
         if user.ads_watched_today >= 100:
             return jsonify({'success': False, 'message': 'Daily limit reached'})
         
-        # Credit reward (flat rate)
         reward = 0.0015
         user.balance += reward
         user.ads_watched_today += 1
@@ -628,7 +621,7 @@ def credit_ad_reward():
         session.close()
 
 # ============================================
-# CLAIM INVESTMENT ENDPOINT
+# CLAIM INVESTMENT ENDPOINT - FIXED
 # ============================================
 
 @app.route('/api/claim_investment', methods=['POST'])
@@ -704,6 +697,7 @@ def claim_investment():
         
     except Exception as e:
         session.rollback()
+        logger.error(f"Error claiming investment: {e}")
         return jsonify({'success': False, 'message': str(e)})
     finally:
         session.close()
