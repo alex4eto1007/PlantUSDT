@@ -627,5 +627,11 @@ def credit_ad_reward():
     finally:
         session.close()
 
+# ============================================
+# COINZILLA VERIFICATION
+# ============================================
+
+    return "8c2956864017c8cca7dfcff72da12cf1", 200, {'Content-Type': 'text/plain'}
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)

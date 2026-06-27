@@ -481,13 +481,13 @@ async function investFieldWithLock(fieldNumber) {
                         buttons:[{type:'ok'}]
                     });
                     
-                    // 📢 Show rewarded ad after investment
+                    // Show rewarded ad after investment
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after investment...");
                         await window.watchRewardedAd();
                     }
                     
-                    // 📢 Show interstitial ad after investment
+                    // Show interstitial ad after investment
                     if (window.showInterstitialAd) {
                         console.log("📢 Showing interstitial ad after investment...");
                         await window.showInterstitialAd();
@@ -895,7 +895,7 @@ function setupEventListeners() {
                     if (data.success) {
                         safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
-                        // 📢 Show rewarded ad after withdrawal
+                        // Show rewarded ad after withdrawal
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after withdrawal...");
                             window.watchRewardedAd().then(function() {
@@ -905,7 +905,7 @@ function setupEventListeners() {
                             loadUserData();
                         }
                         
-                        // 📢 Show interstitial ad after withdrawal
+                        // Show interstitial ad after withdrawal
                         if (window.showInterstitialAd) {
                             console.log("📢 Showing interstitial ad after withdrawal...");
                             window.showInterstitialAd();
