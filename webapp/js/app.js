@@ -190,22 +190,14 @@ function updateFields(data) {
             var unlockDate = new Date(field.unlock_date);
             var now = new Date();
             var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
-            var isReady = !isLocked || daysRemaining <= 0;
             
-            // Status
-            if (isReady && isLocked) {
-                statusEl.textContent = '✅ Ready to Claim!';
-                statusEl.className = 'field-status ready';
-                statusEl.style.color = '#ffd93d';
-            } else if (isLocked) {
-                statusEl.textContent = '🔒 Locked';
-                statusEl.className = 'field-status locked';
-                statusEl.style.color = '#ff6b6b';
-            } else {
-                statusEl.textContent = '🟢 Active';
-                statusEl.className = 'field-status active';
-                statusEl.style.color = '#00ff87';
-            }
+            // Store for timer
+            window.fieldData[i] = {
+                unlock_date: field.unlock_date,
+                is_locked: isLocked,
+                lock_period: lockPeriod,
+                is_ready: false // Will be set by timer
+            };
             
             amountEl.textContent = '$' + field.amount.toFixed(3);
             daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
@@ -217,57 +209,15 @@ function updateFields(data) {
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
             
-            // ============================================
-            // CLAIM BUTTON LOGIC
-            // ============================================
-            if (isReady && isLocked) {
-                // Investment is unlocked - show Claim button
-                btnEl.textContent = '🌾 Claim Now!';
-                btnEl.disabled = false;
-                btnEl.style.opacity = '1';
-                btnEl.style.cursor = 'pointer';
-                btnEl.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
-                btnEl.style.color = '#0a0e17';
-                btnEl.style.border = 'none';
-                btnEl.onclick = (function(fieldNum) {
-                    return function() { claimInvestment(fieldNum); };
-                })(i);
-            } else if (isLocked && !isReady) {
-                // Still locked
-                btnEl.textContent = '🔒 Locked';
-                btnEl.disabled = true;
-                btnEl.style.opacity = '0.5';
-                btnEl.style.cursor = 'not-allowed';
-                btnEl.style.background = '';
-                btnEl.style.color = '';
-                btnEl.onclick = null;
-            } else if (!isLocked && field.is_active) {
-                // Active (should not happen with new system)
-                btnEl.textContent = '🌱 Active';
-                btnEl.disabled = true;
-                btnEl.style.opacity = '0.5';
-                btnEl.style.cursor = 'not-allowed';
-                btnEl.style.background = '';
-                btnEl.style.color = '';
-            } else {
-                // Available - show Plant button
-                btnEl.textContent = '🌱 Plant Now';
-                btnEl.disabled = false;
-                btnEl.style.opacity = '1';
-                btnEl.style.cursor = 'pointer';
-                btnEl.style.background = '';
-                btnEl.style.color = '';
-                btnEl.onclick = (function(fieldNum) {
-                    return function() { investField(fieldNum); };
-                })(i);
-            }
+            // Default button state (will be updated by timer)
+            btnEl.textContent = '🔒 Locked';
+            btnEl.disabled = true;
+            btnEl.style.opacity = '0.5';
+            btnEl.style.cursor = 'not-allowed';
+            btnEl.style.background = '';
+            btnEl.style.color = '';
+            btnEl.onclick = null;
             
-            window.fieldData[i] = {
-                unlock_date: field.unlock_date,
-                is_locked: isLocked,
-                lock_period: lockPeriod,
-                is_ready: isReady
-            };
         } else {
             // No investment - available
             statusEl.textContent = '✅ Available';
@@ -354,6 +304,173 @@ async function claimInvestment(fieldNumber) {
     });
 }
 
+// ============================================
+// UPDATE TIMERS - FIXED VERSION
+// ============================================
+
+function updateFieldTimers() {
+    if (document.getElementById('historyList')) {
+        return;
+    }
+    
+    var now = new Date();
+    var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+    
+    for (var i = 1; i <= 3; i++) {
+        var timerEl = document.getElementById('field' + i + 'Timer');
+        var statusEl = document.getElementById('field' + i + 'Status');
+        var btnEl = document.getElementById('field' + i + 'Btn');
+        var progressEl = document.getElementById('field' + i + 'Progress');
+        var daysEl = document.getElementById('field' + i + 'Days');
+        var earnedEl = document.getElementById('field' + i + 'Earned');
+        var amountEl = document.getElementById('field' + i + 'Amount');
+        var cardEl = document.getElementById('field' + i);
+        
+        if (!timerEl || !statusEl || !btnEl) continue;
+        
+        var fieldData = window.fieldData ? window.fieldData[i] : null;
+        if (!fieldData || !fieldData.unlock_date) {
+            timerEl.textContent = '⏳ Payout: --:--:-- UTC';
+            timerEl.className = 'field-timer';
+            continue;
+        }
+        
+        // CRITICAL FIX: Only use is_locked from database
+        var isLocked = fieldData.is_locked === true;
+        var lockPeriod = fieldData.lock_period || 30;
+        
+        // Parse unlock date correctly
+        var unlockDateStr = fieldData.unlock_date;
+        if (unlockDateStr.endsWith('Z')) {
+            unlockDateStr = unlockDateStr.slice(0, -1);
+        }
+        var unlockDate = new Date(unlockDateStr + 'Z').getTime();
+        var timeLeft = unlockDate - utcNow;
+        
+        // CRITICAL FIX: Only unlocked if timeLeft <= 0 AND is_locked is true
+        var isReady = (isLocked === true) && (timeLeft <= 0);
+        
+        // Store ready state
+        fieldData.is_ready = isReady;
+        
+        // Debug log
+        console.log('Field ' + i + ': isLocked=' + isLocked + ', timeLeft=' + timeLeft + ', isReady=' + isReady);
+        
+        if (isReady) {
+            // Investment is unlocked - show READY TO CLAIM
+            timerEl.textContent = '🟢 READY TO CLAIM!';
+            timerEl.className = 'field-timer ready';
+            timerEl.style.color = '#ffd93d';
+            timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
+            timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
+            timerEl.style.animation = 'pulse-gold 1.5s infinite';
+            
+            // Change button to Claim
+            btnEl.textContent = '🌾 Claim Now!';
+            btnEl.disabled = false;
+            btnEl.style.opacity = '1';
+            btnEl.style.cursor = 'pointer';
+            btnEl.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
+            btnEl.style.color = '#0a0e17';
+            btnEl.style.border = 'none';
+            btnEl.onclick = (function(fieldNum) {
+                return function() { claimInvestment(fieldNum); };
+            })(i);
+            
+            // Change status text
+            statusEl.textContent = '✅ Ready to Claim!';
+            statusEl.className = 'field-status ready';
+            statusEl.style.color = '#ffd93d';
+            
+        } else if (isLocked === true && timeLeft > 0) {
+            // Still locked - show countdown
+            var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            var timeString = '';
+            if (days > 0) {
+                timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            } else {
+                timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            }
+            timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
+            timerEl.className = 'field-timer countdown';
+            timerEl.style.color = '';
+            timerEl.style.borderColor = '';
+            timerEl.style.background = '';
+            timerEl.style.animation = '';
+            
+            // Button: Locked
+            btnEl.textContent = '🔒 Locked';
+            btnEl.disabled = true;
+            btnEl.style.opacity = '0.5';
+            btnEl.style.cursor = 'not-allowed';
+            btnEl.style.background = '';
+            btnEl.style.color = '';
+            btnEl.onclick = null;
+            
+            // Status: Locked
+            statusEl.textContent = '🔒 Locked';
+            statusEl.className = 'field-status locked';
+            statusEl.style.color = '#ff6b6b';
+            
+        } else if (isLocked === false) {
+            // Already claimed/available
+            timerEl.textContent = '🟢 Available (UTC)';
+            timerEl.className = 'field-timer';
+            timerEl.style.color = '';
+            timerEl.style.borderColor = '';
+            timerEl.style.background = '';
+            timerEl.style.animation = '';
+            
+            btnEl.textContent = '🌱 Plant Now';
+            btnEl.disabled = false;
+            btnEl.style.opacity = '1';
+            btnEl.style.cursor = 'pointer';
+            btnEl.style.background = '';
+            btnEl.style.color = '';
+            btnEl.onclick = (function(fieldNum) {
+                return function() { investField(fieldNum); };
+            })(i);
+            
+            statusEl.textContent = '✅ Available';
+            statusEl.className = 'field-status available';
+            statusEl.style.color = '#8247E5';
+        }
+    }
+}
+
+// Add pulse animation
+var style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse-gold {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+`;
+document.head.appendChild(style);
+
+function startCountdownTimer() {
+    updateFieldTimers();
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    timerInterval = setInterval(updateFieldTimers, 1000);
+}
+
+function stopCountdownTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// ============================================
+// UPDATE REFERRAL
+// ============================================
+
 async function updateReferral(data) {
     var referralLink = document.getElementById('referralLinkText');
     var walletText = document.getElementById('walletText');
@@ -380,6 +497,10 @@ async function updateReferral(data) {
         }
     }
 }
+
+// ============================================
+// WALLET FUNCTIONS
+// ============================================
 
 async function saveWallet() {
     var userId = tgUser ? tgUser.id : '0';
@@ -911,111 +1032,6 @@ function renderHistory(transactions) {
         '</div>';
     }
     historyList.innerHTML = html;
-}
-
-// ============================================
-// TIMER FUNCTIONS
-// ============================================
-
-function updateFieldTimers() {
-    if (document.getElementById('historyList')) {
-        return;
-    }
-    
-    var now = new Date();
-    var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-    
-    for (var i = 1; i <= 3; i++) {
-        var timerEl = document.getElementById('field' + i + 'Timer');
-        var statusEl = document.getElementById('field' + i + 'Status');
-        
-        if (!timerEl || !statusEl) continue;
-        
-        var fieldData = window.fieldData ? window.fieldData[i] : null;
-        if (!fieldData || !fieldData.unlock_date) {
-            timerEl.textContent = '⏳ Payout: --:--:-- UTC';
-            timerEl.className = 'field-timer';
-            continue;
-        }
-        
-        var isLocked = fieldData.is_locked || false;
-        var isReady = fieldData.is_ready || false;
-        
-        if (isReady && isLocked) {
-            timerEl.textContent = '🟢 READY TO CLAIM!';
-            timerEl.className = 'field-timer ready';
-            timerEl.style.color = '#ffd93d';
-            timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
-            timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
-            timerEl.style.animation = 'pulse-gold 1.5s infinite';
-            continue;
-        }
-        
-        if (!isLocked) {
-            timerEl.textContent = '🟢 Available (UTC)';
-            timerEl.className = 'field-timer';
-            timerEl.style.color = '';
-            timerEl.style.borderColor = '';
-            timerEl.style.background = '';
-            timerEl.style.animation = '';
-            continue;
-        }
-        
-        var unlockDate = new Date(fieldData.unlock_date + 'Z').getTime();
-        var timeLeft = unlockDate - utcNow;
-        
-        if (timeLeft <= 0) {
-            timerEl.textContent = '🟢 READY TO CLAIM!';
-            timerEl.className = 'field-timer ready';
-            timerEl.style.color = '#ffd93d';
-            timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
-            timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
-            timerEl.style.animation = 'pulse-gold 1.5s infinite';
-        } else {
-            var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-            var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            
-            var timeString = '';
-            if (days > 0) {
-                timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            } else {
-                timeString = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            }
-            timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
-            timerEl.className = 'field-timer countdown';
-            timerEl.style.color = '';
-            timerEl.style.borderColor = '';
-            timerEl.style.background = '';
-            timerEl.style.animation = '';
-        }
-    }
-}
-
-// Add pulse animation
-var style = document.createElement('style');
-style.textContent = `
-    @keyframes pulse-gold {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-`;
-document.head.appendChild(style);
-
-function startCountdownTimer() {
-    updateFieldTimers();
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
-    timerInterval = setInterval(updateFieldTimers, 1000);
-}
-
-function stopCountdownTimer() {
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
 }
 
 // ============================================
