@@ -1118,19 +1118,12 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - ONLY 2 POPUPS REMAIN
+// AD REWARD FUNCTIONS - UNLIMITED ADS, $0.001 REWARD
 // ============================================
 
 async function canWatchAd() {
-    const userId = tgUser ? tgUser.id : '0';
-    try {
-        const response = await fetch(API_BASE + '/api/can_watch_ad?telegram_id=' + userId);
-        const data = await response.json();
-        return data.can_watch || false;
-    } catch (error) {
-        console.error('Error checking ad limit:', error);
-        return false;
-    }
+    // No limit - always return true
+    return true;
 }
 
 async function creditAdReward() {
@@ -1151,16 +1144,6 @@ async function creditAdReward() {
 
 async function watchRewardedAd() {
     console.log('📢 watchRewardedAd called');
-    
-    const canWatch = await canWatchAd();
-    if (!canWatch) {
-        safePopup({
-            title: '⏳ Daily Limit Reached',
-            message: 'You have watched 100 ads today. Come back tomorrow!',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
-    }
 
     if (!window.showRewardedAd) {
         console.log('📢 Rewarded ad not available');
@@ -1181,7 +1164,7 @@ async function watchRewardedAd() {
             if (credited) {
                 safePopup({
                     title: '🎁 Bonus Earned!',
-                    message: 'You earned $0.0015 USDT for watching the ad!\n\n💡 Tip: Clicking on links inside ads helps support the project and may earn you higher rewards in the future!',
+                    message: 'You earned $0.001 USDT for watching the ad!\n\n💡 Tip: Clicking on links inside ads helps support the project and may earn you higher rewards in the future!',
                     buttons: [{type: 'ok'}]
                 });
                 loadUserData();
@@ -1199,35 +1182,28 @@ async function watchRewardedAd() {
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(API_BASE + '/api/can_watch_ad?telegram_id=' + userId);
-        const data = await response.json();
+        // Get user data for ad earnings only
+        const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
+        const userData = await userResponse.json();
         
-        const adsTodayEl = document.getElementById('adsToday');
         const adEarningsEl = document.getElementById('adEarnings');
-        
-        if (adsTodayEl) {
-            adsTodayEl.textContent = (data.watched_today || 0) + ' / 100';
-        }
         if (adEarningsEl) {
-            const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
-            const userData = await userResponse.json();
             adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
         }
         
+        // Set ads today to Unlimited
+        const adsTodayEl = document.getElementById('adsToday');
+        if (adsTodayEl) {
+            adsTodayEl.textContent = '♾️ Unlimited';
+        }
+        
+        // Always enable the button
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
-        if (watchBtn && !data.can_watch) {
-            watchBtn.disabled = true;
-            watchBtn.style.opacity = '0.5';
-            watchBtn.textContent = '⏳ Daily Limit Reached';
-            if (statusEl) {
-                statusEl.textContent = '✅ You\'ve watched all 100 ads today! Come back tomorrow.';
-                statusEl.style.display = 'block';
-            }
-        } else if (watchBtn) {
+        if (watchBtn) {
             watchBtn.disabled = false;
             watchBtn.style.opacity = '1';
-            watchBtn.textContent = '▶️ Watch Ad & Earn $0.0015';
+            watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
             if (statusEl) {
                 statusEl.style.display = 'none';
             }
@@ -1259,5 +1235,5 @@ window.claimInvestment = claimInvestment;
 console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);
 console.log('📢 Watch ad function available:', typeof watchRewardedAd);
+console.log('📢 Unlimited ads - $0.001 reward per ad');
 console.log('📢 Interstitial ads give NO reward - only Rewarded ads do.');
-console.log('📢 Only 2 popups remain: Bonus Earned & Ad Not Available');

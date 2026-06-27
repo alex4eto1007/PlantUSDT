@@ -195,14 +195,14 @@
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">
-                Watch a short ad and earn <strong>$0.0015 USDT</strong> each time!
-                <br><span style="font-size: 12px; opacity: 0.7;">Max 100 ads per day • All rewards help sustain the project 🌱</span>
+                Watch a short ad and earn <strong>$0.001 USDT</strong> each time!
+                <br><span style="font-size: 12px; opacity: 0.7;">Unlimited ads • All rewards help sustain the project 🌱</span>
             </p>
 
             <div class="ad-stats">
                 <div class="ad-stat-box">
                     <span class="ad-stat-label">📊 Ads Today</span>
-                    <span class="ad-stat-value" id="adsToday">0 / 100</span>
+                    <span class="ad-stat-value" id="adsToday">♾️ Unlimited</span>
                 </div>
                 <div class="ad-stat-box">
                     <span class="ad-stat-label">💰 Total Earned</span>
@@ -211,7 +211,7 @@
             </div>
 
             <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
-                ▶️ Watch Ad & Earn $0.0015
+                ▶️ Watch Ad & Earn $0.001
             </button>
 
             <div id="adStatus" style="margin-top: 10px; font-size: 13px; color: #ffd93d; text-align: center; display: none;"></div>
@@ -255,7 +255,7 @@
         // Ad Block IDs
         const INTERSTITIAL_ID = "int-36282";
         const REWARDED_ID = "36283";
-        const AD_REWARD = 0.0015; // $0.0015 per ad (rewarded only)
+        const AD_REWARD = 0.001; // $0.001 per ad (rewarded only)
         
         let interstitialController = null;
         let rewardedController = null;
@@ -334,7 +334,7 @@
         window.showInterstitialAd = showInterstitialAd;
         window.showRewardedAd = showRewardedAd;
         window.AD_REWARD = AD_REWARD;
-        console.log("✅ Adsgram initialized - Interstitial: NO reward, Rewarded: $0.0015");
+        console.log("✅ Adsgram initialized - Interstitial: NO reward, Rewarded: $0.001");
     </script>
 
     <!-- Adsterra Popunder -->

@@ -553,34 +553,17 @@ def check_deposit_with_amount():
         return jsonify({'success': False, 'message': str(e)})
 
 # ============================================
-# AD REWARD ENDPOINTS
+# AD REWARD ENDPOINTS - UNLIMITED ADS, $0.001 REWARD
 # ============================================
 
 @app.route('/api/can_watch_ad', methods=['GET'])
 def can_watch_ad():
-    """Check if user can watch ads today (100/day limit)"""
-    telegram_id = request.args.get('telegram_id', '0')
-    if telegram_id == '0':
-        return jsonify({'can_watch': False})
-    
-    session = db.get_session()
-    try:
-        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
-        if not user:
-            return jsonify({'can_watch': False})
-        
-        now = datetime.utcnow()
-        if user.last_ad_date and user.last_ad_date.date() != now.date():
-            user.ads_watched_today = 0
-        
-        can_watch = user.ads_watched_today < 100
-        return jsonify({'can_watch': can_watch, 'watched_today': user.ads_watched_today})
-    finally:
-        session.close()
+    """Always return true - no daily limit"""
+    return jsonify({'can_watch': True, 'watched_today': 0})
 
 @app.route('/api/credit_ad_reward', methods=['POST'])
 def credit_ad_reward():
-    """Credit $0.0015 USDT for watching an ad"""
+    """Credit $0.001 USDT for watching an ad (unlimited)"""
     data = request.json
     telegram_id = data.get('telegram_id')
     if not telegram_id:
@@ -592,27 +575,18 @@ def credit_ad_reward():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        now = datetime.utcnow()
-        if user.last_ad_date and user.last_ad_date.date() != now.date():
-            user.ads_watched_today = 0
-        
-        if user.ads_watched_today >= 100:
-            return jsonify({'success': False, 'message': 'Daily limit reached'})
-        
-        reward = 0.0015
+        # Credit reward (flat rate - $0.001)
+        reward = 0.001
         user.balance += reward
-        user.ads_watched_today += 1
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.total_ad_earnings = (user.total_ad_earnings or 0) + reward
-        user.last_ad_date = now
         
         session.commit()
         clear_user_cache(telegram_id)
         return jsonify({
             'success': True,
             'reward': reward,
-            'balance': user.balance,
-            'ads_today': user.ads_watched_today
+            'balance': user.balance
         })
     except Exception as e:
         session.rollback()
@@ -621,7 +595,7 @@ def credit_ad_reward():
         session.close()
 
 # ============================================
-# CLAIM INVESTMENT ENDPOINT - FIXED
+# CLAIM INVESTMENT ENDPOINT
 # ============================================
 
 @app.route('/api/claim_investment', methods=['POST'])
