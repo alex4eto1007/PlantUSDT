@@ -26,9 +26,30 @@ function safePopup(options) {
     }
 }
 
+// ============================================
+// SAFE POPUP WITH CALLBACK
+// ============================================
+function safePopupWithCallback(options, callback) {
+    try {
+        if (typeof tg !== 'undefined' && tg.showPopup) {
+            tg.showPopup(options, callback);
+        } else {
+            const message = options.title + '\n\n' + options.message;
+            if (confirm(message)) {
+                if (callback) callback('confirm');
+            } else {
+                if (callback) callback('cancel');
+            }
+        }
+    } catch (e) {
+        alert(options.message || options);
+        if (callback) callback('confirm');
+    }
+}
+
 // Interstitial ad counter
 let pageViewCount = 0;
-const INTERSTITIAL_INTERVAL = 3; // Show after every 3 page changes
+const INTERSTITIAL_INTERVAL = 3;
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -115,9 +136,6 @@ async function updateReferralStats(userId) {
             document.getElementById('referralEarned').textContent = '$' + (data.total_earnings || 0).toFixed(3);
             document.getElementById('level1Count').textContent = data.level1_count || 0;
             document.getElementById('level1Earnings').textContent = '$' + (data.level1_earnings || 0).toFixed(3);
-            
-            var level2Section = document.getElementById('level2Section');
-            if (level2Section) level2Section.style.display = 'none';
         }
     } catch (error) {
         console.error('Error loading referral stats:', error);
@@ -243,15 +261,25 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT FUNCTION
+// CLAIM INVESTMENT FUNCTION - FIXED
 // ============================================
 
 async function claimInvestment(fieldNumber) {
-    const userId = tgUser ? tgUser.id : '0';
+    console.log('🔍 Claim button clicked for Field #' + fieldNumber);
     
-    safePopup({
+    const userId = tgUser ? tgUser.id : '0';
+    if (!userId || userId === '0') {
+        safePopup({
+            title: '❌ Error',
+            message: 'User not authenticated. Please restart the app.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    safePopupWithCallback({
         title: '🌾 Claim Investment',
-        message: `Are you sure you want to claim Field #${fieldNumber}?`,
+        message: 'Are you sure you want to claim Field #' + fieldNumber + '?',
         buttons: [
             {id: 'cancel', type: 'cancel'},
             {id: 'confirm', type: 'ok', text: '✅ Claim'}
@@ -259,6 +287,8 @@ async function claimInvestment(fieldNumber) {
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
+                console.log('📤 Sending claim request for Field #' + fieldNumber);
+                
                 const response = await fetch(`${API_BASE}/api/claim_investment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -269,22 +299,29 @@ async function claimInvestment(fieldNumber) {
                 });
                 
                 const data = await response.json();
+                console.log('📥 Claim response:', data);
                 
                 if (data.success) {
                     safePopup({
                         title: '✅ Claimed!',
-                        message: `You claimed $${data.amount.toFixed(2)} USDT from Field #${fieldNumber}!\n\n🌱 The field is now available for a new investment.`,
+                        message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!\n\n🌱 The field is now available for a new investment.',
                         buttons: [{type: 'ok'}]
                     });
                     
                     // Show rewarded ad after claim
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after claim...");
-                        await window.watchRewardedAd();
+                        setTimeout(function() {
+                            window.watchRewardedAd();
+                        }, 500);
                     }
                     
-                    loadUserData();
-                    loadAdStats();
+                    // Reload data
+                    setTimeout(function() {
+                        loadUserData();
+                        loadAdStats();
+                    }, 1000);
+                    
                 } else {
                     safePopup({
                         title: '❌ Error',
@@ -293,7 +330,7 @@ async function claimInvestment(fieldNumber) {
                     });
                 }
             } catch (error) {
-                console.error('Error claiming:', error);
+                console.error('❌ Error claiming:', error);
                 safePopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
@@ -320,11 +357,6 @@ function updateFieldTimers() {
         var timerEl = document.getElementById('field' + i + 'Timer');
         var statusEl = document.getElementById('field' + i + 'Status');
         var btnEl = document.getElementById('field' + i + 'Btn');
-        var progressEl = document.getElementById('field' + i + 'Progress');
-        var daysEl = document.getElementById('field' + i + 'Days');
-        var earnedEl = document.getElementById('field' + i + 'Earned');
-        var amountEl = document.getElementById('field' + i + 'Amount');
-        var cardEl = document.getElementById('field' + i);
         
         if (!timerEl || !statusEl || !btnEl) continue;
         
@@ -335,11 +367,9 @@ function updateFieldTimers() {
             continue;
         }
         
-        // CRITICAL FIX: Only use is_locked from database
         var isLocked = fieldData.is_locked === true;
         var lockPeriod = fieldData.lock_period || 30;
         
-        // Parse unlock date correctly
         var unlockDateStr = fieldData.unlock_date;
         if (unlockDateStr.endsWith('Z')) {
             unlockDateStr = unlockDateStr.slice(0, -1);
@@ -347,17 +377,12 @@ function updateFieldTimers() {
         var unlockDate = new Date(unlockDateStr + 'Z').getTime();
         var timeLeft = unlockDate - utcNow;
         
-        // CRITICAL FIX: Only unlocked if timeLeft <= 0 AND is_locked is true
         var isReady = (isLocked === true) && (timeLeft <= 0);
-        
-        // Store ready state
         fieldData.is_ready = isReady;
         
-        // Debug log
         console.log('Field ' + i + ': isLocked=' + isLocked + ', timeLeft=' + timeLeft + ', isReady=' + isReady);
         
         if (isReady) {
-            // Investment is unlocked - show READY TO CLAIM
             timerEl.textContent = '🟢 READY TO CLAIM!';
             timerEl.className = 'field-timer ready';
             timerEl.style.color = '#ffd93d';
@@ -365,7 +390,6 @@ function updateFieldTimers() {
             timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
             timerEl.style.animation = 'pulse-gold 1.5s infinite';
             
-            // Change button to Claim
             btnEl.textContent = '🌾 Claim Now!';
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
@@ -374,16 +398,17 @@ function updateFieldTimers() {
             btnEl.style.color = '#0a0e17';
             btnEl.style.border = 'none';
             btnEl.onclick = (function(fieldNum) {
-                return function() { claimInvestment(fieldNum); };
+                return function() { 
+                    console.log('🖱️ Claim button clicked for Field #' + fieldNum);
+                    claimInvestment(fieldNum); 
+                };
             })(i);
             
-            // Change status text
             statusEl.textContent = '✅ Ready to Claim!';
             statusEl.className = 'field-status ready';
             statusEl.style.color = '#ffd93d';
             
         } else if (isLocked === true && timeLeft > 0) {
-            // Still locked - show countdown
             var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
@@ -402,7 +427,6 @@ function updateFieldTimers() {
             timerEl.style.background = '';
             timerEl.style.animation = '';
             
-            // Button: Locked
             btnEl.textContent = '🔒 Locked';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
@@ -411,13 +435,11 @@ function updateFieldTimers() {
             btnEl.style.color = '';
             btnEl.onclick = null;
             
-            // Status: Locked
             statusEl.textContent = '🔒 Locked';
             statusEl.className = 'field-status locked';
             statusEl.style.color = '#ff6b6b';
             
         } else if (isLocked === false) {
-            // Already claimed/available
             timerEl.textContent = '🟢 Available (UTC)';
             timerEl.className = 'field-timer';
             timerEl.style.color = '';
@@ -585,7 +607,7 @@ function resetWalletUI() {
 
 async function disconnectWallet() {
     var userId = tgUser ? tgUser.id : '0';
-    safePopup({
+    safePopupWithCallback({
         title:'🔓 Disconnect Wallet',
         message:'Are you sure you want to disconnect your Polygon wallet?',
         buttons:[
@@ -654,9 +676,9 @@ async function setWallet() {
 
 function calculateReturn(amount, days) {
     const multipliers = {
-        1: 1.02,    // 2%
-        7: 1.15,    // 15%
-        30: 1.65    // 65%
+        1: 1.02,
+        7: 1.15,
+        30: 1.65
     };
     const multiplier = multipliers[days] || 1.65;
     return amount * multiplier;
@@ -687,7 +709,7 @@ async function investFieldWithLock(fieldNumber) {
     options.forEach(opt => {
         const returnAmount = calculateReturn(amountNum, opt.days);
         const profit = returnAmount - amountNum;
-        message += `• ${opt.days} day${opt.days > 1 ? 's' : ''}: +${opt.returnPercent}% → $${returnAmount.toFixed(2)} (+$${profit.toFixed(2)})\n`;
+        message += '• ' + opt.days + ' day' + (opt.days > 1 ? 's' : '') + ': +' + opt.returnPercent + '% → $' + returnAmount.toFixed(2) ' (+$' + profit.toFixed(2) + ')\n';
     });
     message += '\n\nEnter 1, 7, or 30:';
     
@@ -703,9 +725,9 @@ async function investFieldWithLock(fieldNumber) {
     const expectedReturn = calculateReturn(amountNum, days);
     const profit = expectedReturn - amountNum;
     
-    safePopup({
+    safePopupWithCallback({
         title: '📊 Confirm Investment',
-        message: `Field #${fieldNumber}\n\n💰 Amount: $${amountNum.toFixed(2)}\n⏱️ Lock Period: ${days} day${days > 1 ? 's' : ''}\n📈 Expected Return: $${expectedReturn.toFixed(2)}\n✅ Profit: +$${profit.toFixed(2)}\n⛓️ Network: Polygon`,
+        message: 'Field #' + fieldNumber + '\n\n💰 Amount: $' + amountNum.toFixed(2) + '\n⏱️ Lock Period: ' + days + ' day' + (days > 1 ? 's' : '') + '\n📈 Expected Return: $' + expectedReturn.toFixed(2) + '\n✅ Profit: +$' + profit.toFixed(2) + '\n⛓️ Network: Polygon',
         buttons: [
             {id:'cancel', type:'cancel'},
             {id:'confirm', type:'ok', text:'✅ Confirm'}
@@ -713,7 +735,7 @@ async function investFieldWithLock(fieldNumber) {
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
-                const response = await fetch(`${API_BASE}/api/invest_locked`, {
+                const response = await fetch(API_BASE + '/api/invest_locked', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({
@@ -727,20 +749,18 @@ async function investFieldWithLock(fieldNumber) {
                 if (data.success) {
                     safePopup({
                         title:'✅ Success!',
-                        message:`Invested $${amountNum.toFixed(2)} in Field #${fieldNumber} on Polygon!\n🔒 Locked for ${days} days.\n📈 Expected return: $${expectedReturn.toFixed(2)}`,
+                        message:'Invested $' + amountNum.toFixed(2) + ' in Field #' + fieldNumber + ' on Polygon!\n🔒 Locked for ' + days + ' days.\n📈 Expected return: $' + expectedReturn.toFixed(2),
                         buttons:[{type:'ok'}]
                     });
                     
-                    // Show rewarded ad after investment
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after investment...");
-                        await window.watchRewardedAd();
+                        setTimeout(function() { window.watchRewardedAd(); }, 500);
                     }
                     
-                    // Show interstitial ad after investment
                     if (window.showInterstitialAd) {
                         console.log("📢 Showing interstitial ad after investment...");
-                        await window.showInterstitialAd();
+                        setTimeout(function() { window.showInterstitialAd(); }, 1000);
                     }
                     
                     loadUserData();
@@ -894,7 +914,7 @@ async function checkDepositWithAmount() {
         statusDiv.className = 'deposit-status pending';
         statusDiv.style.display = 'block';
         try {
-            const response = await fetch(`${API_BASE}/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
+            const response = await fetch(API_BASE + '/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
             const data = await response.json();
             if (data.success) {
                 statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
@@ -1073,20 +1093,14 @@ function setupEventListeners() {
                     if (data.success) {
                         safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
-                        // Show rewarded ad after withdrawal
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after withdrawal...");
-                            window.watchRewardedAd().then(function() {
-                                loadUserData();
-                            });
-                        } else {
-                            loadUserData();
+                            setTimeout(function() { window.watchRewardedAd(); }, 500);
                         }
                         
-                        // Show interstitial ad after withdrawal
                         if (window.showInterstitialAd) {
                             console.log("📢 Showing interstitial ad after withdrawal...");
-                            window.showInterstitialAd();
+                            setTimeout(function() { window.showInterstitialAd(); }, 1000);
                         }
                         
                         if (amountInput) amountInput.value = '';
@@ -1107,13 +1121,10 @@ function setupEventListeners() {
 // AD REWARD FUNCTIONS
 // ============================================
 
-/**
- * Check if user can watch ads today (100/day limit)
- */
 async function canWatchAd() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/can_watch_ad?telegram_id=${userId}`);
+        const response = await fetch(API_BASE + '/api/can_watch_ad?telegram_id=' + userId);
         const data = await response.json();
         return data.can_watch || false;
     } catch (error) {
@@ -1122,13 +1133,10 @@ async function canWatchAd() {
     }
 }
 
-/**
- * Credit ad reward to user (only for rewarded ads)
- */
 async function creditAdReward() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/credit_ad_reward`, {
+        const response = await fetch(API_BASE + '/api/credit_ad_reward', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ telegram_id: userId })
@@ -1141,11 +1149,9 @@ async function creditAdReward() {
     }
 }
 
-/**
- * Show rewarded ad and credit bonus ONLY if user watches till end
- */
 async function watchRewardedAd() {
-    // Check daily limit
+    console.log('📢 watchRewardedAd called');
+    
     const canWatch = await canWatchAd();
     if (!canWatch) {
         safePopup({
@@ -1166,64 +1172,34 @@ async function watchRewardedAd() {
         return false;
     }
 
-    // Show ad and wait for result
-    const result = await window.showRewardedAd();
-    console.log('📢 Ad result:', result);
-    
-    // STRICT CHECK: Only credit if:
-    // 1. result.done === true (watched till the end)
-    // 2. result.error === false (no error)
-    // 3. result.state === 'destroy' (ad was fully completed)
-    if (result.done && !result.error && result.state === 'destroy') {
-        // User watched the ad till the end
-        const credited = await creditAdReward();
-        if (credited) {
-            safePopup({
-                title: '🎁 Bonus Earned!',
-                message: `You earned $${window.AD_REWARD || 0.0015} USDT for watching the ad!\n\n💡 Tip: Clicking on ads helps support the project and may earn you higher rewards in the future!`,
-                buttons: [{type: 'ok'}]
-            });
-            loadUserData();
-            loadAdStats();
-            return true;
-        } else {
-            safePopup({
-                title: '⚠️ Reward Failed',
-                message: 'Could not credit reward. Please try again later.',
-                buttons: [{type: 'ok'}]
-            });
-            return false;
+    try {
+        const result = await window.showRewardedAd();
+        console.log('📢 Ad result:', result);
+        
+        if (result.done && !result.error && result.state === 'destroy') {
+            const credited = await creditAdReward();
+            if (credited) {
+                safePopup({
+                    title: '🎁 Bonus Earned!',
+                    message: 'You earned $' + (window.AD_REWARD || 0.0015) + ' USDT for watching the ad!',
+                    buttons: [{type: 'ok'}]
+                });
+                loadUserData();
+                loadAdStats();
+                return true;
+            }
         }
-    } else if (result.error) {
-        // Ad error – no reward
-        safePopup({
-            title: '❌ Ad Error',
-            message: 'There was an error playing the ad. No reward was given.',
-            buttons: [{type: 'ok'}]
-        });
         return false;
-    } else {
-        // Ad was skipped or not completed – SHOW WARNING
-        safePopup({
-            title: '⚠️ Ad Not Completed',
-            message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-            buttons: [{type: 'ok'}]
-        });
+    } catch (error) {
+        console.error('Error watching ad:', error);
         return false;
     }
 }
 
-// ============================================
-// AD STATS FUNCTIONS
-// ============================================
-
-/**
- * Load ad stats for the user
- */
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/can_watch_ad?telegram_id=${userId}`);
+        const response = await fetch(API_BASE + '/api/can_watch_ad?telegram_id=' + userId);
         const data = await response.json();
         
         const adsTodayEl = document.getElementById('adsToday');
@@ -1233,13 +1209,11 @@ async function loadAdStats() {
             adsTodayEl.textContent = (data.watched_today || 0) + ' / 100';
         }
         if (adEarningsEl) {
-            // Fetch total ad earnings from user data
-            const userResponse = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
+            const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
             const userData = await userResponse.json();
             adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
         }
         
-        // Update button state if limit reached
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn && !data.can_watch) {
@@ -1281,3 +1255,7 @@ window.watchRewardedAd = watchRewardedAd;
 window.canWatchAd = canWatchAd;
 window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
+
+console.log('✅ PlantUSDT app loaded successfully!');
+console.log('📢 Claim function available:', typeof claimInvestment);
+console.log('📢 Watch ad function available:', typeof watchRewardedAd);
