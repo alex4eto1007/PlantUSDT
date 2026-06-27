@@ -47,7 +47,7 @@ function safePopupWithCallback(options, callback) {
     }
 }
 
-// Interstitial ad counter (just for showing interstitial ads, no reward)
+// Interstitial ad counter
 let pageViewCount = 0;
 const INTERSTITIAL_INTERVAL = 3;
 
@@ -308,7 +308,7 @@ async function claimInvestment(fieldNumber) {
                         buttons: [{type: 'ok'}]
                     });
                     
-                    // Show rewarded ad after claim (only if user wants to watch)
+                    // Show rewarded ad after claim
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after claim...");
                         setTimeout(function() {
@@ -342,7 +342,7 @@ async function claimInvestment(fieldNumber) {
 }
 
 // ============================================
-// UPDATE TIMERS - FIXED VERSION
+// UPDATE TIMERS
 // ============================================
 
 function updateFieldTimers() {
@@ -753,13 +753,11 @@ async function investFieldWithLock(fieldNumber) {
                         buttons:[{type:'ok'}]
                     });
                     
-                    // Show rewarded ad after investment (only if user wants)
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after investment...");
                         setTimeout(function() { window.watchRewardedAd(); }, 500);
                     }
                     
-                    // Show interstitial ad after investment (NO REWARD)
                     if (window.showInterstitialAd) {
                         console.log("📢 Showing interstitial ad after investment (NO REWARD)...");
                         setTimeout(function() { window.showInterstitialAd(); }, 1000);
@@ -1095,13 +1093,11 @@ function setupEventListeners() {
                     if (data.success) {
                         safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
                         
-                        // Show rewarded ad after withdrawal (only if user wants)
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after withdrawal...");
                             setTimeout(function() { window.watchRewardedAd(); }, 500);
                         }
                         
-                        // Show interstitial ad after withdrawal (NO REWARD)
                         if (window.showInterstitialAd) {
                             console.log("📢 Showing interstitial ad after withdrawal (NO REWARD)...");
                             setTimeout(function() { window.showInterstitialAd(); }, 1000);
@@ -1122,7 +1118,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - ONLY REWARDED ADS GIVE REWARD
+// AD REWARD FUNCTIONS - ONLY 2 POPUPS REMAIN
 // ============================================
 
 async function canWatchAd() {
@@ -1180,7 +1176,6 @@ async function watchRewardedAd() {
         const result = await window.showRewardedAd();
         console.log('📢 Ad result:', result);
         
-        // Only credit reward if ad was watched to completion
         if (result.done && !result.error && result.state === 'destroy') {
             const credited = await creditAdReward();
             if (credited) {
@@ -1192,37 +1187,11 @@ async function watchRewardedAd() {
                 loadUserData();
                 loadAdStats();
                 return true;
-            } else {
-                safePopup({
-                    title: '⚠️ Reward Failed',
-                    message: 'Could not credit reward. Please try again later.',
-                    buttons: [{type: 'ok'}]
-                });
-                return false;
             }
-        } else if (result.error) {
-            safePopup({
-                title: '❌ Ad Error',
-                message: 'There was an error playing the ad. No reward was given.',
-                buttons: [{type: 'ok'}]
-            });
-            return false;
-        } else {
-            // Ad was skipped or not completed
-            safePopup({
-                title: '⚠️ Ad Not Completed',
-                message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
-                buttons: [{type: 'ok'}]
-            });
-            return false;
         }
+        return false;
     } catch (error) {
         console.error('Error watching ad:', error);
-        safePopup({
-            title: '❌ Ad Error',
-            message: 'There was an error playing the ad. No reward was given.',
-            buttons: [{type: 'ok'}]
-        });
         return false;
     }
 }
@@ -1291,3 +1260,4 @@ console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);
 console.log('📢 Watch ad function available:', typeof watchRewardedAd);
 console.log('📢 Interstitial ads give NO reward - only Rewarded ads do.');
+console.log('📢 Only 2 popups remain: Bonus Earned & Ad Not Available');
