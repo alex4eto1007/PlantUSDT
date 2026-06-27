@@ -190,7 +190,7 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- 📺 WATCH ADS & EARN SECTION -->
+        <!-- 📺 WATCH ADS & EARN SECTION (REWARDED ADS) -->
         <!-- ============================================ -->
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
@@ -247,13 +247,14 @@
         // Ad Block IDs
         const INTERSTITIAL_ID = "int-36282";
         const REWARDED_ID = "36283";
-        const AD_REWARD = 0.0015; // $0.0015 per ad
+        const AD_REWARD = 0.0015; // $0.0015 per ad (rewarded only)
         
         let interstitialController = null;
         let rewardedController = null;
 
         /**
-         * Show Interstitial Ad (No reward)
+         * Show Interstitial Ad - NO REWARD
+         * This is shown on page changes, does NOT give any reward.
          */
         function showInterstitialAd() {
             return new Promise((resolve) => {
@@ -272,7 +273,7 @@
 
                     interstitialController.show()
                         .then((result) => {
-                            console.log("📢 Interstitial ad result:", result);
+                            console.log("📢 Interstitial ad result (no reward):", result);
                             resolve(result);
                         })
                         .catch((result) => {
@@ -287,7 +288,8 @@
         }
 
         /**
-         * Show Rewarded Ad (User gets $0.0015 USDT)
+         * Show Rewarded Ad - GIVES REWARD ONLY IF WATCHED TO END
+         * Called only from the "Watch Ad & Earn" button.
          */
         function showRewardedAd() {
             return new Promise((resolve) => {
@@ -324,10 +326,10 @@
         window.showInterstitialAd = showInterstitialAd;
         window.showRewardedAd = showRewardedAd;
         window.AD_REWARD = AD_REWARD;
-        console.log("✅ Adsgram initialized");
+        console.log("✅ Adsgram initialized - Interstitial: NO reward, Rewarded: $0.0015");
     </script>
 
-    <!-- Adsterra Popunder -->
+    <!-- Adsterra Popunder (no reward, just popunder) -->
     <script src="https://pl30082550.effectivecpmnetwork.com/1e/26/6e/1e266e8e2355011550501bd4be436dc5.js"></script>
 
     <script src="js/app.js?v=14"></script>
