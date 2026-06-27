@@ -671,7 +671,7 @@ async function setWallet() {
 }
 
 // ============================================
-// INVESTMENT FUNCTIONS
+// INVESTMENT FUNCTIONS - FIXED SYNTAX ERROR
 // ============================================
 
 function calculateReturn(amount, days) {
@@ -709,7 +709,8 @@ async function investFieldWithLock(fieldNumber) {
     options.forEach(opt => {
         const returnAmount = calculateReturn(amountNum, opt.days);
         const profit = returnAmount - amountNum;
-        message += '• ' + opt.days + ' day' + (opt.days > 1 ? 's' : '') + ': +' + opt.returnPercent + '% → $' + returnAmount.toFixed(2) ' (+$' + profit.toFixed(2) + ')\n';
+        // FIXED: Added missing + operator before the string
+        message += '• ' + opt.days + ' day' + (opt.days > 1 ? 's' : '') + ': +' + opt.returnPercent + '% → $' + returnAmount.toFixed(2) + ' (+$' + profit.toFixed(2) + ')\n';
     });
     message += '\n\nEnter 1, 7, or 30:';
     
