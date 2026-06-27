@@ -165,6 +165,10 @@ function updateDashboardUI(data) {
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
 }
 
+// ============================================
+// UPDATE FIELDS WITH CLAIM BUTTON
+// ============================================
+
 function updateFields(data) {
     var fields = data.fields || [];
     window.fieldData = {};
@@ -177,7 +181,7 @@ function updateFields(data) {
         var earnedEl = document.getElementById('field' + i + 'Earned');
         var progressEl = document.getElementById('field' + i + 'Progress');
         var cardEl = document.getElementById('field' + i);
-        var btnEl = cardEl ? cardEl.querySelector('.action-btn') : null;
+        var btnEl = document.getElementById('field' + i + 'Btn');
         var timerEl = document.getElementById('field' + i + 'Timer');
         
         if (field) {
@@ -186,9 +190,23 @@ function updateFields(data) {
             var unlockDate = new Date(field.unlock_date);
             var now = new Date();
             var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
+            var isReady = !isLocked || daysRemaining <= 0;
             
-            statusEl.textContent = isLocked ? '🔒 Locked' : '🟢 Active';
-            statusEl.className = isLocked ? 'field-status locked' : 'field-status active';
+            // Status
+            if (isReady && isLocked) {
+                statusEl.textContent = '✅ Ready to Claim!';
+                statusEl.className = 'field-status ready';
+                statusEl.style.color = '#ffd93d';
+            } else if (isLocked) {
+                statusEl.textContent = '🔒 Locked';
+                statusEl.className = 'field-status locked';
+                statusEl.style.color = '#ff6b6b';
+            } else {
+                statusEl.textContent = '🟢 Active';
+                statusEl.className = 'field-status active';
+                statusEl.style.color = '#00ff87';
+            }
+            
             amountEl.textContent = '$' + field.amount.toFixed(3);
             daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
             
@@ -198,19 +216,63 @@ function updateFields(data) {
             var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
-            btnEl.textContent = isLocked ? '🔒 Locked' : '🌱 Active';
-            btnEl.disabled = true;
-            btnEl.style.opacity = '0.5';
-            btnEl.style.cursor = 'not-allowed';
+            
+            // ============================================
+            // CLAIM BUTTON LOGIC
+            // ============================================
+            if (isReady && isLocked) {
+                // Investment is unlocked - show Claim button
+                btnEl.textContent = '🌾 Claim Now!';
+                btnEl.disabled = false;
+                btnEl.style.opacity = '1';
+                btnEl.style.cursor = 'pointer';
+                btnEl.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
+                btnEl.style.color = '#0a0e17';
+                btnEl.style.border = 'none';
+                btnEl.onclick = (function(fieldNum) {
+                    return function() { claimInvestment(fieldNum); };
+                })(i);
+            } else if (isLocked && !isReady) {
+                // Still locked
+                btnEl.textContent = '🔒 Locked';
+                btnEl.disabled = true;
+                btnEl.style.opacity = '0.5';
+                btnEl.style.cursor = 'not-allowed';
+                btnEl.style.background = '';
+                btnEl.style.color = '';
+                btnEl.onclick = null;
+            } else if (!isLocked && field.is_active) {
+                // Active (should not happen with new system)
+                btnEl.textContent = '🌱 Active';
+                btnEl.disabled = true;
+                btnEl.style.opacity = '0.5';
+                btnEl.style.cursor = 'not-allowed';
+                btnEl.style.background = '';
+                btnEl.style.color = '';
+            } else {
+                // Available - show Plant button
+                btnEl.textContent = '🌱 Plant Now';
+                btnEl.disabled = false;
+                btnEl.style.opacity = '1';
+                btnEl.style.cursor = 'pointer';
+                btnEl.style.background = '';
+                btnEl.style.color = '';
+                btnEl.onclick = (function(fieldNum) {
+                    return function() { investField(fieldNum); };
+                })(i);
+            }
             
             window.fieldData[i] = {
                 unlock_date: field.unlock_date,
                 is_locked: isLocked,
-                lock_period: lockPeriod
+                lock_period: lockPeriod,
+                is_ready: isReady
             };
         } else {
+            // No investment - available
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
+            statusEl.style.color = '#8247E5';
             amountEl.textContent = '$0.000';
             daysEl.textContent = '0 days';
             earnedEl.textContent = '$0.000';
@@ -220,9 +282,76 @@ function updateFields(data) {
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
             btnEl.style.cursor = 'pointer';
+            btnEl.style.background = '';
+            btnEl.style.color = '';
+            btnEl.onclick = (function(fieldNum) {
+                return function() { investField(fieldNum); };
+            })(i);
             window.fieldData[i] = null;
         }
     }
+}
+
+// ============================================
+// CLAIM INVESTMENT FUNCTION
+// ============================================
+
+async function claimInvestment(fieldNumber) {
+    const userId = tgUser ? tgUser.id : '0';
+    
+    safePopup({
+        title: '🌾 Claim Investment',
+        message: `Are you sure you want to claim Field #${fieldNumber}?`,
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'confirm', type: 'ok', text: '✅ Claim'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(`${API_BASE}/api/claim_investment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        field_number: fieldNumber
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    safePopup({
+                        title: '✅ Claimed!',
+                        message: `You claimed $${data.amount.toFixed(2)} USDT from Field #${fieldNumber}!\n\n🌱 The field is now available for a new investment.`,
+                        buttons: [{type: 'ok'}]
+                    });
+                    
+                    // Show rewarded ad after claim
+                    if (window.watchRewardedAd) {
+                        console.log("📢 Showing rewarded ad after claim...");
+                        await window.watchRewardedAd();
+                    }
+                    
+                    loadUserData();
+                    loadAdStats();
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Failed to claim.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error claiming:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
 }
 
 async function updateReferral(data) {
@@ -810,10 +939,25 @@ function updateFieldTimers() {
         }
         
         var isLocked = fieldData.is_locked || false;
+        var isReady = fieldData.is_ready || false;
+        
+        if (isReady && isLocked) {
+            timerEl.textContent = '🟢 READY TO CLAIM!';
+            timerEl.className = 'field-timer ready';
+            timerEl.style.color = '#ffd93d';
+            timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
+            timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
+            timerEl.style.animation = 'pulse-gold 1.5s infinite';
+            continue;
+        }
         
         if (!isLocked) {
-            timerEl.textContent = '🟢 Unlocked! (UTC)';
-            timerEl.className = 'field-timer ready';
+            timerEl.textContent = '🟢 Available (UTC)';
+            timerEl.className = 'field-timer';
+            timerEl.style.color = '';
+            timerEl.style.borderColor = '';
+            timerEl.style.background = '';
+            timerEl.style.animation = '';
             continue;
         }
         
@@ -821,8 +965,12 @@ function updateFieldTimers() {
         var timeLeft = unlockDate - utcNow;
         
         if (timeLeft <= 0) {
-            timerEl.textContent = '🟢 Unlocked! (UTC)';
+            timerEl.textContent = '🟢 READY TO CLAIM!';
             timerEl.className = 'field-timer ready';
+            timerEl.style.color = '#ffd93d';
+            timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
+            timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
+            timerEl.style.animation = 'pulse-gold 1.5s infinite';
         } else {
             var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -837,9 +985,23 @@ function updateFieldTimers() {
             }
             timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
             timerEl.className = 'field-timer countdown';
+            timerEl.style.color = '';
+            timerEl.style.borderColor = '';
+            timerEl.style.background = '';
+            timerEl.style.animation = '';
         }
     }
 }
+
+// Add pulse animation
+var style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse-gold {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+`;
+document.head.appendChild(style);
 
 function startCountdownTimer() {
     updateFieldTimers();
@@ -1102,3 +1264,4 @@ window.setWallet = setWallet;
 window.watchRewardedAd = watchRewardedAd;
 window.canWatchAd = canWatchAd;
 window.loadAdStats = loadAdStats;
+window.claimInvestment = claimInvestment;

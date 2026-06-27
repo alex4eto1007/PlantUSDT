@@ -628,10 +628,85 @@ def credit_ad_reward():
         session.close()
 
 # ============================================
-# COINZILLA VERIFICATION
+# CLAIM INVESTMENT ENDPOINT
 # ============================================
 
-    return "8c2956864017c8cca7dfcff72da12cf1", 200, {'Content-Type': 'text/plain'}
+@app.route('/api/claim_investment', methods=['POST'])
+def claim_investment():
+    """Claim an unlocked investment - user manually claims when ready"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    field_number = data.get('field_number')
+    
+    if not telegram_id or not field_number:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        # Find the locked investment for this field
+        investment = session.query(Investment).filter_by(
+            user_id=user.id,
+            field_number=field_number,
+            is_active=True,
+            is_locked=True
+        ).first()
+        
+        if not investment:
+            return jsonify({'success': False, 'message': 'No locked investment found for this field'})
+        
+        # Check if unlock date has passed
+        now = datetime.utcnow()
+        if investment.unlock_date > now:
+            return jsonify({'success': False, 'message': 'Investment is not yet unlocked'})
+        
+        # Calculate profit
+        profit = investment.expected_return - investment.amount
+        amount_to_credit = investment.expected_return
+        
+        # Update investment
+        investment.is_locked = False
+        investment.is_active = False
+        investment.is_completed = True
+        investment.completed_at = now
+        investment.principal_returned = True
+        
+        # Update user balance
+        user.balance += amount_to_credit
+        user.total_earned += profit
+        user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + profit
+        user.total_earnings_all_time = (user.total_earnings_all_time or 0) + profit
+        
+        # Create payout record for history
+        payout = DailyPayout(
+            user_id=user.id,
+            investment_id=investment.id,
+            amount=profit,
+            day_number=investment.lock_period,
+            paid_at=now
+        )
+        session.add(payout)
+        
+        session.commit()
+        
+        # Clear cache
+        clear_user_cache(telegram_id)
+        
+        return jsonify({
+            'success': True,
+            'amount': amount_to_credit,
+            'profit': profit,
+            'message': f'Successfully claimed ${amount_to_credit:.2f} USDT from Field #{field_number}'
+        })
+        
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
