@@ -261,7 +261,7 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT FUNCTION - FIXED
+// CLAIM INVESTMENT FUNCTION
 // ============================================
 
 async function claimInvestment(fieldNumber) {
@@ -671,7 +671,7 @@ async function setWallet() {
 }
 
 // ============================================
-// INVESTMENT FUNCTIONS - FIXED SYNTAX ERROR
+// INVESTMENT FUNCTIONS
 // ============================================
 
 function calculateReturn(amount, days) {
@@ -709,7 +709,6 @@ async function investFieldWithLock(fieldNumber) {
     options.forEach(opt => {
         const returnAmount = calculateReturn(amountNum, opt.days);
         const profit = returnAmount - amountNum;
-        // FIXED: Added missing + operator before the string
         message += '• ' + opt.days + ' day' + (opt.days > 1 ? 's' : '') + ': +' + opt.returnPercent + '% → $' + returnAmount.toFixed(2) + ' (+$' + profit.toFixed(2) + ')\n';
     });
     message += '\n\nEnter 1, 7, or 30:';
@@ -1119,7 +1118,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS
+// AD REWARD FUNCTIONS - UPDATED POPUPS
 // ============================================
 
 async function canWatchAd() {
@@ -1156,7 +1155,7 @@ async function watchRewardedAd() {
     const canWatch = await canWatchAd();
     if (!canWatch) {
         safePopup({
-            title: '⚠️ Daily Limit Reached',
+            title: '⏳ Daily Limit Reached',
             message: 'You have watched 100 ads today. Come back tomorrow!',
             buttons: [{type: 'ok'}]
         });
@@ -1182,17 +1181,42 @@ async function watchRewardedAd() {
             if (credited) {
                 safePopup({
                     title: '🎁 Bonus Earned!',
-                    message: 'You earned $' + (window.AD_REWARD || 0.0015) + ' USDT for watching the ad!',
+                    message: 'You earned $0.0015 USDT for watching the ad!\n\n💡 Tip: Clicking on links inside ads helps support the project and may earn you higher rewards in the future!',
                     buttons: [{type: 'ok'}]
                 });
                 loadUserData();
                 loadAdStats();
                 return true;
+            } else {
+                safePopup({
+                    title: '⚠️ Reward Failed',
+                    message: 'Could not credit reward. Please try again later.',
+                    buttons: [{type: 'ok'}]
+                });
+                return false;
             }
+        } else if (result.error) {
+            safePopup({
+                title: '❌ Ad Error',
+                message: 'There was an error playing the ad. No reward was given.',
+                buttons: [{type: 'ok'}]
+            });
+            return false;
+        } else {
+            safePopup({
+                title: '⚠️ Ad Not Completed',
+                message: 'You must watch the ad till the end to earn the bonus!\n\nPlease watch the entire ad next time.',
+                buttons: [{type: 'ok'}]
+            });
+            return false;
         }
-        return false;
     } catch (error) {
         console.error('Error watching ad:', error);
+        safePopup({
+            title: '❌ Ad Error',
+            message: 'There was an error playing the ad. No reward was given.',
+            buttons: [{type: 'ok'}]
+        });
         return false;
     }
 }
