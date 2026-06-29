@@ -1,74 +1,100 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config.settings import Config
 from database.db_manager import DatabaseManager
+from database.models import User, Investment, Withdrawal, Deposit
+from services.investment import InvestmentService
+from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
 from services.scheduler import SchedulerService
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+# ============================================
+# RATE LIMITING
+# ============================================
+user_requests = defaultdict(list)
+
+def check_rate_limit(user_id: int, limit: int = 10, period: int = 60) -> bool:
+    now = datetime.utcnow()
+    user_requests[user_id] = [t for t in user_requests[user_id] if (now - t).seconds < period]
+    if len(user_requests[user_id]) >= limit:
+        return False
+    user_requests[user_id].append(now)
+    return True
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-
 logger = logging.getLogger(__name__)
 
-# Global application variable
 application = None
 
-# Initialize services
 db = DatabaseManager()
+investment_service = InvestmentService()
+wallet_service = WalletService()
 scheduler = SchedulerService()
 deposit_scanner = DepositScanner()
 
-# Create tables
 db.create_tables()
 
-# Vercel URL for Mini App
-VERCEL_URL = "https://plant-usdt.vercel.app"
+VERCEL_URL = "https://plant-usdt.vercel.app?v=6"
+PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
-# START COMMAND - WITH REFERRAL HANDLING
+# COMMUNITY FOOTER
+# ============================================
+
+def get_community_footer():
+    """Return the community footer with channel and group links"""
+    return (
+        "\n\n━━━━━━━━━━━━━━━━━━━━\n"
+        "🌱 **Join our community!**\n"
+        "📢 Channel: [PlantUSDTchannel](https://t.me/PlantUSDTchannel)\n"
+        "💬 Group: [PlantUSDT](https://t.me/PlantUSDT)\n"
+        "━━━━━━━━━━━━━━━━━━━━"
+    )
+
+def is_admin(user_id: int) -> bool:
+    user = db.get_user(user_id)
+    return user and user.is_admin
+
+# ============================================
+# START COMMAND
 # ============================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
     now = datetime.utcnow()
-
-    logger.info(f"START COMMAND - User: {user.id}, Args: {context.args}")
-
     existing_user = db.get_user(user.id)
 
     if not existing_user:
-        # NEW USER - Create account with referral
         referred_by = None
         if context.args and len(context.args) > 0:
             referral_code = context.args[0]
-            logger.info(f"New user - Referral code received: {referral_code}")
             referrer = db.get_user_by_referral_code(referral_code)
             if referrer:
                 referred_by = referrer.id
-                logger.info(f"New user {user.id} referred by {referrer.telegram_id}")
-            else:
-                logger.info(f"Referral code {referral_code} not found")
-
         db.create_user(
             telegram_id=user.id,
             username=user.username,
             first_name=user.first_name,
             referred_by=referred_by
         )
-
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
 
-Grow your USDT with returns up to 65% on Polygon network!
+Grow your USDT with returns up to 80% on Polygon network!
 
 💰 INVESTMENT DETAILS:
 • 🌿 1 Day: 2% return
-• 🌿 7 Days: 15% return  
-• 🌿 30 Days: 65% return
+• 🌿 7 Days: 18% return  
+• 🌿 30 Days: 80% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
 • 🔒 Platform fee: 10% on withdrawals
@@ -76,99 +102,76 @@ Grow your USDT with returns up to 65% on Polygon network!
 • ⛓️ Network: Polygon (MATIC) - Low fees!
 
 👥 REFERRAL BONUS:
-Share your referral link and earn 5% from your friends' deposits!
+Share your referral link and earn 1% from your friends' deposits!
 
-Click the button below to open the Mini App and start growing your USDT! 🚀"""
-
-        keyboard = [
-            [InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]
-        ]
+Use /app to open the Mini App!"""
+        keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+        await update.message.reply_text(
+            welcome_text + get_community_footer(),
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
         return
 
-    # ============================================
-    # EXISTING USER - Check if they can accept a referral
-    # 3-MINUTE WINDOW
-    # ============================================
-    if context.args and len(context.args) > 0 and existing_user.can_be_referred and existing_user.referred_by is None:
+    # Referral handling – only for new users, silently ignore existing
+    if context.args and len(context.args) > 0:
         referral_code = context.args[0]
-        logger.info(f"Existing user {user.id} trying to accept referral: {referral_code}")
+        if existing_user.can_be_referred and existing_user.referred_by is None:
+            seconds_since_creation = (now - existing_user.created_at).total_seconds()
+            if seconds_since_creation <= 180:
+                referrer = db.get_user_by_referral_code(referral_code)
+                if referrer and referrer.id != existing_user.id:
+                    session = db.get_session()
+                    user_obj = session.query(User).filter_by(telegram_id=user.id).first()
+                    referrer_obj = session.query(User).filter_by(id=referrer.id).first()
+                    if user_obj and referrer_obj:
+                        user_obj.referred_by = referrer.id
+                        user_obj.referred_at = now
+                        user_obj.can_be_referred = False
+                        session.commit()
+                        await update.message.reply_text(
+                            f"✅ You have been successfully referred by @{referrer_obj.username or 'User'}! 🎉\n\n"
+                            f"Welcome to the PlantUSDT community! 🌱\n\n"
+                            f"💡 Your referrer will earn 1% from your future deposits!"
+                            + get_community_footer(),
+                            parse_mode='Markdown'
+                        )
+                        try:
+                            await context.bot.send_message(
+                                chat_id=referrer.telegram_id,
+                                text=f"🎉 **New Referral!**\n\n"
+                                     f"@{existing_user.username or 'User'} accepted your referral!\n"
+                                     f"💡 You will earn 1% from their future deposits!"
+                                     + get_community_footer(),
+                                parse_mode='Markdown'
+                            )
+                        except Exception as e:
+                            logger.error(f"Error notifying referrer: {e}")
+                        session.close()
+                        return
+                    session.close()
 
-        seconds_since_creation = (now - existing_user.created_at).total_seconds()
-
-        if seconds_since_creation <= 180:  # 3 minutes = 180 seconds
-            referrer = db.get_user_by_referral_code(referral_code)
-            if referrer and referrer.id != existing_user.id:
-                if referrer.id == existing_user.id:
-                    await update.message.reply_text("❌ You cannot refer yourself!")
-                    return
-
-                session = db.get_session()
-                user_obj = session.query(User).filter_by(telegram_id=user.id).first()
-                referrer_obj = session.query(User).filter_by(id=referrer.id).first()
-
-                if user_obj and referrer_obj:
-                    user_obj.referred_by = referrer.id
-                    user_obj.referred_at = now
-                    user_obj.can_be_referred = False
-                    session.commit()
-                    logger.info(f"Referral saved: {user.id} referred by {referrer.id}")
-                else:
-                    logger.error(f"Could not find user or referrer in session")
-                    session.rollback()
-
-                await update.message.reply_text(
-                    f"✅ You have been successfully referred by @{referrer_obj.username or 'User'}! 🎉\n\n"
-                    f"Welcome to the PlantUSDT community! 🌱\n\n"
-                    f"💡 Your referrer will earn 5% from your future deposits!"
-                )
-
-                try:
-                    await context.bot.send_message(
-                        chat_id=referrer.telegram_id,
-                        text=f"🎉 **New Referral!**\n\n"
-                             f"@{existing_user.username or 'User'} accepted your referral!\n"
-                             f"💡 You will earn 5% from their future deposits!"
-                    )
-                except Exception as e:
-                    logger.error(f"Error notifying referrer: {e}")
-
-                return
-            else:
-                await update.message.reply_text("❌ Invalid referral code or referrer not found.")
-                return
-        else:
-            await update.message.reply_text(
-                f"❌ Sorry, you can only accept a referral within 3 minutes of creating your account.\n\n"
-                f"Your account was created on {existing_user.created_at.strftime('%d/%m/%Y %H:%M:%S')} UTC.\n"
-                f"You are {int(seconds_since_creation)} seconds old.\n"
-                f"The referral window is only 3 minutes."
-            )
-            return
-
-    # Regular welcome back message
-    keyboard = [
-        [InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]
-    ]
+    keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     await update.message.reply_text(
-        f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:",
-        reply_markup=reply_markup
+        f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:"
+        + get_community_footer(),
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
     )
 
 # ============================================
-# APP COMMAND - Direct Mini App Link
+# APP COMMAND
 # ============================================
 
 async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[
-        InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))
-    ]]
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     await update.message.reply_text(
         "🌱 **Open PlantUSDT Mini App**\n\n"
         "Click the button below to:\n"
@@ -176,7 +179,8 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌾 Invest in planting fields\n"
         "📊 View your earnings\n"
         "👥 Manage referrals\n\n"
-        "Start growing your USDT today on Polygon! 🚀",
+        "Start growing your USDT today on Polygon! 🚀"
+        + get_community_footer(),
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -187,6 +191,9 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -194,7 +201,10 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
     pending = db.get_pending_withdrawals()
 
     if not pending:
-        await update.message.reply_text("📋 No pending withdrawals.")
+        await update.message.reply_text(
+            "📋 No pending withdrawals." + get_community_footer(),
+            parse_mode='Markdown'
+        )
         return
 
     text = "📋 PENDING WITHDRAWALS\n\n"
@@ -211,10 +221,16 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         text += f"Status: ⏳ Pending\n"
         text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
 
-    await update.message.reply_text(text, parse_mode='HTML')
+    await update.message.reply_text(
+        text + get_community_footer(),
+        parse_mode='HTML'
+    )
 
 async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -224,6 +240,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
             "Example: /complete_payout 1 0xabc123...\n\n"
             "💡 Transaction hash should be from sending USDT on Polygon network."
+            + get_community_footer(),
+            parse_mode='Markdown'
         )
         return
 
@@ -251,6 +269,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
             f"🔗 TX: {tx_hash}\n"
             f"⛓️ Network: Polygon"
+            + get_community_footer(),
+            parse_mode='Markdown'
         )
 
         user_obj = db.get_user_by_id(withdrawal.user_id)
@@ -264,6 +284,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
                          f"🔗 TX: {tx_hash}\n"
                          f"⛓️ Network: Polygon\n\n"
                          f"Check your wallet!"
+                         + get_community_footer(),
+                    parse_mode='Markdown'
                 )
             except Exception as e:
                 logger.error(f"Error notifying user: {e}")
@@ -272,6 +294,9 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -289,10 +314,16 @@ Example:
 
 💡 Transactions are on Polygon (MATIC) network using USDT on Polygon"""
 
-    await update.message.reply_text(help_text)
+    await update.message.reply_text(
+        help_text + get_community_footer(),
+        parse_mode='Markdown'
+    )
 
 async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -302,6 +333,8 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Usage: /reset_referral <user_id>\n\n"
             "Example: /reset_referral 123456789\n\n"
             "This will allow the user to accept a new referral."
+            + get_community_footer(),
+            parse_mode='Markdown'
         )
         return
 
@@ -318,6 +351,8 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ Referral reset for @{target_user.username or 'User'}!\n\n"
             f"They can now accept a new referral."
+            + get_community_footer(),
+            parse_mode='Markdown'
         )
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID.")
@@ -388,6 +423,7 @@ def main():
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
         logger.info("📌 Menu button set to: 🌱 PlantUSDT")
+        logger.info("📢 Community footer added to all messages")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
