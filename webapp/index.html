@@ -52,7 +52,7 @@
             <div class="stat-card">
                 <div class="stat-icon">📈</div>
                 <div class="stat-label">Returns</div>
-                <div class="stat-value">2-65%</div>
+                <div class="stat-value">2-80%</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">🔒</div>
@@ -167,7 +167,7 @@
         <!-- Referral Section -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
-            <p>Earn 5% of your referrals' deposits!</p>
+            <p>Earn 1% of your referrals' deposits!</p>
             <div class="referral-link-box" id="referralLinkBox">
                 <span id="referralLinkText">Loading referral link...</span>
                 <button class="copy-btn" onclick="copyReferral()">📋</button>
@@ -220,14 +220,6 @@
             </p>
         </div>
 
-        <!-- ============================================ -->
-        <!-- 📢 ADSTERRA NATIVE BANNER (4:1) -->
-        <!-- ============================================ -->
-        <div style="margin: 16px auto; text-align: center; max-width: 400px; min-height: 80px;">
-            <script async="async" data-cfasync="false" src="https://pl30093618.effectivecpmnetwork.com/e4e0e5fa652f5b0e7a477826466467a4/invoke.js"></script>
-            <div id="container-e4e0e5fa652f5b0e7a477826466467a4"></div>
-        </div>
-
         <!-- Investment Info -->
         <div class="info-card">
             <h3>💎 How It Works</h3>
@@ -239,7 +231,7 @@
             <p>6. When period ends, click <strong>"🌾 Claim Now!"</strong></p>
             <p>7. Funds added to your balance and field resets</p>
             <p>8. Withdraw anytime (min $2, 10% fee)</p>
-            <p>9. Refer friends and earn 5% of their deposits!</p>
+            <p>9. Refer friends and earn 1% of their deposits!</p>
             <p style="color: #8247E5; margin-top: 8px; font-weight: 500;">⛓️ Powered by Polygon Network</p>
         </div>
 
@@ -262,7 +254,6 @@
 
         /**
          * Show Interstitial Ad - NO REWARD
-         * This is shown on page changes, does NOT give any reward.
          */
         function showInterstitialAd() {
             return new Promise((resolve) => {
@@ -297,7 +288,6 @@
 
         /**
          * Show Rewarded Ad - GIVES REWARD ONLY IF WATCHED TO END
-         * Called only from the "Watch Ad & Earn" button.
          */
         function showRewardedAd() {
             return new Promise((resolve) => {
@@ -337,9 +327,9 @@
         console.log("✅ Adsgram initialized - Interstitial: NO reward, Rewarded: $0.001");
     </script>
 
-    <!-- Adsterra Popunder -->
+    <!-- Adsterra Popunder ONLY - Banners REMOVED -->
     <script src="https://pl30082550.effectivecpmnetwork.com/1e/26/6e/1e266e8e2355011550501bd4be436dc5.js"></script>
 
-    <script src="js/app.js?v=14"></script>
+    <script src="js/app.js?v=15"></script>
 </body>
 </html>

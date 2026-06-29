@@ -12,20 +12,20 @@ class InvestmentService:
     def __init__(self):
         self.db = DatabaseManager()
         self.notification_service = NotificationService()
-        # Updated multipliers: 1 day 2%, 7 days 15%, 30 days 65%
+        # Updated multipliers: 1 day 2%, 7 days 18%, 30 days 80%
         self.lock_multipliers = {
             1: 1.02,    # 2% return
-            7: 1.15,    # 15% return
-            30: 1.65    # 65% return
+            7: 1.18,    # 18% return
+            30: 1.80    # 80% return
         }
 
     def calculate_return(self, amount: float, lock_period: int) -> float:
         """Calculate the total return based on lock period"""
-        multiplier = self.lock_multipliers.get(lock_period, 1.65)
+        multiplier = self.lock_multipliers.get(lock_period, 1.80)
         return round(amount * multiplier, 2)
 
     async def process_referral_earnings(self, investment):
-        """Process referral earnings based on deposits (5% of deposit amount)"""
+        """Process referral earnings based on deposits (1% of deposit amount)"""
         logger.info("🔔🔔🔔 REFERRAL FUNCTION STARTED 🔔🔔🔔")
         try:
             session = self.db.get_session()
@@ -40,7 +40,7 @@ class InvestmentService:
                 logger.info(f"🔔 REFERRAL DEBUG: Referrer not found for user {investment.user_id}")
                 return 0
 
-            referral_bonus = investment.amount * 0.05
+            referral_bonus = investment.amount * 0.01  # 1% instead of 5%
 
             referrer.balance += referral_bonus
             referrer.total_earned += referral_bonus
@@ -73,7 +73,7 @@ class InvestmentService:
                 message = (
                     f"🎁 **Referral Bonus Received (Polygon)**\n\n"
                     f"Your referral **@{username}** deposited **${investment.amount:.2f} USDT**\n\n"
-                    f"**+${referral_bonus:.2f} USDT** credited to your balance! (5% bonus)\n"
+                    f"**+${referral_bonus:.2f} USDT** credited to your balance! (1% bonus)\n"
                     f"━━━━━━━━━━━━━━━━━━━━\n"
                     f"💰 Your balance: **${referrer.balance:.2f}**\n"
                     f"👥 Total referrals: **{total_refs}**\n"
@@ -235,6 +235,7 @@ class InvestmentService:
                     try:
                         from bot.main import application
                         if application and application.bot:
+                            profit = investment.expected_return - investment.amount
                             message = (
                                 f"🎉 **Investment Completed!**\n\n"
                                 f"Your investment in **Field #{investment.field_number}** has been completed!\n\n"
@@ -268,8 +269,8 @@ class InvestmentService:
         """Get available lock periods with their returns"""
         return [
             {'days': 1, 'return_percent': 2, 'multiplier': 1.02},
-            {'days': 7, 'return_percent': 15, 'multiplier': 1.15},
-            {'days': 30, 'return_percent': 65, 'multiplier': 1.65}
+            {'days': 7, 'return_percent': 18, 'multiplier': 1.18},
+            {'days': 30, 'return_percent': 80, 'multiplier': 1.80}
         ]
 
     def get_investment_status(self, user_id: int):

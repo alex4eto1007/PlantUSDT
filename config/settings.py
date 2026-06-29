@@ -29,18 +29,17 @@ class Config:
     USDT_DECIMALS = int(os.getenv("USDT_DECIMALS", 6))
 
     # ============================================
-    # INVESTMENT SETTINGS
+    # INVESTMENT SETTINGS - UPDATED RATES
     # ============================================
     DAILY_RATE = float(os.getenv("DAILY_RATE", 0.02))
     INVESTMENT_DAYS = int(os.getenv("INVESTMENT_DAYS", 30))
     MIN_INVESTMENT = float(os.getenv("MIN_INVESTMENT", 5))
     MAX_FIELD_AMOUNT = float(os.getenv("MAX_FIELD_AMOUNT", 100))
 
-    # Updated multipliers: 1 day 2%, 7 days 15%, 30 days 65%
     LOCK_MULTIPLIERS = {
         1: 1.02,    # 2% return
-        7: 1.15,    # 15% return (was 14%)
-        30: 1.65    # 65% return (was 60%)
+        7: 1.18,    # 18% return
+        30: 1.80    # 80% return
     }
 
     # ============================================
@@ -50,9 +49,9 @@ class Config:
     WITHDRAWAL_FEE = float(os.getenv("WITHDRAWAL_FEE", 0.10))
 
     # ============================================
-    # REFERRAL SETTINGS
+    # REFERRAL SETTINGS - UPDATED TO 1%
     # ============================================
-    REFERRAL_BONUS_PERCENT = float(os.getenv("REFERRAL_BONUS_PERCENT", 0.05))
+    REFERRAL_BONUS_PERCENT = float(os.getenv("REFERRAL_BONUS_PERCENT", 0.01))
     REFERRAL_WINDOW_SECONDS = int(os.getenv("REFERRAL_WINDOW_SECONDS", 180))
 
     # ============================================

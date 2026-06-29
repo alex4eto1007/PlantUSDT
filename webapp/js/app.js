@@ -671,24 +671,24 @@ async function setWallet() {
 }
 
 // ============================================
-// INVESTMENT FUNCTIONS
+// INVESTMENT FUNCTIONS - UPDATED RATES
 // ============================================
 
 function calculateReturn(amount, days) {
     const multipliers = {
-        1: 1.02,
-        7: 1.15,
-        30: 1.65
+        1: 1.02,    // 2%
+        7: 1.18,    // 18%
+        30: 1.80    // 80%
     };
-    const multiplier = multipliers[days] || 1.65;
+    const multiplier = multipliers[days] || 1.80;
     return amount * multiplier;
 }
 
 function getLockOptions() {
     return [
         { days: 1, returnPercent: 2 },
-        { days: 7, returnPercent: 15 },
-        { days: 30, returnPercent: 65 }
+        { days: 7, returnPercent: 18 },
+        { days: 30, returnPercent: 80 }
     ];
 }
 
@@ -1172,9 +1172,20 @@ async function watchRewardedAd() {
                 return true;
             }
         }
+        // If ad didn't complete or errored, show the "Ad Not Available" popup
+        safePopup({
+            title: '❌ Ad Not Available',
+            message: 'No ads available right now. Please try again later.',
+            buttons: [{type: 'ok'}]
+        });
         return false;
     } catch (error) {
         console.error('Error watching ad:', error);
+        safePopup({
+            title: '❌ Ad Not Available',
+            message: 'No ads available right now. Please try again later.',
+            buttons: [{type: 'ok'}]
+        });
         return false;
     }
 }
