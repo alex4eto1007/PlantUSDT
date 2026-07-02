@@ -2,7 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config.settings import Config
 from database.db_manager import DatabaseManager
-from database.models import User, Investment, Withdrawal, Deposit
+from database.models import User, Investment, Withdrawal, Deposit, UncollectedFee
 from services.investment import InvestmentService
 from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
@@ -287,11 +287,27 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✅ Withdrawal {withdrawal_id} marked as COMPLETED!\n\n"
             f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
             f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
+            f"🔒 Fee Collected: ${withdrawal.fee:.2f} USDT\n"
             f"🔗 TX: {tx_hash}\n"
             f"⛓️ Network: Polygon"
             + get_community_footer(),
             parse_mode='Markdown'
         )
+
+        # Send channel message
+        try:
+            channel_message = (
+                f"📤 **Withdrawal Completed!**\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"💵 Amount: **${withdrawal.net_amount:.2f} USDT**\n"
+                f"⛓️ Network: Polygon\n"
+                f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"🏦 Project Wallet: `{PROJECT_WALLET}`"
+            )
+            await send_to_channel(context.bot, channel_message)
+        except Exception as e:
+            logger.error(f"Error sending to channel: {e}")
 
         user_obj = db.get_user_by_id(withdrawal.user_id)
         if user_obj:
@@ -312,6 +328,103 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ Failed to update withdrawal {withdrawal_id}.")
 
+# ============================================
+# FEE COLLECTION COMMANDS (ADMIN ONLY)
+# ============================================
+
+async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show total uncollected withdrawal fees"""
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    total_fees = db.get_uncollected_fees_total()
+    fees = db.get_uncollected_fees()
+
+    if total_fees == 0:
+        await update.message.reply_text(
+            "📋 No uncollected fees.\n\n"
+            "All withdrawal fees have been collected! ✅"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    text = f"💰 **Uncollected Withdrawal Fees**\n"
+    text += f"━━━━━━━━━━━━━━━━━━━━\n"
+    text += f"📊 Total: **${total_fees:.2f} USDT**\n"
+    text += f"📋 Number of fees: **{len(fees)}**\n\n"
+    text += "📝 Details:\n"
+    
+    for fee in fees[:10]:  # Show last 10
+        user_obj = db.get_user_by_id(fee.user_id)
+        username = user_obj.username if user_obj else "Unknown"
+        text += f"  • ${fee.amount:.2f} from @{username}\n"
+    
+    if len(fees) > 10:
+        text += f"  ... and {len(fees) - 10} more\n"
+    
+    text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
+    text += f"To collect all fees:\n"
+    text += f"`/collect_fees TX_HASH`\n\n"
+    text += f"⚠️ This will mark ALL uncollected fees as collected."
+    
+    await update.message.reply_text(
+        text + get_community_footer(),
+        parse_mode='Markdown'
+    )
+
+async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Collect all uncollected fees (admin only)"""
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "❌ Usage: /collect_fees <tx_hash>\n\n"
+            "Example: /collect_fees 0xabc123...\n\n"
+            "This will mark ALL uncollected fees as collected.\n"
+            "The transaction hash should be from sending the total fees to your wallet."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    tx_hash = context.args[0]
+    
+    # Check if there are any uncollected fees
+    total_fees = db.get_uncollected_fees_total()
+    if total_fees == 0:
+        await update.message.reply_text(
+            "📋 No uncollected fees to collect." + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    # Mark all fees as collected
+    count = db.mark_fees_collected(tx_hash)
+    
+    await update.message.reply_text(
+        f"✅ **Fees Collected!**\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"💰 Total collected: **${total_fees:.2f} USDT**\n"
+        f"📋 Number of fees: **{count}**\n"
+        f"🔗 TX: `{tx_hash}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"All fees have been marked as collected."
+        + get_community_footer(),
+        parse_mode='Markdown'
+    )
+
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
@@ -325,14 +438,24 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 /pending - View all pending withdrawals
 /complete_payout <id> <tx_hash> - Mark a payout as completed
+/pending_fees - View total uncollected withdrawal fees
+/collect_fees <tx_hash> - Collect ALL uncollected fees
 /reset_referral <user_id> - Reset a user's referral status
 
 Example:
 /pending
 /complete_payout 1 0xabc123...
+/pending_fees
+/collect_fees 0xdef456...
 /reset_referral 123456789
 
-💡 Transactions are on Polygon (MATIC) network using USDT on Polygon"""
+💡 Transactions are on Polygon (MATIC) network using USDT on Polygon
+
+📊 Fee Collection System:
+• Fees are automatically tracked when withdrawals are completed
+• Use /pending_fees to see how much is uncollected
+• Use /collect_fees TX_HASH to mark all fees as collected
+• Send the total fees to your personal wallet in one transaction"""
 
     await update.message.reply_text(
         help_text + get_community_footer(),
@@ -405,6 +528,8 @@ def main():
         # Admin commands
         application.add_handler(CommandHandler("pending", pending_withdrawals))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
+        application.add_handler(CommandHandler("pending_fees", pending_fees))
+        application.add_handler(CommandHandler("collect_fees", collect_fees))
         application.add_handler(CommandHandler("adminhelp", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
 
@@ -445,6 +570,7 @@ def main():
         logger.info("📌 Menu button set to: 🌱 PlantUSDT")
         logger.info("📢 Community footer added to all messages")
         logger.info("📊 Transaction channel: @PlantUSDTtransactions")
+        logger.info("💰 Fee collection system active")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

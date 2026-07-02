@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from config.settings import Config
-from database.models import Base, User, Investment, Deposit, DailyPayout, Withdrawal
+from database.models import Base, User, Investment, Deposit, DailyPayout, Withdrawal, UncollectedFee
 import logging
 from datetime import datetime
 
@@ -124,7 +124,7 @@ class DatabaseManager:
             session.close()
 
     def update_withdrawal_status(self, withdrawal_id, status, tx_hash=None):
-        """Update withdrawal status"""
+        """Update withdrawal status and create uncollected fee"""
         session = self.get_session()
         try:
             withdrawal = session.query(Withdrawal).filter_by(id=withdrawal_id).first()
@@ -133,6 +133,17 @@ class DatabaseManager:
                 if tx_hash:
                     withdrawal.tx_hash = tx_hash
                 withdrawal.processed_at = datetime.utcnow()
+                
+                # Create uncollected fee entry
+                if withdrawal.fee > 0:
+                    uncollected_fee = UncollectedFee(
+                        user_id=withdrawal.user_id,
+                        withdrawal_id=withdrawal.id,
+                        amount=withdrawal.fee,
+                        collected=False
+                    )
+                    session.add(uncollected_fee)
+                
                 session.commit()
                 logger.info(f"Withdrawal {withdrawal_id} updated to {status} on Polygon")
                 return True
@@ -243,7 +254,7 @@ class DatabaseManager:
                 tx_hash=tx_hash,
                 from_address=from_address,
                 block_number=block_number,
-                network='polygon'  # Always Polygon for now
+                network='polygon'
             )
             session.add(deposit)
             session.commit()
@@ -261,6 +272,43 @@ class DatabaseManager:
         session = self.get_session()
         try:
             return session.query(Deposit).filter_by(tx_hash=tx_hash).first()
+        finally:
+            session.close()
+
+    def get_uncollected_fees_total(self):
+        """Get total uncollected fees"""
+        session = self.get_session()
+        try:
+            total = session.query(UncollectedFee).filter_by(collected=False).with_entities(func.sum(UncollectedFee.amount)).scalar()
+            return total or 0.0
+        finally:
+            session.close()
+
+    def get_uncollected_fees(self):
+        """Get all uncollected fees with details"""
+        session = self.get_session()
+        try:
+            return session.query(UncollectedFee).filter_by(collected=False).all()
+        finally:
+            session.close()
+
+    def mark_fees_collected(self, tx_hash=None):
+        """Mark all uncollected fees as collected"""
+        session = self.get_session()
+        try:
+            fees = session.query(UncollectedFee).filter_by(collected=False).all()
+            for fee in fees:
+                fee.collected = True
+                fee.collected_at = datetime.utcnow()
+                if tx_hash:
+                    fee.tx_hash = tx_hash
+            session.commit()
+            logger.info(f"✅ {len(fees)} uncollected fees marked as collected")
+            return len(fees)
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error marking fees as collected: {e}")
+            return 0
         finally:
             session.close()
 

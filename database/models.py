@@ -53,6 +53,7 @@ class User(Base):
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")
     referrals = relationship("User", backref="referrer", remote_side=[id])
+    uncollected_fees = relationship("UncollectedFee", back_populates="user")
 
 class Investment(Base):
     __tablename__ = "investments"
@@ -125,3 +126,19 @@ class Withdrawal(Base):
     network = Column(String(20), default="polygon")
     
     user = relationship("User", back_populates="withdrawals")
+    uncollected_fee = relationship("UncollectedFee", back_populates="withdrawal")
+
+class UncollectedFee(Base):
+    __tablename__ = "uncollected_fees"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    withdrawal_id = Column(Integer, ForeignKey("withdrawals.id"))
+    amount = Column(Float, nullable=False)  # Fee amount (10%)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    collected = Column(Boolean, default=False)
+    collected_at = Column(DateTime, nullable=True)
+    tx_hash = Column(String(100), nullable=True)
+    
+    user = relationship("User", back_populates="uncollected_fees")
+    withdrawal = relationship("Withdrawal", back_populates="uncollected_fee")
