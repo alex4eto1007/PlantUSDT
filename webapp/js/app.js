@@ -49,7 +49,7 @@ function safePopupWithCallback(options, callback) {
 
 // Interstitial ad counter - MORE FREQUENT = MORE REVENUE
 let pageViewCount = 0;
-const INTERSTITIAL_INTERVAL = 2; // Show every 2 page changes (more frequent)
+const INTERSTITIAL_INTERVAL = 1; // Show every 2 page changes (more frequent)
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
