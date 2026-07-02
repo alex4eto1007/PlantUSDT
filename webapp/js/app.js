@@ -48,12 +48,15 @@ function safePopupWithCallback(options, callback) {
 }
 
 // ============================================
-// SHOW INTERSTITIAL AD ON BUTTON CLICKS
+// SHOW INTERSTITIAL AD ON BUTTON CLICKS - FIXED
 // ============================================
 function showInterstitialIfNeeded() {
     if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
         console.log("📢 Showing interstitial ad on button click...");
-        window.showInterstitialAd().catch(() => {});
+        // Wait 500ms before showing to ensure ad controller is ready
+        setTimeout(function() {
+            window.showInterstitialAd().catch(() => {});
+        }, 500);
     }
 }
 
@@ -128,15 +131,23 @@ function refreshData() {
     }, 300);
 }
 
+// ============================================
+// UPDATE REFERRAL STATS - FIXED
+// ============================================
 async function updateReferralStats(userId) {
     try {
         const response = await fetch(`${API_BASE}/api/referral_stats/${userId}`);
         const data = await response.json();
         if (data.success) {
-            document.getElementById('referralCount').textContent = data.total_referrals || 0;
-            document.getElementById('referralEarned').textContent = '$' + (data.total_earnings || 0).toFixed(3);
-            document.getElementById('level1Count').textContent = data.level1_count || 0;
-            document.getElementById('level1Earnings').textContent = '$' + (data.level1_earnings || 0).toFixed(3);
+            var referralCountEl = document.getElementById('referralCount');
+            var referralEarnedEl = document.getElementById('referralEarned');
+            var level1CountEl = document.getElementById('level1Count');
+            var level1EarningsEl = document.getElementById('level1Earnings');
+            
+            if (referralCountEl) referralCountEl.textContent = data.total_referrals || 0;
+            if (referralEarnedEl) referralEarnedEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
+            if (level1CountEl) level1CountEl.textContent = data.level1_count || 0;
+            if (level1EarningsEl) level1EarningsEl.textContent = '$' + (data.level1_earnings || 0).toFixed(3);
         }
     } catch (error) {
         console.error('Error loading referral stats:', error);
