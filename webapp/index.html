@@ -6,18 +6,15 @@
     <title>🌱 PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css?v=13">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Adsgram Ads -->
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header with Refresh Button -->
+        <!-- Header -->
         <div class="header">
             <div class="logo">🌱 PlantUSDT</div>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <button onclick="refreshData()" style="background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 8px; padding: 6px 12px; color: #00ff87; cursor: pointer; font-size: 14px; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(0,255,135,0.2)'" onmouseout="this.style.background='rgba(0,255,135,0.1)'">
-                    🔄
-                </button>
+                <button onclick="showInterstitialIfNeeded(); refreshData();" style="background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 8px; padding: 6px 12px; color: #00ff87; cursor: pointer; font-size: 14px;">🔄</button>
                 <div class="balance-display">
                     <span class="balance-label">💰 Balance</span>
                     <span class="balance-amount" id="balance">$0.000</span>
@@ -25,7 +22,7 @@
             </div>
         </div>
 
-        <!-- Polygon Network Badge -->
+        <!-- Network Badge -->
         <div class="network-badge-container">
             <div class="network-badge">
                 <span class="network-dot polygon"></span>
@@ -34,7 +31,7 @@
             </div>
         </div>
 
-        <!-- Total Earnings Display -->
+        <!-- Earnings -->
         <div class="earnings-section">
             <div class="earnings-card">
                 <div class="earnings-label">📈 Total Earnings</div>
@@ -47,180 +44,93 @@
             </div>
         </div>
 
-        <!-- Quick Stats -->
+        <!-- Stats -->
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">📈</div>
-                <div class="stat-label">Returns</div>
-                <div class="stat-value">2-80%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">🔒</div>
-                <div class="stat-label">Lock Period</div>
-                <div class="stat-value">1-30 Days</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">💵</div>
-                <div class="stat-label">Min Deposit</div>
-                <div class="stat-value">$5</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">⛓️</div>
-                <div class="stat-label">Network</div>
-                <div class="stat-value" style="font-size: 12px;">Polygon</div>
-            </div>
+            <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-label">Returns</div><div class="stat-value">2-80%</div></div>
+            <div class="stat-card"><div class="stat-icon">🔒</div><div class="stat-label">Lock Period</div><div class="stat-value">1-30 Days</div></div>
+            <div class="stat-card"><div class="stat-icon">💵</div><div class="stat-label">Min Deposit</div><div class="stat-value">$5</div></div>
+            <div class="stat-card"><div class="stat-icon">⛓️</div><div class="stat-label">Network</div><div class="stat-value" style="font-size:12px;">Polygon</div></div>
         </div>
 
-        <!-- Wallet Connect Section -->
+        <!-- Wallet -->
         <div class="wallet-section" id="walletSection">
-            <div class="wallet-status" id="walletStatus">
-                <span class="wallet-icon">🔗</span>
-                <span id="walletText" class="disconnected">Wallet not connected</span>
-            </div>
+            <div class="wallet-status"><span class="wallet-icon">🔗</span><span id="walletText" class="disconnected">Wallet not connected</span></div>
             <div class="wallet-input-group">
-                <input type="text" id="walletInput" placeholder="Enter your Polygon wallet address (0x...)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; margin-bottom: 8px;">
-                <div style="display: flex; gap: 8px;">
-                    <button class="action-btn primary" onclick="saveWallet()" id="saveWalletBtn" style="flex: 1; padding: 12px;">
-                        <span class="btn-icon">💾</span>
-                        Save Wallet
-                    </button>
-                    <button class="action-btn warning" onclick="disconnectWallet()" id="disconnectWalletBtn" style="display: none; flex: 1; padding: 12px; background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important; color: white !important;">
-                        <span class="btn-icon">🔓</span>
-                        Disconnect
-                    </button>
+                <input type="text" id="walletInput" placeholder="Enter your Polygon wallet address (0x...)" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;margin-bottom:8px;">
+                <div style="display:flex;gap:8px;">
+                    <button class="action-btn primary" onclick="showInterstitialIfNeeded(); saveWallet()" id="saveWalletBtn" style="flex:1;padding:12px;"><span class="btn-icon">💾</span> Save Wallet</button>
+                    <button class="action-btn warning" onclick="showInterstitialIfNeeded(); disconnectWallet()" id="disconnectWalletBtn" style="display:none;flex:1;padding:12px;background:linear-gradient(135deg,#ff6b6b,#ee5a24)!important;color:white!important;"><span class="btn-icon">🔓</span> Disconnect</button>
                 </div>
             </div>
-            <div class="wallet-address" id="walletAddressDisplay" style="display: none; font-size: 12px; color: #00ff87; margin-top: 8px; word-break: break-all; padding: 8px 12px; background: rgba(0,255,135,0.05); border-radius: 6px; border: 1px solid rgba(0,255,135,0.1);"></div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 6px; text-align: center;">
-                ⚠️ Only send USDT on Polygon network
-            </div>
+            <div class="wallet-address" id="walletAddressDisplay" style="display:none;font-size:12px;color:#00ff87;margin-top:8px;word-break:break-all;padding:8px 12px;background:rgba(0,255,135,0.05);border-radius:6px;border:1px solid rgba(0,255,135,0.1);"></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;text-align:center;">⚠️ Only send USDT on Polygon network</div>
         </div>
 
-        <!-- 3 Planting Fields -->
+        <!-- Fields -->
         <div class="section-title">🌱 Your Planting Fields</div>
         <div class="fields-grid">
-            <!-- Field #1 -->
             <div class="field-card" id="field1">
                 <div class="field-number">🌾 Field #1</div>
                 <div class="field-status" id="field1Status">Available</div>
                 <div class="field-amount" id="field1Amount">$0.000</div>
                 <div class="field-timer" id="field1Timer">⏳ Payout: --:--:-- UTC</div>
-                <div class="field-progress">
-                    <div class="progress-bar" id="field1Progress" style="width: 0%"></div>
-                </div>
-                <div class="field-details">
-                    <span>Days: <span id="field1Days">0/30</span></span>
-                    <span>Earned: <span id="field1Earned">$0.000</span></span>
-                </div>
-                <button class="action-btn primary" onclick="investField(1)" id="field1Btn">🌱 Plant Now</button>
+                <div class="field-progress"><div class="progress-bar" id="field1Progress" style="width:0%"></div></div>
+                <div class="field-details"><span>Days: <span id="field1Days">0/30</span></span><span>Earned: <span id="field1Earned">$0.000</span></span></div>
+                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); investField(1)" id="field1Btn">🌱 Plant Now</button>
             </div>
-
-            <!-- Field #2 -->
             <div class="field-card" id="field2">
                 <div class="field-number">🌾 Field #2</div>
                 <div class="field-status" id="field2Status">Available</div>
                 <div class="field-amount" id="field2Amount">$0.000</div>
                 <div class="field-timer" id="field2Timer">⏳ Payout: --:--:-- UTC</div>
-                <div class="field-progress">
-                    <div class="progress-bar" id="field2Progress" style="width: 0%"></div>
-                </div>
-                <div class="field-details">
-                    <span>Days: <span id="field2Days">0/30</span></span>
-                    <span>Earned: <span id="field2Earned">$0.000</span></span>
-                </div>
-                <button class="action-btn primary" onclick="investField(2)" id="field2Btn">🌱 Plant Now</button>
+                <div class="field-progress"><div class="progress-bar" id="field2Progress" style="width:0%"></div></div>
+                <div class="field-details"><span>Days: <span id="field2Days">0/30</span></span><span>Earned: <span id="field2Earned">$0.000</span></span></div>
+                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); investField(2)" id="field2Btn">🌱 Plant Now</button>
             </div>
-
-            <!-- Field #3 -->
             <div class="field-card" id="field3">
                 <div class="field-number">🌾 Field #3</div>
                 <div class="field-status" id="field3Status">Available</div>
                 <div class="field-amount" id="field3Amount">$0.000</div>
                 <div class="field-timer" id="field3Timer">⏳ Payout: --:--:-- UTC</div>
-                <div class="field-progress">
-                    <div class="progress-bar" id="field3Progress" style="width: 0%"></div>
-                </div>
-                <div class="field-details">
-                    <span>Days: <span id="field3Days">0/30</span></span>
-                    <span>Earned: <span id="field3Earned">$0.000</span></span>
-                </div>
-                <button class="action-btn primary" onclick="investField(3)" id="field3Btn">🌱 Plant Now</button>
+                <div class="field-progress"><div class="progress-bar" id="field3Progress" style="width:0%"></div></div>
+                <div class="field-details"><span>Days: <span id="field3Days">0/30</span></span><span>Earned: <span id="field3Earned">$0.000</span></span></div>
+                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); investField(3)" id="field3Btn">🌱 Plant Now</button>
             </div>
         </div>
 
-        <!-- Main Actions -->
+        <!-- Actions -->
         <div class="actions-grid">
-            <button class="action-btn" onclick="navigateTo('deposit')" style="background: linear-gradient(135deg, #00d4ff, #0088ff) !important; color: #ffffff !important; border: none; padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%;">
-                <span class="btn-icon">💳</span>
-                Deposit
-            </button>
-            <button class="action-btn" onclick="navigateTo('withdraw')" style="background: linear-gradient(135deg, #00ff87, #00cc6a) !important; color: #ffffff !important; border: none; padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%;">
-                <span class="btn-icon">🏦</span>
-                Withdraw
-            </button>
-            <button class="action-btn" onclick="navigateTo('dashboard')" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important; color: #ffffff !important; border: none; padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%;">
-                <span class="btn-icon">📊</span>
-                Dashboard
-            </button>
+            <button class="action-btn" onclick="showInterstitialIfNeeded(); navigateTo('deposit')" style="background:linear-gradient(135deg,#00d4ff,#0088ff)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">💳</span> Deposit</button>
+            <button class="action-btn" onclick="showInterstitialIfNeeded(); navigateTo('withdraw')" style="background:linear-gradient(135deg,#00ff87,#00cc6a)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">🏦</span> Withdraw</button>
+            <button class="action-btn" onclick="showInterstitialIfNeeded(); navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">📊</span> Dashboard</button>
         </div>
 
-        <!-- Referral Section -->
+        <!-- Referral -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
             <p>Earn 1% of your referrals' deposits!</p>
-            <div class="referral-link-box" id="referralLinkBox">
-                <span id="referralLinkText">Loading referral link...</span>
-                <button class="copy-btn" onclick="copyReferral()">📋</button>
-            </div>
-            <div class="referral-stats">
-                <span>Total Referrals: <strong id="referralCount">0</strong></span>
-                <span>Total Earned: <strong id="referralEarned">$0.000</strong></span>
-            </div>
-            
+            <div class="referral-link-box"><span id="referralLinkText">Loading referral link...</span><button class="copy-btn" onclick="showInterstitialIfNeeded(); copyReferral()">📋</button></div>
+            <div class="referral-stats"><span>Total Referrals: <strong id="referralCount">0</strong></span><span>Total Earned: <strong id="referralEarned">$0.000</strong></span></div>
             <div class="referral-details">
-                <div class="referral-detail-row">
-                    <span>👤 Referrals:</span>
-                    <strong id="level1Count">0</strong>
-                </div>
-                <div class="referral-detail-row">
-                    <span>💰 Earnings from deposits:</span>
-                    <strong id="level1Earnings">$0.000</strong>
-                </div>
+                <div class="referral-detail-row"><span>👤 Referrals:</span><strong id="level1Count">0</strong></div>
+                <div class="referral-detail-row"><span>💰 Earnings from deposits:</span><strong id="level1Earnings">$0.000</strong></div>
             </div>
         </div>
 
-        <!-- ============================================ -->
-        <!-- 📺 WATCH ADS & EARN SECTION -->
-        <!-- ============================================ -->
+        <!-- Ads -->
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
-            <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">
-                Watch a short ad and earn <strong>$0.001 USDT</strong> each time!
-                <br><span style="font-size: 12px; opacity: 0.7;">Unlimited ads • More video ads = more earnings! 🌱</span>
-            </p>
-
+            <p style="font-size:13px;color:#8892b0;margin-bottom:12px;">Watch a short ad and earn <strong>$0.001 USDT</strong> each time!<br><span style="font-size:12px;opacity:0.7;">Unlimited ads • More video ads = more earnings! 🌱</span></p>
             <div class="ad-stats">
-                <div class="ad-stat-box">
-                    <span class="ad-stat-label">📊 Ads Today</span>
-                    <span class="ad-stat-value" id="adsToday">♾️ Unlimited</span>
-                </div>
-                <div class="ad-stat-box">
-                    <span class="ad-stat-label">💰 Total Earned</span>
-                    <span class="ad-stat-value" id="adEarnings">$0.000</span>
-                </div>
+                <div class="ad-stat-box"><span class="ad-stat-label">📊 Ads Today</span><span class="ad-stat-value" id="adsToday">♾️ Unlimited</span></div>
+                <div class="ad-stat-box"><span class="ad-stat-label">💰 Total Earned</span><span class="ad-stat-value" id="adEarnings">$0.000</span></div>
             </div>
-
-            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
-                ▶️ Watch Ad & Earn $0.001
-            </button>
-
-            <div id="adStatus" style="margin-top: 10px; font-size: 13px; color: #ffd93d; text-align: center; display: none;"></div>
-            <p style="font-size: 11px; color: #495670; margin-top: 8px; text-align: center;">
-                💚 More video ads = more rewards for you!
-            </p>
+            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad & Earn $0.001</button>
+            <div id="adStatus" style="margin-top:10px;font-size:13px;color:#ffd93d;text-align:center;display:none;"></div>
+            <p style="font-size:11px;color:#495670;margin-top:8px;text-align:center;">💚 More video ads = more rewards for you!</p>
         </div>
 
-        <!-- Investment Info -->
+        <!-- Info -->
         <div class="info-card">
             <h3>💎 How It Works</h3>
             <p>1. Enter your Polygon wallet address</p>
@@ -232,7 +142,7 @@
             <p>7. Funds added to your balance and field resets</p>
             <p>8. Withdraw anytime (min $2, 10% fee)</p>
             <p>9. Refer friends and earn 1% of their deposits!</p>
-            <p style="color: #8247E5; margin-top: 8px; font-weight: 500;">⛓️ Powered by Polygon Network</p>
+            <p style="color:#8247E5;margin-top:8px;font-weight:500;">⛓️ Powered by Polygon Network</p>
         </div>
 
         <!-- Footer -->
@@ -242,93 +152,68 @@
         </div>
     </div>
 
-    <!-- Adsgram Ads -->
+    <!-- Ads -->
     <script>
-        // Ad Block IDs - REMOVED ADSTERRA, ADDED MORE ADSGRAM
         const INTERSTITIAL_ID = "int-36282";
         const REWARDED_ID = "36283";
-        const AD_REWARD = 0.001; // $0.001 per ad
-        
+        const AD_REWARD = 0.001;
         let interstitialController = null;
         let rewardedController = null;
 
-        /**
-         * Show Interstitial Ad - NO REWARD
-         * Shows on page changes (more frequent = more revenue)
-         */
         function showInterstitialAd() {
+            console.log('📢 Attempting to show interstitial ad...');
             return new Promise((resolve) => {
                 try {
                     if (typeof window.Adsgram === 'undefined') {
-                        console.log("📢 Adsgram not loaded");
+                        console.warn('📢 Adsgram not loaded');
                         resolve({ done: false, error: true });
                         return;
                     }
-
                     if (!interstitialController) {
-                        interstitialController = window.Adsgram.init({ 
-                            blockId: INTERSTITIAL_ID 
-                        });
+                        interstitialController = window.Adsgram.init({ blockId: INTERSTITIAL_ID });
+                        console.log('📢 Interstitial controller initialized with ID:', INTERSTITIAL_ID);
                     }
-
                     interstitialController.show()
                         .then((result) => {
-                            console.log("📢 Interstitial ad result (no reward):", result);
+                            console.log('📢 Interstitial ad result:', result);
                             resolve(result);
                         })
                         .catch((result) => {
-                            console.log("📢 Interstitial ad error:", result);
+                            console.error('📢 Interstitial ad error:', result);
                             resolve(result);
                         });
                 } catch (e) {
-                    console.log("📢 Interstitial ad exception:", e);
+                    console.error('📢 Interstitial ad exception:', e);
                     resolve({ done: false, error: true });
                 }
             });
         }
 
-        /**
-         * Show Rewarded Ad - GIVES REWARD
-         * Called from the "Watch Ad & Earn" button
-         */
         function showRewardedAd() {
             return new Promise((resolve) => {
                 try {
                     if (typeof window.Adsgram === 'undefined') {
-                        console.log("📢 Adsgram not loaded");
                         resolve({ done: false, error: true, description: 'Adsgram not loaded' });
                         return;
                     }
-
                     if (!rewardedController) {
-                        rewardedController = window.Adsgram.init({ 
-                            blockId: REWARDED_ID 
-                        });
+                        rewardedController = window.Adsgram.init({ blockId: REWARDED_ID });
                     }
-
                     rewardedController.show()
-                        .then((result) => {
-                            console.log("📢 Rewarded ad result:", result);
-                            resolve(result);
-                        })
-                        .catch((result) => {
-                            console.log("📢 Rewarded ad error:", result);
-                            resolve({ done: false, error: true, description: result });
-                        });
+                        .then((result) => resolve(result))
+                        .catch((result) => resolve({ done: false, error: true, description: result }));
                 } catch (e) {
-                    console.log("📢 Rewarded ad exception:", e);
                     resolve({ done: false, error: true, description: e.message });
                 }
             });
         }
 
-        // Make them globally available
         window.showInterstitialAd = showInterstitialAd;
         window.showRewardedAd = showRewardedAd;
         window.AD_REWARD = AD_REWARD;
-        console.log("✅ Adsgram initialized - More video ads! No popups!");
+        console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=16"></script>
+    <script src="js/app.js?v=17"></script>
 </body>
 </html>

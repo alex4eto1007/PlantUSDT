@@ -1,24 +1,15 @@
-// PlantUSDT Mini App - JavaScript (Polygon Network)
-
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const API_BASE = 'https://plantusdt.ddns.net';
-const NETWORK = 'Polygon';
-const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
 
-// ============================================
-// SAFE POPUP – Works on both Web & Mobile
-// ============================================
 function safePopup(options) {
     try {
         if (typeof tg !== 'undefined' && tg.showPopup) {
             tg.showPopup(options);
         } else {
-            const message = typeof options === 'string' 
-                ? options 
-                : options.title + '\n\n' + options.message;
+            const message = typeof options === 'string' ? options : options.title + '\n\n' + options.message;
             alert(message);
         }
     } catch (e) {
@@ -26,9 +17,6 @@ function safePopup(options) {
     }
 }
 
-// ============================================
-// SAFE POPUP WITH CALLBACK
-// ============================================
 function safePopupWithCallback(options, callback) {
     try {
         if (typeof tg !== 'undefined' && tg.showPopup) {
@@ -47,9 +35,12 @@ function safePopupWithCallback(options, callback) {
     }
 }
 
-// Interstitial ad counter - MORE FREQUENT = MORE REVENUE
-let pageViewCount = 0;
-const INTERSTITIAL_INTERVAL = 1; // Show every 2 page changes (more frequent)
+function showInterstitialIfNeeded() {
+    if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
+        console.log("📢 Showing interstitial ad on button click...");
+        window.showInterstitialAd().catch(() => {});
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -62,33 +53,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function navigateTo(page) {
-    const pages = {
-        'dashboard': 'dashboard.html',
-        'deposit': 'deposit.html',
-        'withdraw': 'withdraw.html',
-        'history': 'history.html',
-        'index': 'index.html'
-    };
+    const pages = { 'dashboard': 'dashboard.html', 'deposit': 'deposit.html', 'withdraw': 'withdraw.html', 'history': 'history.html', 'index': 'index.html' };
     if (pages[page]) {
-        pageViewCount++;
-        if (pageViewCount % INTERSTITIAL_INTERVAL === 0) {
-            if (window.showInterstitialAd) {
-                console.log("📢 Showing interstitial ad after page change (NO REWARD)...");
-                window.showInterstitialAd();
-            }
-        }
+        showInterstitialIfNeeded();
         window.location.href = pages[page];
     }
 }
 
 function goBack() {
-    pageViewCount++;
-    if (pageViewCount % INTERSTITIAL_INTERVAL === 0) {
-        if (window.showInterstitialAd) {
-            console.log("📢 Showing interstitial ad on back (NO REWARD)...");
-            window.showInterstitialAd();
-        }
-    }
     window.history.back();
 }
 
@@ -112,19 +84,9 @@ async function loadUserData() {
 function refreshData() {
     var balanceEl = document.getElementById('balance');
     var totalEarningsEl = document.getElementById('totalEarnings');
-    
-    if (balanceEl) {
-        balanceEl.textContent = '⏳ ...';
-    }
-    if (totalEarningsEl) {
-        totalEarningsEl.textContent = '⏳ ...';
-    }
-    
-    setTimeout(function() {
-        loadUserData();
-        loadSavedWallet();
-        loadAdStats();
-    }, 300);
+    if (balanceEl) balanceEl.textContent = '⏳ ...';
+    if (totalEarningsEl) totalEarningsEl.textContent = '⏳ ...';
+    setTimeout(function() { loadUserData(); loadSavedWallet(); loadAdStats(); }, 300);
 }
 
 async function updateReferralStats(userId) {
@@ -144,53 +106,33 @@ async function updateReferralStats(userId) {
 
 function updateUI(data) {
     var balanceEl = document.getElementById('balance');
-    if (balanceEl) {
-        balanceEl.textContent = '$' + (data.balance || 0).toFixed(3);
-    }
-    
+    if (balanceEl) balanceEl.textContent = '$' + (data.balance || 0).toFixed(3);
     var totalEarningsEl = document.getElementById('totalEarnings');
-    if (totalEarningsEl) {
-        totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
-    }
-    
+    if (totalEarningsEl) totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
     var investmentEarningsEl = document.getElementById('investmentEarnings');
-    if (investmentEarningsEl) {
-        investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(3);
-    }
-    
+    if (investmentEarningsEl) investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(3);
     var referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
-    if (referralEarningsDisplayEl) {
-        referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(3);
-    }
-    
+    if (referralEarningsDisplayEl) referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(3);
     var adEarningsDisplayEl = document.getElementById('adEarningsDisplay');
-    if (adEarningsDisplayEl) {
-        adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
-    }
+    if (adEarningsDisplayEl) adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
 }
 
 function updateDashboardUI(data) {
     var dashBalance = document.getElementById('dashBalance');
-    var dashInvested = document.getElementById('dashInvested');
-    var dashEarned = document.getElementById('dashEarned');
-    var dashDeposited = document.getElementById('dashDeposited');
-    var dashReferrals = document.getElementById('dashReferrals');
-
     if (dashBalance) dashBalance.textContent = '$' + (data.balance || 0).toFixed(3);
+    var dashInvested = document.getElementById('dashInvested');
     if (dashInvested) dashInvested.textContent = '$' + (data.total_invested || 0).toFixed(3);
+    var dashEarned = document.getElementById('dashEarned');
     if (dashEarned) dashEarned.textContent = '$' + (data.total_earnings || 0).toFixed(3);
+    var dashDeposited = document.getElementById('dashDeposited');
     if (dashDeposited) dashDeposited.textContent = '$' + (data.total_deposited || 0).toFixed(3);
+    var dashReferrals = document.getElementById('dashReferrals');
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
 }
-
-// ============================================
-// UPDATE FIELDS WITH CLAIM BUTTON
-// ============================================
 
 function updateFields(data) {
     var fields = data.fields || [];
     window.fieldData = {};
-    
     for (var i = 1; i <= 3; i++) {
         var field = fields.find(function(f) { return f.field_number === i; });
         var statusEl = document.getElementById('field' + i + 'Status');
@@ -201,33 +143,20 @@ function updateFields(data) {
         var cardEl = document.getElementById('field' + i);
         var btnEl = document.getElementById('field' + i + 'Btn');
         var timerEl = document.getElementById('field' + i + 'Timer');
-        
         if (field) {
             var lockPeriod = field.lock_period || 30;
             var isLocked = field.is_locked || false;
             var unlockDate = new Date(field.unlock_date);
             var now = new Date();
             var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
-            
-            // Store for timer
-            window.fieldData[i] = {
-                unlock_date: field.unlock_date,
-                is_locked: isLocked,
-                lock_period: lockPeriod,
-                is_ready: false // Will be set by timer
-            };
-            
+            window.fieldData[i] = { unlock_date: field.unlock_date, is_locked: isLocked, lock_period: lockPeriod, is_ready: false };
             amountEl.textContent = '$' + field.amount.toFixed(3);
             daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
-            
             var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
             earnedEl.textContent = '$' + displayEarned.toFixed(3);
-            
             var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
-            
-            // Default button state (will be updated by timer)
             btnEl.textContent = '🔒 Locked';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
@@ -235,9 +164,7 @@ function updateFields(data) {
             btnEl.style.background = '';
             btnEl.style.color = '';
             btnEl.onclick = null;
-            
         } else {
-            // No investment - available
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             statusEl.style.color = '#8247E5';
@@ -253,143 +180,71 @@ function updateFields(data) {
             btnEl.style.background = '';
             btnEl.style.color = '';
             btnEl.onclick = (function(fieldNum) {
-                return function() { investField(fieldNum); };
+                return function() { showInterstitialIfNeeded(); investField(fieldNum); };
             })(i);
             window.fieldData[i] = null;
         }
     }
 }
 
-// ============================================
-// CLAIM INVESTMENT FUNCTION
-// ============================================
-
 async function claimInvestment(fieldNumber) {
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
-    
     const userId = tgUser ? tgUser.id : '0';
     if (!userId || userId === '0') {
-        safePopup({
-            title: '❌ Error',
-            message: 'User not authenticated. Please restart the app.',
-            buttons: [{type: 'ok'}]
-        });
+        safePopup({ title: '❌ Error', message: 'User not authenticated.', buttons: [{type: 'ok'}] });
         return;
     }
-    
     safePopupWithCallback({
         title: '🌾 Claim Investment',
         message: 'Are you sure you want to claim Field #' + fieldNumber + '?',
-        buttons: [
-            {id: 'cancel', type: 'cancel'},
-            {id: 'confirm', type: 'ok', text: '✅ Claim'}
-        ]
+        buttons: [{id: 'cancel', type: 'cancel'}, {id: 'confirm', type: 'ok', text: '✅ Claim'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
-                console.log('📤 Sending claim request for Field #' + fieldNumber);
-                
                 const response = await fetch(`${API_BASE}/api/claim_investment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: userId,
-                        field_number: fieldNumber
-                    })
+                    body: JSON.stringify({ telegram_id: userId, field_number: fieldNumber })
                 });
-                
                 const data = await response.json();
-                console.log('📥 Claim response:', data);
-                
                 if (data.success) {
-                    safePopup({
-                        title: '✅ Claimed!',
-                        message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!\n\n🌱 The field is now available for a new investment.',
-                        buttons: [{type: 'ok'}]
-                    });
-                    
-                    // Show rewarded ad after claim
+                    safePopup({ title: '✅ Claimed!', message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!', buttons: [{type: 'ok'}] });
                     if (window.watchRewardedAd) {
-                        console.log("📢 Showing rewarded ad after claim...");
-                        setTimeout(function() {
-                            window.watchRewardedAd();
-                        }, 500);
+                        setTimeout(function() { window.watchRewardedAd(); }, 500);
                     }
-                    
-                    // Show interstitial ad after claim
-                    if (window.showInterstitialAd) {
-                        console.log("📢 Showing interstitial ad after claim (NO REWARD)...");
-                        setTimeout(function() {
-                            window.showInterstitialAd();
-                        }, 1000);
-                    }
-                    
-                    // Reload data
-                    setTimeout(function() {
-                        loadUserData();
-                        loadAdStats();
-                    }, 1000);
-                    
+                    setTimeout(function() { loadUserData(); loadAdStats(); }, 1000);
                 } else {
-                    safePopup({
-                        title: '❌ Error',
-                        message: data.message || 'Failed to claim.',
-                        buttons: [{type: 'ok'}]
-                    });
+                    safePopup({ title: '❌ Error', message: data.message || 'Failed to claim.', buttons: [{type: 'ok'}] });
                 }
             } catch (error) {
-                console.error('❌ Error claiming:', error);
-                safePopup({
-                    title: '❌ Error',
-                    message: 'Network error. Please try again.',
-                    buttons: [{type: 'ok'}]
-                });
+                safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
             }
         }
     });
 }
 
-// ============================================
-// UPDATE TIMERS
-// ============================================
-
 function updateFieldTimers() {
-    if (document.getElementById('historyList')) {
-        return;
-    }
-    
+    if (document.getElementById('historyList')) return;
     var now = new Date();
     var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-    
     for (var i = 1; i <= 3; i++) {
         var timerEl = document.getElementById('field' + i + 'Timer');
         var statusEl = document.getElementById('field' + i + 'Status');
         var btnEl = document.getElementById('field' + i + 'Btn');
-        
         if (!timerEl || !statusEl || !btnEl) continue;
-        
         var fieldData = window.fieldData ? window.fieldData[i] : null;
         if (!fieldData || !fieldData.unlock_date) {
             timerEl.textContent = '⏳ Payout: --:--:-- UTC';
             timerEl.className = 'field-timer';
             continue;
         }
-        
         var isLocked = fieldData.is_locked === true;
-        var lockPeriod = fieldData.lock_period || 30;
-        
         var unlockDateStr = fieldData.unlock_date;
-        if (unlockDateStr.endsWith('Z')) {
-            unlockDateStr = unlockDateStr.slice(0, -1);
-        }
+        if (unlockDateStr.endsWith('Z')) unlockDateStr = unlockDateStr.slice(0, -1);
         var unlockDate = new Date(unlockDateStr + 'Z').getTime();
         var timeLeft = unlockDate - utcNow;
-        
         var isReady = (isLocked === true) && (timeLeft <= 0);
         fieldData.is_ready = isReady;
-        
-        console.log('Field ' + i + ': isLocked=' + isLocked + ', timeLeft=' + timeLeft + ', isReady=' + isReady);
-        
         if (isReady) {
             timerEl.textContent = '🟢 READY TO CLAIM!';
             timerEl.className = 'field-timer ready';
@@ -397,7 +252,6 @@ function updateFieldTimers() {
             timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
             timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
             timerEl.style.animation = 'pulse-gold 1.5s infinite';
-            
             btnEl.textContent = '🌾 Claim Now!';
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
@@ -406,22 +260,16 @@ function updateFieldTimers() {
             btnEl.style.color = '#0a0e17';
             btnEl.style.border = 'none';
             btnEl.onclick = (function(fieldNum) {
-                return function() { 
-                    console.log('🖱️ Claim button clicked for Field #' + fieldNum);
-                    claimInvestment(fieldNum); 
-                };
+                return function() { console.log('🖱️ Claim button clicked for Field #' + fieldNum); claimInvestment(fieldNum); };
             })(i);
-            
             statusEl.textContent = '✅ Ready to Claim!';
             statusEl.className = 'field-status ready';
             statusEl.style.color = '#ffd93d';
-            
         } else if (isLocked === true && timeLeft > 0) {
             var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            
             var timeString = '';
             if (days > 0) {
                 timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
@@ -434,7 +282,6 @@ function updateFieldTimers() {
             timerEl.style.borderColor = '';
             timerEl.style.background = '';
             timerEl.style.animation = '';
-            
             btnEl.textContent = '🔒 Locked';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
@@ -442,11 +289,9 @@ function updateFieldTimers() {
             btnEl.style.background = '';
             btnEl.style.color = '';
             btnEl.onclick = null;
-            
             statusEl.textContent = '🔒 Locked';
             statusEl.className = 'field-status locked';
             statusEl.style.color = '#ff6b6b';
-            
         } else if (isLocked === false) {
             timerEl.textContent = '🟢 Available (UTC)';
             timerEl.className = 'field-timer';
@@ -454,7 +299,6 @@ function updateFieldTimers() {
             timerEl.style.borderColor = '';
             timerEl.style.background = '';
             timerEl.style.animation = '';
-            
             btnEl.textContent = '🌱 Plant Now';
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
@@ -462,9 +306,8 @@ function updateFieldTimers() {
             btnEl.style.background = '';
             btnEl.style.color = '';
             btnEl.onclick = (function(fieldNum) {
-                return function() { investField(fieldNum); };
+                return function() { showInterstitialIfNeeded(); investField(fieldNum); };
             })(i);
-            
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             statusEl.style.color = '#8247E5';
@@ -472,7 +315,6 @@ function updateFieldTimers() {
     }
 }
 
-// Add pulse animation
 var style = document.createElement('style');
 style.textContent = `
     @keyframes pulse-gold {
@@ -484,28 +326,18 @@ document.head.appendChild(style);
 
 function startCountdownTimer() {
     updateFieldTimers();
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(updateFieldTimers, 1000);
 }
 
 function stopCountdownTimer() {
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
-
-// ============================================
-// UPDATE REFERRAL
-// ============================================
 
 async function updateReferral(data) {
     var referralLink = document.getElementById('referralLinkText');
     var walletText = document.getElementById('walletText');
     var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
-    
     if (referralLink) {
         if (isConnected) {
             var userId = tgUser ? tgUser.id : '0';
@@ -528,11 +360,8 @@ async function updateReferral(data) {
     }
 }
 
-// ============================================
-// WALLET FUNCTIONS
-// ============================================
-
 async function saveWallet() {
+    showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
     var walletInput = document.getElementById('walletInput');
     var walletAddress = walletInput ? walletInput.value.trim() : '';
@@ -574,19 +403,9 @@ function updateWalletUI(address) {
     var walletInput = document.getElementById('walletInput');
     var saveBtn = document.getElementById('saveWalletBtn');
     var disconnectBtn = document.getElementById('disconnectWalletBtn');
-    if (statusText) {
-        statusText.textContent = '✅ Polygon Wallet Connected';
-        statusText.className = 'connected';
-    }
-    if (addressDisplay) {
-        addressDisplay.textContent = '📍 ' + address + ' (Polygon)';
-        addressDisplay.style.display = 'block';
-    }
-    if (walletInput) {
-        walletInput.value = address;
-        walletInput.disabled = true;
-        walletInput.style.opacity = '0.6';
-    }
+    if (statusText) { statusText.textContent = '✅ Polygon Wallet Connected'; statusText.className = 'connected'; }
+    if (addressDisplay) { addressDisplay.textContent = '📍 ' + address + ' (Polygon)'; addressDisplay.style.display = 'block'; }
+    if (walletInput) { walletInput.value = address; walletInput.disabled = true; walletInput.style.opacity = '0.6'; }
     if (saveBtn) saveBtn.style.display = 'none';
     if (disconnectBtn) disconnectBtn.style.display = 'flex';
     loadUserData();
@@ -598,30 +417,21 @@ function resetWalletUI() {
     var walletInput = document.getElementById('walletInput');
     var saveBtn = document.getElementById('saveWalletBtn');
     var disconnectBtn = document.getElementById('disconnectWalletBtn');
-    if (statusText) {
-        statusText.textContent = 'Polygon wallet not connected';
-        statusText.className = 'disconnected';
-    }
+    if (statusText) { statusText.textContent = 'Polygon wallet not connected'; statusText.className = 'disconnected'; }
     if (addressDisplay) addressDisplay.style.display = 'none';
-    if (walletInput) {
-        walletInput.value = '';
-        walletInput.disabled = false;
-        walletInput.style.opacity = '1';
-    }
+    if (walletInput) { walletInput.value = ''; walletInput.disabled = false; walletInput.style.opacity = '1'; }
     if (saveBtn) saveBtn.style.display = 'flex';
     if (disconnectBtn) disconnectBtn.style.display = 'none';
     loadUserData();
 }
 
 async function disconnectWallet() {
+    showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
     safePopupWithCallback({
         title:'🔓 Disconnect Wallet',
         message:'Are you sure you want to disconnect your Polygon wallet?',
-        buttons:[
-            {id:'cancel', type:'cancel'},
-            {id:'confirm', type:'ok', text:'Disconnect'}
-        ]
+        buttons:[{id:'cancel', type:'cancel'}, {id:'confirm', type:'ok', text:'Disconnect'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
@@ -659,6 +469,7 @@ async function loadSavedWallet() {
 }
 
 async function setWallet() {
+    showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
     try {
         var response = await fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId);
@@ -678,16 +489,8 @@ async function setWallet() {
     }
 }
 
-// ============================================
-// INVESTMENT FUNCTIONS - UPDATED RATES
-// ============================================
-
 function calculateReturn(amount, days) {
-    const multipliers = {
-        1: 1.02,    // 2%
-        7: 1.18,    // 18%
-        30: 1.80    // 80%
-    };
+    const multipliers = { 1: 1.02, 7: 1.18, 30: 1.80 };
     const multiplier = multipliers[days] || 1.80;
     return amount * multiplier;
 }
@@ -702,16 +505,13 @@ function getLockOptions() {
 
 async function investFieldWithLock(fieldNumber) {
     const userId = tgUser ? tgUser.id : '0';
-    
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
-    
     const amountNum = parseFloat(amount.replace('$', '').trim());
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
         safePopup({title:'❌ Invalid Amount', message:'Please enter between $5 and $100.', buttons:[{type:'ok'}]});
         return;
     }
-    
     const options = getLockOptions();
     let message = '📊 Choose lock period:\n\n';
     options.forEach(opt => {
@@ -720,63 +520,37 @@ async function investFieldWithLock(fieldNumber) {
         message += '• ' + opt.days + ' day' + (opt.days > 1 ? 's' : '') + ': +' + opt.returnPercent + '% → $' + returnAmount.toFixed(2) + ' (+$' + profit.toFixed(2) + ')\n';
     });
     message += '\n\nEnter 1, 7, or 30:';
-    
     const lockPeriod = prompt(message);
     if (!lockPeriod) return;
-    
     const days = parseInt(lockPeriod);
     if (![1, 7, 30].includes(days)) {
         safePopup({title:'❌ Invalid Option', message:'Please enter 1, 7, or 30.', buttons:[{type:'ok'}]});
         return;
     }
-    
     const expectedReturn = calculateReturn(amountNum, days);
     const profit = expectedReturn - amountNum;
-    
     safePopupWithCallback({
         title: '📊 Confirm Investment',
         message: 'Field #' + fieldNumber + '\n\n💰 Amount: $' + amountNum.toFixed(2) + '\n⏱️ Lock Period: ' + days + ' day' + (days > 1 ? 's' : '') + '\n📈 Expected Return: $' + expectedReturn.toFixed(2) + '\n✅ Profit: +$' + profit.toFixed(2) + '\n⛓️ Network: Polygon',
-        buttons: [
-            {id:'cancel', type:'cancel'},
-            {id:'confirm', type:'ok', text:'✅ Confirm'}
-        ]
+        buttons: [{id:'cancel', type:'cancel'}, {id:'confirm', type:'ok', text:'✅ Confirm'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
                 const response = await fetch(API_BASE + '/api/invest_locked', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({
-                        telegram_id: userId,
-                        field_number: fieldNumber,
-                        amount: amountNum,
-                        lock_period: days
-                    })
+                    body:JSON.stringify({ telegram_id: userId, field_number: fieldNumber, amount: amountNum, lock_period: days })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    safePopup({
-                        title:'✅ Success!',
-                        message:'Invested $' + amountNum.toFixed(2) + ' in Field #' + fieldNumber + ' on Polygon!\n🔒 Locked for ' + days + ' days.\n📈 Expected return: $' + expectedReturn.toFixed(2),
-                        buttons:[{type:'ok'}]
-                    });
-                    
-                    if (window.watchRewardedAd) {
-                        console.log("📢 Showing rewarded ad after investment...");
-                        setTimeout(function() { window.watchRewardedAd(); }, 500);
-                    }
-                    
-                    if (window.showInterstitialAd) {
-                        console.log("📢 Showing interstitial ad after investment (NO REWARD)...");
-                        setTimeout(function() { window.showInterstitialAd(); }, 1000);
-                    }
-                    
+                    safePopup({ title:'✅ Success!', message:'Invested $' + amountNum.toFixed(2) + ' in Field #' + fieldNumber + ' on Polygon!\n🔒 Locked for ' + days + ' days.\n📈 Expected return: $' + expectedReturn.toFixed(2), buttons:[{type:'ok'}] });
+                    if (window.watchRewardedAd) { setTimeout(function() { window.watchRewardedAd(); }, 500); }
+                    if (window.showInterstitialAd) { setTimeout(function() { window.showInterstitialAd(); }, 1000); }
                     loadUserData();
                 } else {
                     safePopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
-                console.error('Error investing:', error);
                 safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
             }
         }
@@ -787,31 +561,19 @@ async function investField(fieldNumber) {
     await investFieldWithLock(fieldNumber);
 }
 
-// ============================================
-// ADDRESS COPY AND REFERRAL
-// ============================================
-
 function copyAddress() {
+    showInterstitialIfNeeded();
     var addressElement = document.getElementById('addressText');
     var address = addressElement ? addressElement.textContent.trim() : '';
-    
     if (!address) {
         var displayElement = document.querySelector('.address');
-        if (displayElement) {
-            address = displayElement.textContent.trim();
-        }
+        if (displayElement) address = displayElement.textContent.trim();
     }
-    
     address = address.replace(/\s+/g, '').trim();
-    
     if (address && address.startsWith('0x') && address.length === 42) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(address).then(function() {
-                safePopup({
-                    title: '✅ Copied!',
-                    message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
-                    buttons: [{type: 'ok'}]
-                });
+                safePopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
             }).catch(function() {
                 var textArea = document.createElement('textarea');
                 textArea.value = address;
@@ -819,11 +581,7 @@ function copyAddress() {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                safePopup({
-                    title: '✅ Copied!',
-                    message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
-                    buttons: [{type: 'ok'}]
-                });
+                safePopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
             });
         } else {
             var textArea = document.createElement('textarea');
@@ -832,30 +590,19 @@ function copyAddress() {
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            safePopup({
-                title: '✅ Copied!',
-                message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
-                buttons: [{type: 'ok'}]
-            });
+            safePopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
         }
     } else {
-        safePopup({
-            title: '❌ Error',
-            message: 'Invalid address. Please try again.',
-            buttons: [{type: 'ok'}]
-        });
+        safePopup({ title: '❌ Error', message: 'Invalid address. Please try again.', buttons: [{type: 'ok'}] });
     }
 }
 
 async function copyReferral() {
+    showInterstitialIfNeeded();
     var walletText = document.getElementById('walletText');
     var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
     if (!isConnected) {
-        safePopup({
-            title: '⚠️ Wallet Required',
-            message: 'You must save your Polygon wallet address first to get your referral link!',
-            buttons: [{type: 'ok'}]
-        });
+        safePopup({ title: '⚠️ Wallet Required', message: 'You must save your Polygon wallet address first to get your referral link!', buttons: [{type: 'ok'}] });
         return;
     }
     var userId = tgUser ? tgUser.id : '0';
@@ -878,10 +625,6 @@ async function copyReferral() {
     }
 }
 
-// ============================================
-// DEPOSIT FUNCTIONS
-// ============================================
-
 async function checkDeposit() {
     var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
@@ -903,19 +646,14 @@ async function checkDeposit() {
 }
 
 async function checkDepositWithAmount() {
+    showInterstitialIfNeeded();
     const userId = tgUser?.id || '0';
     const amountInput = document.getElementById('depositAmount');
     const amount = amountInput?.value;
-    
     if (!amount || parseFloat(amount) < 5) {
-        safePopup({
-            title: '⚠️ Invalid Amount',
-            message: 'Please enter at least $5 USDT on Polygon.',
-            buttons: [{type: 'ok'}]
-        });
+        safePopup({ title: '⚠️ Invalid Amount', message: 'Please enter at least $5 USDT on Polygon.', buttons: [{type: 'ok'}] });
         return;
     }
-    
     const statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
         statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
@@ -939,65 +677,39 @@ async function checkDepositWithAmount() {
     }
 }
 
-// ============================================
-// HISTORY FUNCTIONS
-// ============================================
-
 function filterHistory(type) {
     var buttons = document.querySelectorAll('.filter-btn');
-    for (var i = 0; i < buttons.length; i++) {
-        buttons[i].classList.remove('active');
-    }
+    for (var i = 0; i < buttons.length; i++) { buttons[i].classList.remove('active'); }
     event.target.classList.add('active');
     var historyList = document.getElementById('historyList');
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     var userId = tgUser ? tgUser.id : '0';
-    
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
     var url2 = API_BASE + '/api/investments/' + userId;
-    
     Promise.all([fetch(url1), fetch(url2)])
-        .then(function(responses) { 
-            return Promise.all(responses.map(function(r) { return r.json(); })); 
-        })
+        .then(function(responses) { return Promise.all(responses.map(function(r) { return r.json(); })); })
         .then(function(data) {
             var allTransactions = [];
-            
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
-            
             if (data[1].transactions && data[1].transactions.length > 0) {
-                data[1].transactions.forEach(function(tx) {
-                    tx.type = 'investment';
-                });
+                data[1].transactions.forEach(function(tx) { tx.type = 'investment'; });
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
-            
             if (allTransactions.length === 0) {
                 historyList.innerHTML = '<p class="empty-state">No transactions found on Polygon.</p>';
                 return;
             }
-            
             if (type !== 'all') {
-                allTransactions = allTransactions.filter(function(tx) { 
-                    if (type === 'deposits') {
-                        return tx.type === 'deposit' || tx.type === 'deposits';
-                    }
-                    if (type === 'withdrawals') {
-                        return tx.type === 'withdraw' || tx.type === 'withdrawal' || tx.type === 'withdrawals';
-                    }
-                    if (type === 'earnings') {
-                        return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || 
-                               tx.type === 'referral_earnings' || tx.type === 'ad_earnings';
-                    }
-                    if (type === 'investments') {
-                        return tx.type === 'investment' || tx.type === 'investments';
-                    }
-                    return tx.type === type; 
+                allTransactions = allTransactions.filter(function(tx) {
+                    if (type === 'deposits') return tx.type === 'deposit' || tx.type === 'deposits';
+                    if (type === 'withdrawals') return tx.type === 'withdraw' || tx.type === 'withdrawal' || tx.type === 'withdrawals';
+                    if (type === 'earnings') return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || tx.type === 'referral_earnings' || tx.type === 'ad_earnings';
+                    if (type === 'investments') return tx.type === 'investment' || tx.type === 'investments';
+                    return tx.type === type;
                 });
             }
-            
             if (allTransactions.length === 0) {
                 var displayType = type;
                 if (type === 'deposits') displayType = 'deposit';
@@ -1007,11 +719,7 @@ function filterHistory(type) {
                 historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found on Polygon.</p>';
                 return;
             }
-            
-            allTransactions.sort(function(a, b) { 
-                return new Date(b.date) - new Date(a.date); 
-            });
-            
+            allTransactions.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
             renderHistory(allTransactions);
         })
         .catch(function(error) {
@@ -1025,31 +733,16 @@ function renderHistory(transactions) {
     var html = '';
     for (var i = 0; i < transactions.length; i++) {
         var tx = transactions[i];
-        var icon = tx.type === 'deposit' ? '📥' : 
-                   tx.type === 'withdraw' ? '📤' : 
-                   tx.type === 'investment' ? '🌱' : 
-                   tx.type === 'referral_earnings' ? '🎁' : 
-                   tx.type === 'ad_earnings' ? '📺' : '💰';
+        var icon = tx.type === 'deposit' ? '📥' : tx.type === 'withdraw' ? '📤' : tx.type === 'investment' ? '🌱' : tx.type === 'referral_earnings' ? '🎁' : tx.type === 'ad_earnings' ? '📺' : '💰';
         var status = tx.status || 'completed';
         var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
-        if (tx.type === 'referral_earnings') {
-            displayText = 'Referral Bonus';
-        }
-        if (tx.type === 'ad_earnings') {
-            displayText = 'Ad Earnings';
-        }
-        
+        if (tx.type === 'referral_earnings') displayText = 'Referral Bonus';
+        if (tx.type === 'ad_earnings') displayText = 'Ad Earnings';
         var amountDisplay = '$' + tx.amount.toFixed(3);
-        if (tx.type === 'investment' && tx.field) {
-            amountDisplay = '$' + tx.amount.toFixed(3) + ' (Field ' + tx.field + ')';
-        }
-        
+        if (tx.type === 'investment' && tx.field) amountDisplay = '$' + tx.amount.toFixed(3) + ' (Field ' + tx.field + ')';
         var statusBadge = '';
-        if (tx.type === 'withdraw' && tx.status === 'pending') {
-            statusBadge = ' ⏳';
-        }
-        
+        if (tx.type === 'withdraw' && tx.status === 'pending') statusBadge = ' ⏳';
         html += '<div class="history-item">' +
             '<div class="history-icon">' + icon + '</div>' +
             '<div class="history-details">' +
@@ -1062,15 +755,12 @@ function renderHistory(transactions) {
     historyList.innerHTML = html;
 }
 
-// ============================================
-// EVENT LISTENERS
-// ============================================
-
 function setupEventListeners() {
     var withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            showInterstitialIfNeeded();
             var amountInput = document.getElementById('withdrawAmount');
             var addressInput = document.getElementById('withdrawAddress');
             var amount = amountInput ? amountInput.value : '';
@@ -1095,42 +785,32 @@ function setupEventListeners() {
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({telegram_id:userId, amount:parseFloat(amount), address:address})
             })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
-                    if (data.success) {
-                        safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
-                        
-                        if (window.watchRewardedAd) {
-                            console.log("📢 Showing rewarded ad after withdrawal...");
-                            setTimeout(function() { window.watchRewardedAd(); }, 500);
-                        }
-                        
-                        if (window.showInterstitialAd) {
-                            console.log("📢 Showing interstitial ad after withdrawal (NO REWARD)...");
-                            setTimeout(function() { window.showInterstitialAd(); }, 1000);
-                        }
-                        
-                        if (amountInput) amountInput.value = '';
-                    } else {
-                        safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
+                if (data.success) {
+                    safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
+                    if (window.watchRewardedAd) {
+                        setTimeout(function() { window.watchRewardedAd(); }, 500);
                     }
-                })
-                .catch(function(error) {
-                    console.error('Error:', error);
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
-                    safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
-                });
+                    if (window.showInterstitialAd) {
+                        setTimeout(function() { window.showInterstitialAd(); }, 1000);
+                    }
+                    if (amountInput) amountInput.value = '';
+                } else {
+                    safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
+                safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
+            });
         });
     }
 }
 
-// ============================================
-// AD REWARD FUNCTIONS - UNLIMITED ADS, $0.001 REWARD
-// ============================================
-
 async function canWatchAd() {
-    // No limit - always return true
     return true;
 }
 
@@ -1152,7 +832,6 @@ async function creditAdReward() {
 
 async function watchRewardedAd() {
     console.log('📢 watchRewardedAd called');
-
     if (!window.showRewardedAd) {
         console.log('📢 Rewarded ad not available');
         safePopup({
@@ -1162,17 +841,15 @@ async function watchRewardedAd() {
         });
         return false;
     }
-
     try {
         const result = await window.showRewardedAd();
         console.log('📢 Ad result:', result);
-        
         if (result.done && !result.error && result.state === 'destroy') {
             const credited = await creditAdReward();
             if (credited) {
                 safePopup({
                     title: '🎁 Bonus Earned!',
-                    message: 'You earned $0.001 USDT for watching the ad!\n\n💡 Tip: Clicking on links inside ads helps support the project and may earn you higher rewards in the future!',
+                    message: 'You earned $0.001 USDT for watching the ad!',
                     buttons: [{type: 'ok'}]
                 });
                 loadUserData();
@@ -1180,7 +857,6 @@ async function watchRewardedAd() {
                 return true;
             }
         }
-        // If ad didn't complete or errored, show the "Ad Not Available" popup
         safePopup({
             title: '❌ Ad Not Available',
             message: 'No ads available right now. Please try again later.',
@@ -1201,38 +877,29 @@ async function watchRewardedAd() {
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        // Get user data for ad earnings only
         const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
         const userData = await userResponse.json();
-        
         const adEarningsEl = document.getElementById('adEarnings');
         if (adEarningsEl) {
             adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
         }
-        
-        // Set ads today to Unlimited
         const adsTodayEl = document.getElementById('adsToday');
         if (adsTodayEl) {
             adsTodayEl.textContent = '♾️ Unlimited';
         }
-        
-        // Always enable the button
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
             watchBtn.disabled = false;
             watchBtn.style.opacity = '1';
             watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-            if (statusEl) {
-                statusEl.style.display = 'none';
-            }
+            if (statusEl) statusEl.style.display = 'none';
         }
     } catch (error) {
         console.error('Error loading ad stats:', error);
     }
 }
 
-// Expose functions globally
 window.navigateTo = navigateTo;
 window.goBack = goBack;
 window.refreshData = refreshData;
@@ -1250,10 +917,8 @@ window.watchRewardedAd = watchRewardedAd;
 window.canWatchAd = canWatchAd;
 window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
+window.showInterstitialIfNeeded = showInterstitialIfNeeded;
 
 console.log('✅ PlantUSDT app loaded successfully!');
-console.log('📢 Claim function available:', typeof claimInvestment);
-console.log('📢 Watch ad function available:', typeof watchRewardedAd);
 console.log('📢 Unlimited ads - $0.001 reward per ad');
-console.log('📢 Interstitial ads every 2 page changes - NO REWARD');
-console.log('📢 No popups - Only video ads!');
+console.log('📢 Interstitial ads on button clicks');
