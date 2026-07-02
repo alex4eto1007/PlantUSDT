@@ -8,7 +8,7 @@ const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
 let lastAdTime = 0;
-const AD_COOLDOWN = 5000;
+const AD_COOLDOWN = 2000;
 
 // ============================================
 // SAFE POPUP – Works on both Web & Mobile
