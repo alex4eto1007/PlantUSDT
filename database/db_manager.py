@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from config.settings import Config
