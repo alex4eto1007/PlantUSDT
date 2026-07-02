@@ -190,13 +190,13 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- 📺 WATCH ADS & EARN SECTION (REWARDED ADS) -->
+        <!-- 📺 WATCH ADS & EARN SECTION -->
         <!-- ============================================ -->
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">
                 Watch a short ad and earn <strong>$0.001 USDT</strong> each time!
-                <br><span style="font-size: 12px; opacity: 0.7;">Unlimited ads • All rewards help sustain the project 🌱</span>
+                <br><span style="font-size: 12px; opacity: 0.7;">Unlimited ads • More video ads = more earnings! 🌱</span>
             </p>
 
             <div class="ad-stats">
@@ -216,7 +216,7 @@
 
             <div id="adStatus" style="margin-top: 10px; font-size: 13px; color: #ffd93d; text-align: center; display: none;"></div>
             <p style="font-size: 11px; color: #495670; margin-top: 8px; text-align: center;">
-                💚 All rewards help sustain the project. Every little bit counts!
+                💚 More video ads = more rewards for you!
             </p>
         </div>
 
@@ -244,16 +244,17 @@
 
     <!-- Adsgram Ads -->
     <script>
-        // Ad Block IDs
+        // Ad Block IDs - REMOVED ADSTERRA, ADDED MORE ADSGRAM
         const INTERSTITIAL_ID = "int-36282";
         const REWARDED_ID = "36283";
-        const AD_REWARD = 0.001; // $0.001 per ad (rewarded only)
+        const AD_REWARD = 0.001; // $0.001 per ad
         
         let interstitialController = null;
         let rewardedController = null;
 
         /**
          * Show Interstitial Ad - NO REWARD
+         * Shows on page changes (more frequent = more revenue)
          */
         function showInterstitialAd() {
             return new Promise((resolve) => {
@@ -287,7 +288,8 @@
         }
 
         /**
-         * Show Rewarded Ad - GIVES REWARD ONLY IF WATCHED TO END
+         * Show Rewarded Ad - GIVES REWARD
+         * Called from the "Watch Ad & Earn" button
          */
         function showRewardedAd() {
             return new Promise((resolve) => {
@@ -324,12 +326,9 @@
         window.showInterstitialAd = showInterstitialAd;
         window.showRewardedAd = showRewardedAd;
         window.AD_REWARD = AD_REWARD;
-        console.log("✅ Adsgram initialized - Interstitial: NO reward, Rewarded: $0.001");
+        console.log("✅ Adsgram initialized - More video ads! No popups!");
     </script>
 
-    <!-- Adsterra Popunder ONLY - Banners REMOVED -->
-    <script src="https://pl30082550.effectivecpmnetwork.com/1e/26/6e/1e266e8e2355011550501bd4be436dc5.js"></script>
-
-    <script src="js/app.js?v=15"></script>
+    <script src="js/app.js?v=16"></script>
 </body>
 </html>

@@ -47,9 +47,9 @@ function safePopupWithCallback(options, callback) {
     }
 }
 
-// Interstitial ad counter
+// Interstitial ad counter - MORE FREQUENT = MORE REVENUE
 let pageViewCount = 0;
-const INTERSTITIAL_INTERVAL = 3;
+const INTERSTITIAL_INTERVAL = 2; // Show every 2 page changes (more frequent)
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -314,6 +314,14 @@ async function claimInvestment(fieldNumber) {
                         setTimeout(function() {
                             window.watchRewardedAd();
                         }, 500);
+                    }
+                    
+                    // Show interstitial ad after claim
+                    if (window.showInterstitialAd) {
+                        console.log("📢 Showing interstitial ad after claim (NO REWARD)...");
+                        setTimeout(function() {
+                            window.showInterstitialAd();
+                        }, 1000);
                     }
                     
                     // Reload data
@@ -1247,4 +1255,5 @@ console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);
 console.log('📢 Watch ad function available:', typeof watchRewardedAd);
 console.log('📢 Unlimited ads - $0.001 reward per ad');
-console.log('📢 Interstitial ads give NO reward - only Rewarded ads do.');
+console.log('📢 Interstitial ads every 2 page changes - NO REWARD');
+console.log('📢 No popups - Only video ads!');
