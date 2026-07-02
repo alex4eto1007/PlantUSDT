@@ -70,7 +70,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="goBack()">←</button>
+            <button class="back-btn" onclick="showInterstitialIfNeeded(); goBack()">←</button>
             <h1 style="color: #00ff87; font-size: 20px;">🏦 Withdraw</h1>
             <span class="network-badge-small">
                 <span class="dot"></span>
@@ -104,7 +104,7 @@
             <div class="form-group">
                 <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">📤 Withdraw to (Polygon Wallet)</label>
                 <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
-                <button type="button" onclick="showInterstitialIfNeeded(); setWallet()" style="margin-top: 4px; padding: 4px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 11px;">📂 Use Connected Wallet</button>
+                <button type="button" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); setWallet()" style="margin-top: 4px; padding: 4px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 11px;">📂 Use Connected Wallet</button>
                 <p style="font-size: 11px; color: #495670; margin-top: 4px;">
                     ⚠️ Must be a Polygon network wallet address
                 </p>
@@ -130,7 +130,7 @@
             </button>
         </form>
 
-        <button class="action-btn secondary" onclick="goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
+        <button class="action-btn secondary" onclick="showInterstitialIfNeeded(); goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
             📊 Back to Dashboard
         </button>
     </div>

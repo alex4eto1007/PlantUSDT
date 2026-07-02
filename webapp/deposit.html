@@ -85,7 +85,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="goBack()">←</button>
+            <button class="back-btn" onclick="showInterstitialIfNeeded(); goBack()">←</button>
             <h1 style="color: #00ff87; font-size: 20px;">💳 Deposit</h1>
         </div>
 
@@ -129,7 +129,7 @@
                 <div class="address" style="font-size: 13px; word-break: break-all; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; color: #00ff87; border: 1px solid rgba(0,255,135,0.1);" id="addressText">
                     0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76
                 </div>
-                <button onclick="copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
+                <button onclick="showInterstitialIfNeeded(); copyAddress()" style="margin-top: 8px; padding: 6px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 12px;">📋 Copy Address</button>
             </div>
 
             <!-- ⚠️ Critical Warning -->
@@ -163,11 +163,11 @@
         <div id="depositStatus" class="deposit-status" style="display: none;"></div>
 
         <!-- Buttons -->
-        <button class="action-btn primary" onclick="showInterstitialIfNeeded(); checkDepositWithAmount()" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
+        <button class="action-btn primary" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); checkDepositWithAmount()" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
             🔍 I've Sent USDT
         </button>
 
-        <button class="action-btn secondary" onclick="goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
+        <button class="action-btn secondary" onclick="showInterstitialIfNeeded(); goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
             📊 Back to Dashboard
         </button>
     </div>
