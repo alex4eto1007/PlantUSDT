@@ -50,7 +50,7 @@ function safePopupWithCallback(options, callback) {
 }
 
 // ============================================
-// SHOW INTERSTITIAL AD ON BUTTON CLICKS - FIXED
+// SHOW INTERSTITIAL AD ON BUTTON CLICKS - WITH COOLDOWN
 // ============================================
 function showInterstitialIfNeeded() {
     var now = Date.now();
@@ -59,9 +59,9 @@ function showInterstitialIfNeeded() {
         return;
     }
     lastAdTime = now;
+    
     if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
         console.log("📢 Showing interstitial ad on button click...");
-        // Wait 500ms before showing to ensure ad controller is ready
         setTimeout(function() {
             window.showInterstitialAd().catch(() => {});
         }, 500);
@@ -82,6 +82,26 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     startCountdownTimer();
     loadAdStats();
+    
+    // GLOBAL CLICK LISTENER - Triggers interstitial on all buttons
+    document.addEventListener('click', function(e) {
+        var target = e.target.closest('button');
+        if (!target) return;
+        
+        // Skip back button, watch ad button, and no-ad buttons
+        if (target.classList.contains('back-btn') || 
+            target.classList.contains('no-ad') || 
+            target.id === 'watchAdBtn') {
+            return;
+        }
+        
+        // Also skip the withdraw form submit
+        if (target.type === 'submit' && target.closest('#withdrawForm')) {
+            return;
+        }
+        
+        showInterstitialIfNeeded();
+    });
 });
 
 function navigateTo(page) {
@@ -139,9 +159,6 @@ function refreshData() {
     }, 300);
 }
 
-// ============================================
-// UPDATE REFERRAL STATS - FIXED
-// ============================================
 async function updateReferralStats(userId) {
     try {
         const response = await fetch(`${API_BASE}/api/referral_stats/${userId}`);
