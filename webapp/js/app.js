@@ -185,15 +185,15 @@ function updateDashboardUI(data) {
 }
 
 // ============================================
-// UPDATE FIELDS WITH CLAIM BUTTON
+// UPDATE FIELDS WITH CLAIM BUTTON - FIXED
 // ============================================
 
 function updateFields(data) {
     var fields = data.fields || [];
     window.fieldData = {};
-    
+
     for (var i = 1; i <= 3; i++) {
-        var field = fields.find(function(f) { return f.field_number === i; });
+        // Check if elements exist before trying to update them
         var statusEl = document.getElementById('field' + i + 'Status');
         var amountEl = document.getElementById('field' + i + 'Amount');
         var daysEl = document.getElementById('field' + i + 'Days');
@@ -202,33 +202,38 @@ function updateFields(data) {
         var cardEl = document.getElementById('field' + i);
         var btnEl = document.getElementById('field' + i + 'Btn');
         var timerEl = document.getElementById('field' + i + 'Timer');
-        
+
+        // Skip if this page doesn't have fields (like dashboard or history)
+        if (!statusEl || !amountEl || !daysEl || !earnedEl || !progressEl || !cardEl || !btnEl || !timerEl) {
+            continue;
+        }
+
+        var field = fields.find(function(f) { return f.field_number === i; });
+
         if (field) {
             var lockPeriod = field.lock_period || 30;
             var isLocked = field.is_locked || false;
             var unlockDate = new Date(field.unlock_date);
             var now = new Date();
             var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
-            
-            // Store for timer
+
             window.fieldData[i] = {
                 unlock_date: field.unlock_date,
                 is_locked: isLocked,
                 lock_period: lockPeriod,
-                is_ready: false // Will be set by timer
+                is_ready: false
             };
-            
+
             amountEl.textContent = '$' + field.amount.toFixed(3);
             daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
-            
+
             var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
             earnedEl.textContent = '$' + displayEarned.toFixed(3);
-            
+
             var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
             progressEl.style.width = Math.min(progress, 100) + '%';
             cardEl.className = 'field-card active';
-            
-            // Default button state (will be updated by timer)
+
             btnEl.textContent = '🔒 Locked';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
@@ -236,9 +241,8 @@ function updateFields(data) {
             btnEl.style.background = '';
             btnEl.style.color = '';
             btnEl.onclick = null;
-            
+
         } else {
-            // No investment - available
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             statusEl.style.color = '#8247E5';
