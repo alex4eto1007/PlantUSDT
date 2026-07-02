@@ -334,6 +334,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show total uncollected withdrawal fees"""
+    logger.info("🔥 pending_fees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -347,8 +348,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if total_fees == 0:
         await update.message.reply_text(
-            "📋 No uncollected fees.\n\n"
-            "All withdrawal fees have been collected! ✅"
+            "📋 No uncollected fees.\n\nAll withdrawal fees have been collected! ✅"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -358,15 +358,15 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += f"━━━━━━━━━━━━━━━━━━━━\n"
     text += f"📊 Total: **${total_fees:.2f} USDT**\n"
     text += f"📋 Number of fees: **{len(fees)}**\n\n"
-    text += "📝 Details:\n"
     
-    for fee in fees[:10]:  # Show last 10
-        user_obj = db.get_user_by_id(fee.user_id)
-        username = user_obj.username if user_obj else "Unknown"
-        text += f"  • ${fee.amount:.2f} from @{username}\n"
-    
-    if len(fees) > 10:
-        text += f"  ... and {len(fees) - 10} more\n"
+    if len(fees) > 0:
+        text += "📝 Recent fees:\n"
+        for fee in fees[:5]:
+            user_obj = db.get_user_by_id(fee.user_id)
+            username = user_obj.username if user_obj else "Unknown"
+            text += f"  • ${fee.amount:.2f} from @{username}\n"
+        if len(fees) > 5:
+            text += f"  ... and {len(fees) - 5} more\n"
     
     text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
     text += f"To collect all fees:\n"
@@ -380,6 +380,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Collect all uncollected fees (admin only)"""
+    logger.info("🔥 collect_fees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -401,7 +402,6 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     tx_hash = context.args[0]
     
-    # Check if there are any uncollected fees
     total_fees = db.get_uncollected_fees_total()
     if total_fees == 0:
         await update.message.reply_text(
@@ -410,7 +410,6 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Mark all fees as collected
     count = db.mark_fees_collected(tx_hash)
     
     await update.message.reply_text(
@@ -424,6 +423,33 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         + get_community_footer(),
         parse_mode='Markdown'
     )
+
+# ============================================
+# TEST CHANNEL COMMAND
+# ============================================
+
+async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Test channel connection"""
+    user = update.effective_user
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ Not authorized.")
+        return
+    
+    await update.message.reply_text("📤 Sending test message to channel...")
+    
+    try:
+        await context.bot.send_message(
+            chat_id=CHANNEL_ID,
+            text="✅ PlantUSDT bot is connected to the transaction channel!",
+            parse_mode='Markdown'
+        )
+        await update.message.reply_text("✅ Message sent to channel successfully!")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error sending to channel: {e}")
+
+# ============================================
+# ADMIN HELP COMMAND
+# ============================================
 
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -440,6 +466,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /complete_payout <id> <tx_hash> - Mark a payout as completed
 /pending_fees - View total uncollected withdrawal fees
 /collect_fees <tx_hash> - Collect ALL uncollected fees
+/test_channel - Test channel connection
 /reset_referral <user_id> - Reset a user's referral status
 
 Example:
@@ -447,6 +474,7 @@ Example:
 /complete_payout 1 0xabc123...
 /pending_fees
 /collect_fees 0xdef456...
+/test_channel
 /reset_referral 123456789
 
 💡 Transactions are on Polygon (MATIC) network using USDT on Polygon
@@ -530,6 +558,7 @@ def main():
         application.add_handler(CommandHandler("complete_payout", complete_payout))
         application.add_handler(CommandHandler("pending_fees", pending_fees))
         application.add_handler(CommandHandler("collect_fees", collect_fees))
+        application.add_handler(CommandHandler("test_channel", test_channel))
         application.add_handler(CommandHandler("adminhelp", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
 
