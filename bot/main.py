@@ -45,6 +45,23 @@ VERCEL_URL = "https://plant-usdt.vercel.app?v=6"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
+# CHANNEL FOR TRANSACTION UPDATES
+# ============================================
+CHANNEL_ID = -1004391112772  # @PlantUSDTtransactions
+
+async def send_to_channel(bot, message: str):
+    """Send a message to the transaction channel"""
+    try:
+        await bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=message,
+            parse_mode='Markdown'
+        )
+        logger.info("✅ Transaction update sent to channel")
+    except Exception as e:
+        logger.error(f"❌ Failed to send to channel: {e}")
+
+# ============================================
 # COMMUNITY FOOTER
 # ============================================
 
@@ -55,6 +72,7 @@ def get_community_footer():
         "🌱 **Join our community!**\n"
         "📢 Channel: [PlantUSDTchannel](https://t.me/PlantUSDTchannel)\n"
         "💬 Group: [PlantUSDT](https://t.me/PlantUSDT)\n"
+        "📊 Transactions: [PlantUSDTtransactions](https://t.me/PlantUSDTtransactions)\n"
         "━━━━━━━━━━━━━━━━━━━━"
     )
 
@@ -103,6 +121,8 @@ Grow your USDT with returns up to 80% on Polygon network!
 
 👥 REFERRAL BONUS:
 Share your referral link and earn 1% from your friends' deposits!
+
+📊 Live Transactions: @PlantUSDTtransactions
 
 Use /app to open the Mini App!"""
         keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
@@ -424,6 +444,7 @@ def main():
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
         logger.info("📌 Menu button set to: 🌱 PlantUSDT")
         logger.info("📢 Community footer added to all messages")
+        logger.info("📊 Transaction channel: @PlantUSDTtransactions")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

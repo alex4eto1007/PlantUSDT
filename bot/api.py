@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # API CACHING
 # ============================================
 cache = {}
-CACHE_TTL = 5  # 5 seconds
+CACHE_TTL = 5
 
 def get_cached_user(telegram_id):
     key = f"user_{telegram_id}"
@@ -52,11 +52,8 @@ def after_request(response):
     return response
 
 db = DatabaseManager()
-
-# Project wallet - blocked from user use
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
-# Import deposit scanner for amount-based detection
 from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
@@ -182,7 +179,6 @@ def get_referral_code():
 
 @app.route('/api/referral_stats/<int:telegram_id>', methods=['GET'])
 def get_referral_stats(telegram_id):
-    """Get referral statistics - single level only"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -361,7 +357,6 @@ def get_real_history():
 
 @app.route('/api/investments/<int:telegram_id>', methods=['GET'])
 def get_investments(telegram_id):
-    """Get investment history for a user"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -449,7 +444,6 @@ def invest():
 
 @app.route('/api/invest_locked', methods=['POST'])
 def invest_locked():
-    """New endpoint for locked investments with 1, 7, or 30 day options"""
     data = request.json
     telegram_id = data.get('telegram_id')
     field_number = data.get('field_number')
@@ -487,8 +481,8 @@ def invest_locked():
         from datetime import datetime, timedelta
         now = datetime.utcnow()
         
-        multipliers = {1: 1.02, 7: 1.15, 30: 1.65}
-        multiplier = multipliers.get(lock_period, 1.65)
+        multipliers = {1: 1.02, 7: 1.18, 30: 1.80}
+        multiplier = multipliers.get(lock_period, 1.80)
         expected_return = amount * multiplier
         unlock_date = now + timedelta(days=lock_period)
         
@@ -526,7 +520,6 @@ def invest_locked():
 
 @app.route('/api/check_deposit_with_amount', methods=['GET'])
 def check_deposit_with_amount():
-    """Check for a deposit with a specific expected amount - MANUAL CHECK"""
     telegram_id = request.args.get('telegram_id')
     expected_amount = request.args.get('expected_amount', type=float)
     
@@ -553,17 +546,15 @@ def check_deposit_with_amount():
         return jsonify({'success': False, 'message': str(e)})
 
 # ============================================
-# AD REWARD ENDPOINTS - UNLIMITED ADS, $0.001 REWARD
+# AD REWARD ENDPOINTS
 # ============================================
 
 @app.route('/api/can_watch_ad', methods=['GET'])
 def can_watch_ad():
-    """Always return true - no daily limit"""
     return jsonify({'can_watch': True, 'watched_today': 0})
 
 @app.route('/api/credit_ad_reward', methods=['POST'])
 def credit_ad_reward():
-    """Credit $0.001 USDT for watching an ad (unlimited)"""
     data = request.json
     telegram_id = data.get('telegram_id')
     if not telegram_id:
@@ -575,7 +566,6 @@ def credit_ad_reward():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Credit reward (flat rate - $0.001)
         reward = 0.001
         user.balance += reward
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
@@ -600,7 +590,6 @@ def credit_ad_reward():
 
 @app.route('/api/claim_investment', methods=['POST'])
 def claim_investment():
-    """Claim an unlocked investment - user manually claims when ready"""
     data = request.json
     telegram_id = data.get('telegram_id')
     field_number = data.get('field_number')
@@ -614,7 +603,6 @@ def claim_investment():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Find the locked investment for this field
         investment = session.query(Investment).filter_by(
             user_id=user.id,
             field_number=field_number,
@@ -625,29 +613,24 @@ def claim_investment():
         if not investment:
             return jsonify({'success': False, 'message': 'No locked investment found for this field'})
         
-        # Check if unlock date has passed
         now = datetime.utcnow()
         if investment.unlock_date > now:
             return jsonify({'success': False, 'message': 'Investment is not yet unlocked'})
         
-        # Calculate profit
         profit = investment.expected_return - investment.amount
         amount_to_credit = investment.expected_return
         
-        # Update investment
         investment.is_locked = False
         investment.is_active = False
         investment.is_completed = True
         investment.completed_at = now
         investment.principal_returned = True
         
-        # Update user balance
         user.balance += amount_to_credit
         user.total_earned += profit
         user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + profit
         user.total_earnings_all_time = (user.total_earnings_all_time or 0) + profit
         
-        # Create payout record for history
         payout = DailyPayout(
             user_id=user.id,
             investment_id=investment.id,
@@ -658,8 +641,6 @@ def claim_investment():
         session.add(payout)
         
         session.commit()
-        
-        # Clear cache
         clear_user_cache(telegram_id)
         
         return jsonify({
