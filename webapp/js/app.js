@@ -7,6 +7,8 @@ const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
+let lastAdTime = 0;
+const AD_COOLDOWN = 5000;
 
 // ============================================
 // SAFE POPUP – Works on both Web & Mobile
@@ -51,6 +53,12 @@ function safePopupWithCallback(options, callback) {
 // SHOW INTERSTITIAL AD ON BUTTON CLICKS - FIXED
 // ============================================
 function showInterstitialIfNeeded() {
+    var now = Date.now();
+    if (now - lastAdTime < AD_COOLDOWN) {
+        console.log("⏳ Ad cooldown active, skipping...");
+        return;
+    }
+    lastAdTime = now;
     if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
         console.log("📢 Showing interstitial ad on button click...");
         // Wait 500ms before showing to ensure ad controller is ready
