@@ -39,7 +39,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
             <button class="back-btn" onclick="goBack()" style="font-size: 28px; padding: 8px 16px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
             <h1 style="color:#00ff87;font-size:20px; margin: 0; flex: 1; text-align: center;">💳 Deposit</h1>
@@ -50,7 +49,6 @@
             <div class="network-badge-large"><span class="dot"></span> 🟣 Polygon Network <span style="font-size:11px;opacity:0.7;margin-left:4px;">(Low fees)</span></div>
         </div>
 
-        <!-- Step Indicator -->
         <div class="step-indicator" id="stepIndicator">
             <div class="step" id="step1">
                 <div class="circle active" id="circle1">1</div>
@@ -78,7 +76,6 @@
             <p style="font-size:11px;color:#ffd93d;margin:4px 0 0 0;">⚠️ Send USDT ONLY from this wallet on Polygon network!</p>
         </div>
 
-        <!-- Step 1: Enter Amount -->
         <div id="step1Content">
             <div class="info-card">
                 <p style="font-size:13px;color:#8892b0;line-height:1.6;margin-bottom:8px;"><strong>Network:</strong> Polygon ⛓️ &nbsp;|&nbsp; <strong>Token:</strong> USDT &nbsp;|&nbsp; <strong>Min:</strong> $5</p>
@@ -93,7 +90,6 @@
             <button class="action-btn primary" onclick="generateMemo()" id="generateMemoBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">🔑 Generate Deposit Memo</button>
         </div>
 
-        <!-- Step 2: Memo Display -->
         <div id="step2Content" style="display:none;">
             <div class="memo-box">
                 <p style="font-size:14px;color:#8892b0;margin-bottom:8px;">📋 Your Deposit Memo</p>
@@ -115,7 +111,6 @@
             <button class="action-btn secondary" onclick="resetDeposit()" style="width:100%;margin-top:8px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">🔄 Generate New Memo</button>
         </div>
 
-        <!-- Step 3: Verification -->
         <div id="step3Content" style="display:none;">
             <div class="info-card">
                 <h3>🔍 Verify Your Deposit</h3>
@@ -134,7 +129,6 @@
             <button class="action-btn secondary" onclick="resetDeposit()" style="width:100%;margin-top:8px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">🔄 Start Over</button>
         </div>
 
-        <!-- Contact Support -->
         <div class="contact-support" style="margin-top:16px;padding:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;text-align:center;">
             <p style="font-size:13px;color:#00d4ff;margin:0;line-height:1.6;">❓ Need help?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>! 👨‍🔧</p>
         </div>
@@ -232,12 +226,16 @@
                     
                     updateStep(2);
                     
-                    // Reset timer display before starting
+                    // Reset and start timer
                     const countdownEl = document.getElementById('timerCountdown');
                     countdownEl.textContent = '6:00';
                     countdownEl.className = 'countdown';
                     document.getElementById('memoExpired').style.display = 'none';
                     
+                    // Clear any existing timer
+                    if (timerInterval) clearInterval(timerInterval);
+                    
+                    // Start the timer
                     startTimer();
                     
                     window.Telegram.WebApp.showPopup({
@@ -266,34 +264,30 @@
 
         function startTimer() {
             if (timerInterval) clearInterval(timerInterval);
-            updateTimer(); // Update immediately
-            timerInterval = setInterval(updateTimer, 1000);
+            // Update immediately
+            updateTimerDisplay();
+            // Then every second
+            timerInterval = setInterval(updateTimerDisplay, 1000);
         }
 
-        function updateTimer() {
+        function updateTimerDisplay() {
+            const countdownEl = document.getElementById('timerCountdown');
+            const expiredEl = document.getElementById('memoExpired');
+            
             if (!memoExpiresAt) {
-                // If no expiry, show 6:00 as default
-                const countdownEl = document.getElementById('timerCountdown');
-                if (countdownEl) {
-                    countdownEl.textContent = '6:00';
-                    countdownEl.className = 'countdown';
-                }
+                countdownEl.textContent = '6:00';
+                countdownEl.className = 'countdown';
                 return;
             }
             
             const now = new Date();
             const diff = Math.floor((memoExpiresAt - now) / 1000);
             
-            const timerEl = document.getElementById('memoTimer');
-            const expiredEl = document.getElementById('memoExpired');
-            const countdownEl = document.getElementById('timerCountdown');
-            
             if (diff <= 0) {
                 countdownEl.textContent = '00:00';
                 countdownEl.className = 'countdown expired';
                 expiredEl.style.display = 'block';
-                timerEl.className = 'timer';
-                clearInterval(timerInterval);
+                if (timerInterval) clearInterval(timerInterval);
                 return;
             }
             
@@ -447,11 +441,10 @@
             document.getElementById('step2Content').style.display = 'none';
             document.getElementById('step3Content').style.display = 'none';
             document.getElementById('verifyStatus').style.display = 'none';
-            document.getElementById('memoTimer').className = 'timer';
-            document.getElementById('memoExpired').style.display = 'none';
             const countdownEl = document.getElementById('timerCountdown');
             countdownEl.textContent = '6:00';
             countdownEl.className = 'countdown';
+            document.getElementById('memoExpired').style.display = 'none';
             updateStep(1);
         }
 
@@ -459,7 +452,6 @@
             window.history.back();
         }
 
-        // Expose functions globally
         window.generateMemo = generateMemo;
         window.copyMemo = copyMemo;
         window.copyAddress = copyAddress;
