@@ -341,8 +341,8 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📋 No uncollected fees.\n\nAll withdrawal fees have been collected! ✅" + get_community_footer())
         return
 
-    text = f"💰 Uncollected Withdrawal Fees\n"
-    text += f"━━━━━━━━━━━━━━━━━━━━\n"
+    text = "💰 Uncollected Withdrawal Fees\n"
+    text += "━━━━━━━━━━━━━━━━━━━━\n"
     text += f"📊 Total: ${total_fees:.2f} USDT\n"
     text += f"📋 Number of fees: {len(fees)}\n\n"
     
@@ -351,7 +351,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for fee in fees[:5]:
             user_obj = db.get_user_by_id(fee.user_id)
             username = user_obj.username if user_obj else "Unknown"
-            text += f"  • ${fee.amount:.2f} from @{username}\n"
+            text += f"  - ${fee.amount:.2f} from @{username}\n"
         if len(fees) > 5:
             text += f"  ... and {len(fees) - 5} more\n"
     
