@@ -302,13 +302,12 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT FUNCTION - FIXED
+// CLAIM INVESTMENT FUNCTION
 // ============================================
 
 async function claimInvestment(fieldNumber) {
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
     
-    // Prevent multiple clicks
     if (window.claimInProgress) {
         console.log('⏳ Claim already in progress...');
         return;
@@ -357,13 +356,11 @@ async function claimInvestment(fieldNumber) {
                         buttons: [{type: 'ok'}]
                     });
                     
-                    // Wait for user to close popup, then show ad and reload
                     setTimeout(function() {
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after claim...");
                             window.watchRewardedAd();
                         }
-                        // Reload data after ad
                         setTimeout(function() {
                             loadUserData();
                             loadAdStats();
@@ -432,8 +429,6 @@ function updateFieldTimers() {
         
         var isReady = (isLocked === true) && (timeLeft <= 0);
         fieldData.is_ready = isReady;
-        
-        console.log('Field ' + i + ': isLocked=' + isLocked + ', timeLeft=' + timeLeft + ', isReady=' + isReady);
         
         if (isReady) {
             timerEl.textContent = '🟢 READY TO CLAIM!';
@@ -1186,7 +1181,6 @@ function setupEventListeners() {
 // ============================================
 
 async function canWatchAd() {
-    // No limit - always return true
     return true;
 }
 
@@ -1284,6 +1278,73 @@ async function loadAdStats() {
     }
 }
 
+// ============================================
+// REFERRAL UPGRADE FUNCTIONS
+// ============================================
+
+async function upgradeReferralTier(tier) {
+    showInterstitialIfNeeded();
+    const userId = tgUser ? tgUser.id : '0';
+    
+    if (!userId || userId === '0') {
+        safePopup({
+            title: '❌ Error',
+            message: 'User not authenticated. Please restart the app.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    safePopupWithCallback({
+        title: '📊 Upgrade Referral Tier',
+        message: 'Are you sure you want to upgrade to ' + tier.toUpperCase() + ' tier?\n\nThis is a PERMANENT upgrade. No refunds.',
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'confirm', type: 'ok', text: '✅ Upgrade'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(API_BASE + '/api/upgrade_tier', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        tier: tier
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    safePopup({
+                        title: '✅ Upgrade Successful!',
+                        message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(2),
+                        buttons: [{type: 'ok'}]
+                    });
+                    
+                    setTimeout(function() {
+                        loadUserData();
+                    }, 1000);
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Upgrade failed.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error upgrading tier:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
+}
+
 // Expose functions globally
 window.navigateTo = navigateTo;
 window.goBack = goBack;
@@ -1303,6 +1364,7 @@ window.canWatchAd = canWatchAd;
 window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
 window.showInterstitialIfNeeded = showInterstitialIfNeeded;
+window.upgradeReferralTier = upgradeReferralTier;
 
 console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);

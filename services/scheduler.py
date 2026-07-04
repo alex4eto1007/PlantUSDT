@@ -15,7 +15,6 @@ class SchedulerService:
         self.deposit_scanner = DepositScanner()
 
     def start(self):
-        # Run every 5 minutes to check for unlocked investments
         self.scheduler.add_job(
             self.process_locked_investments,
             trigger=IntervalTrigger(minutes=5),
@@ -23,7 +22,6 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # Run every 5 minutes to scan for deposits on Polygon
         self.scheduler.add_job(
             self.scan_deposits,
             trigger=IntervalTrigger(minutes=5),
@@ -31,7 +29,6 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # Process expired investments every hour
         self.scheduler.add_job(
             self.process_expired_investments,
             trigger=IntervalTrigger(hours=1),
@@ -39,7 +36,6 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # 🔧 Run every hour to fix stuck timers
         self.scheduler.add_job(
             self.correct_timers,
             trigger=IntervalTrigger(hours=1),
@@ -59,11 +55,8 @@ class SchedulerService:
             logger.error(f"Error processing locked investments: {e}")
 
     async def scan_deposits(self):
-        """Scan for new deposits on Polygon network"""
         try:
             logger.info("🔍 Scanning for Polygon deposits...")
-            # This will be handled by the deposit scanner's internal loop
-            # We're just logging here since the scanner runs independently
             pass
         except Exception as e:
             logger.error(f"Error scanning Polygon deposits: {e}")
@@ -76,7 +69,6 @@ class SchedulerService:
             logger.error(f"Error processing expired investments: {e}")
 
     def correct_timers(self):
-        """Auto-correct stuck timers (runs every hour)"""
         try:
             logger.info("🔄 Running timer correction job on Polygon...")
             self.investment_service.correct_stuck_timers()

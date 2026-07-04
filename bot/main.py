@@ -7,6 +7,7 @@ from services.investment import InvestmentService
 from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
 from services.scheduler import SchedulerService
+from services.referral import upgrade_referral_tier, get_referral_stats, REFERRAL_TIERS
 import logging
 import asyncio
 from datetime import datetime, timedelta
@@ -120,7 +121,7 @@ Grow your USDT with returns up to 80% on Polygon network!
 • ⛓️ Network: Polygon (MATIC) - Low fees!
 
 👥 REFERRAL BONUS:
-Share your referral link and earn 1% from your friends' deposits!
+Share your referral link and earn up to 5% from your friends' deposits based on your tier!
 
 📊 Live Transactions: @PlantUSDTtransactions
 
@@ -153,7 +154,7 @@ Use /app to open the Mini App!"""
                         await update.message.reply_text(
                             f"✅ You have been successfully referred by @{referrer_obj.username or 'User'}! 🎉\n\n"
                             f"Welcome to the PlantUSDT community! 🌱\n\n"
-                            f"💡 Your referrer will earn 1% from your future deposits!"
+                            f"💡 Your referrer will earn from your future deposits based on their referral tier!"
                             + get_community_footer(),
                             parse_mode='Markdown'
                         )
@@ -162,7 +163,7 @@ Use /app to open the Mini App!"""
                                 chat_id=referrer.telegram_id,
                                 text=f"🎉 **New Referral!**\n\n"
                                      f"@{existing_user.username or 'User'} accepted your referral!\n"
-                                     f"💡 You will earn 1% from their future deposits!"
+                                     f"💡 You will earn from their future deposits based on your tier!"
                                      + get_community_footer(),
                                 parse_mode='Markdown'
                             )
@@ -529,6 +530,207 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Invalid user ID.")
 
 # ============================================
+# REFERRAL SYSTEM COMMANDS
+# ============================================
+
+async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Upgrade referral tier"""
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    args = context.args
+    if len(args) < 1:
+        tier_list = "\n".join([f"{info['emoji']} {tier.title()}: {info['bonus_percent']}% (${info['price']:.2f})" for tier, info in REFERRAL_TIERS.items() if tier != "free"])
+        await update.message.reply_text(
+            f"📊 **Upgrade Your Referral Tier**\n\n"
+            f"Permanently increase your referral bonus!\n\n"
+            f"Available tiers:\n{tier_list}\n\n"
+            f"💡 Example: Friend deposits $100 → you earn 5% at Diamond tier\n\n"
+            f"Usage: `/upgrade [tier]`\n"
+            f"Example: `/upgrade diamond`\n\n"
+            f"⚠️ **IMPORTANT**: These are the LOWEST prices ever. They will go up!"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+    
+    tier = args[0].lower()
+    if tier not in REFERRAL_TIERS:
+        await update.message.reply_text(
+            f"❌ Invalid tier. Available: {', '.join([t for t in REFERRAL_TIERS.keys() if t != 'free'])}"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+    
+    if tier == "free":
+        await update.message.reply_text(
+            "🌱 You're already on the Free tier (1%).\n\n"
+            "Upgrade to earn more from your referrals!\n"
+            "Use `/upgrade` to see available tiers."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+    
+    session = db.get_session()
+    try:
+        user_obj = session.query(User).filter_by(telegram_id=user.id).first()
+        if not user_obj:
+            await update.message.reply_text("❌ User not found.")
+            session.close()
+            return
+        
+        current_tier = user_obj.referral_tier or "free"
+        
+        # Check if already at this tier
+        if current_tier == tier:
+            await update.message.reply_text(
+                f"✅ You're already on the {REFERRAL_TIERS[tier]['emoji']} {tier.title()} tier!\n"
+                f"Bonus: {REFERRAL_TIERS[tier]['bonus_percent']}%"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            session.close()
+            return
+        
+        # Calculate cost
+        current_price = REFERRAL_TIERS[current_tier]["price"]
+        new_price = REFERRAL_TIERS[tier]["price"]
+        cost = new_price - current_price
+        
+        if cost <= 0:
+            await update.message.reply_text("❌ Invalid upgrade path.")
+            session.close()
+            return
+        
+        # Show confirmation
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Confirm Upgrade", callback_data=f"upgrade_confirm_{tier}"),
+                InlineKeyboardButton("❌ Cancel", callback_data="upgrade_cancel")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            f"📊 **Upgrade to {REFERRAL_TIERS[tier]['emoji']} {tier.title()} Tier**\n\n"
+            f"Current tier: {REFERRAL_TIERS[current_tier]['emoji']} {current_tier.title()} ({REFERRAL_TIERS[current_tier]['bonus_percent']}%)\n"
+            f"New tier: {REFERRAL_TIERS[tier]['emoji']} {tier.title()} ({REFERRAL_TIERS[tier]['bonus_percent']}%)\n\n"
+            f"💰 Cost: **${cost:.2f}** USDT\n"
+            f"💵 Your balance: **${user_obj.balance:.2f}**\n\n"
+            f"⚠️ This is a PERMANENT upgrade. No refunds.\n"
+            f"⚠️ Prices will increase as the project grows!",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        session.close()
+        
+    except Exception as e:
+        logger.error(f"Upgrade error: {e}")
+        await update.message.reply_text("❌ Error processing upgrade. Please try again.")
+        session.close()
+
+async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle upgrade callback"""
+    query = update.callback_query
+    await query.answer()
+    
+    user = query.from_user
+    data = query.data
+    
+    if data == "upgrade_cancel":
+        await query.edit_message_text(
+            "❌ Upgrade cancelled.",
+            parse_mode='Markdown'
+        )
+        return
+    
+    if data.startswith("upgrade_confirm_"):
+        tier = data.replace("upgrade_confirm_", "")
+        
+        session = db.get_session()
+        try:
+            user_obj = session.query(User).filter_by(telegram_id=user.id).first()
+            if not user_obj:
+                await query.edit_message_text("❌ User not found.")
+                session.close()
+                return
+            
+            success, msg = upgrade_referral_tier(user_obj.id, tier, session)
+            
+            if success:
+                await query.edit_message_text(
+                    f"{msg}\n\n"
+                    f"💰 New balance: **${user_obj.balance:.2f}**\n"
+                    f"📊 New bonus: **{REFERRAL_TIERS[tier]['bonus_percent']}%**\n\n"
+                    f"💡 Your referrals will now earn you more!\n"
+                    f"Share your referral link to start earning."
+                    + get_community_footer(),
+                    parse_mode='Markdown'
+                )
+            else:
+                await query.edit_message_text(
+                    f"❌ {msg}"
+                    + get_community_footer(),
+                    parse_mode='Markdown'
+                )
+            session.close()
+            
+        except Exception as e:
+            logger.error(f"Upgrade callback error: {e}")
+            await query.edit_message_text("❌ Error processing upgrade. Please try again.")
+            session.close()
+
+async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show referral statistics"""
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    session = db.get_session()
+    try:
+        stats = get_referral_stats(user.id, session)
+        
+        if not stats:
+            await update.message.reply_text("❌ Error loading stats.")
+            session.close()
+            return
+        
+        response = f"📊 **Your Referral Stats**\n\n"
+        response += f"{stats['tier_emoji']} **Tier:** {stats['current_tier'].title()}\n"
+        response += f"📈 **Bonus:** {stats['tier_bonus']}%\n"
+        response += f"━━━━━━━━━━━━━━━━━━━━\n"
+        response += f"👥 **Total Referrals:** {stats['total_referred']}\n"
+        response += f"✅ **Active Referrals:** {stats['active_referrals']}\n"
+        response += f"⏳ **Pending Active:** {stats['pending_active']}\n"
+        response += f"💰 **Active Bonus Earned:** ${stats['active_bonus_earned']:.3f}\n"
+        response += f"💎 **Spent on Upgrades:** ${stats['upgrade_spent']:.2f}\n\n"
+        
+        if stats['next_tier']:
+            response += f"⬆️ **Next Tier:** {REFERRAL_TIERS[stats['next_tier']]['emoji']} {stats['next_tier'].title()}\n"
+            response += f"📈 **Next Bonus:** {stats['next_tier_bonus']}%\n"
+            response += f"💰 **Upgrade Cost:** ${stats['next_tier_price']:.2f}\n\n"
+            response += f"Upgrade with: `/upgrade {stats['next_tier']}`"
+        else:
+            response += f"🏆 **You're at the highest tier!**\n"
+            response += f"💎 Maximum bonus: {stats['tier_bonus']}%\n\n"
+            response += f"Share your referral link to earn more!"
+        
+        response += get_community_footer()
+        
+        await update.message.reply_text(response, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Referral stats error: {e}")
+        await update.message.reply_text("❌ Error fetching stats.")
+    finally:
+        session.close()
+
+# ============================================
 # ADMIN CHECK
 # ============================================
 
@@ -562,6 +764,11 @@ def main():
         application.add_handler(CommandHandler("adminhelp", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
 
+        # Referral system commands
+        application.add_handler(CommandHandler("upgrade", upgrade))
+        application.add_handler(CommandHandler("referral_stats", referral_stats))
+        application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
+
         # Start deposit scanner in background
         async def start_deposit_scanner():
             while True:
@@ -569,7 +776,7 @@ def main():
                     await deposit_scanner.scan_for_deposits(application.bot)
                 except Exception as e:
                     logger.error(f"Error in deposit scanner loop: {e}")
-                await asyncio.sleep(300)  # Wait 5 minutes
+                await asyncio.sleep(300)
 
         # Run the scanner in background
         loop = asyncio.new_event_loop()
@@ -600,6 +807,7 @@ def main():
         logger.info("📢 Community footer added to all messages")
         logger.info("📊 Transaction channel: @PlantUSDTtransactions")
         logger.info("💰 Fee collection system active")
+        logger.info("📈 Referral system with tier upgrades active")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

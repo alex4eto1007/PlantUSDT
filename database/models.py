@@ -7,12 +7,10 @@ import uuid
 Base = declarative_base()
 
 def generate_unique_code():
-    """Generate a unique 8-character referral code"""
     return str(uuid.uuid4())[:8]
 
 class User(Base):
     __tablename__ = "users"
-    
     id = Column(Integer, primary_key=True)
     telegram_id = Column(BigInteger, unique=True, nullable=False)
     username = Column(String(100))
@@ -22,72 +20,64 @@ class User(Base):
     total_invested = Column(Float, default=0.0)
     total_earned = Column(Float, default=0.0)
     total_deposited = Column(Float, default=0.0)
-    
-    # Earnings tracking
     total_earnings_all_time = Column(Float, default=0.0)
     investment_earnings_all_time = Column(Float, default=0.0)
     referral_earnings_all_time = Column(Float, default=0.0)
-    
-    # Referral deposit earnings
     referral_deposit_earnings = Column(Float, default=0.0)
-    
-    # Referral system
     referred_by = Column(Integer, ForeignKey("users.id"))
     referral_code = Column(String(20), unique=True, default=generate_unique_code)
     referral_earnings = Column(Float, default=0.0)
     can_be_referred = Column(Boolean, default=True)
     referred_at = Column(DateTime, nullable=True)
-    
-    # Ad tracking
     ads_watched_today = Column(Integer, default=0)
     last_ad_date = Column(DateTime, nullable=True)
     total_ads_watched = Column(Integer, default=0)
     total_ad_earnings = Column(Float, default=0.0)
-    
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_deposit_check = Column(DateTime, default=datetime.utcnow)
+    
+    # ============================================
+    # NEW REFERRAL SYSTEM FIELDS
+    # ============================================
+    referral_tier = Column(String(20), default="free")  # free, bronze, silver, gold, diamond
+    referral_tier_upgraded_at = Column(DateTime, nullable=True)
+    referral_upgrade_total_spent = Column(Float, default=0.0)
+    active_referral_bonus_earned = Column(Float, default=0.0)
+    total_active_referrals = Column(Integer, default=0)
     
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")
     referrals = relationship("User", backref="referrer", remote_side=[id])
     uncollected_fees = relationship("UncollectedFee", back_populates="user")
+    referral_upgrades = relationship("ReferralUpgrade", back_populates="user")
+    active_referrals_given = relationship("ActiveReferral", foreign_keys="ActiveReferral.referrer_id", back_populates="referrer")
+    active_referrals_received = relationship("ActiveReferral", foreign_keys="ActiveReferral.referred_user_id", back_populates="referred_user")
 
 class Investment(Base):
     __tablename__ = "investments"
-    
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     field_number = Column(Integer, nullable=False)
     amount = Column(Float, nullable=False)
-    
-    # Lock period settings
-    lock_period = Column(Integer, nullable=False, default=30)  # 1, 7, or 30 days
+    lock_period = Column(Integer, nullable=False, default=30)
     unlock_date = Column(DateTime, nullable=False)
-    expected_return = Column(Float, nullable=False)  # The total amount user will receive
-    
-    # Payout tracking
+    expected_return = Column(Float, nullable=False)
     paid_out = Column(Float, default=0.0)
     referral_earnings_paid = Column(Float, default=0.0)
-    
-    # Dates
     start_date = Column(DateTime, default=datetime.utcnow)
     end_date = Column(DateTime)
     completed_at = Column(DateTime, nullable=True)
-    
-    # Status
     is_active = Column(Boolean, default=True)
     is_completed = Column(Boolean, default=False)
-    is_locked = Column(Boolean, default=True)  # True until unlock_date is reached
+    is_locked = Column(Boolean, default=True)
     principal_returned = Column(Boolean, default=False)
-    
     user = relationship("User", back_populates="investments")
 
 class Deposit(Base):
     __tablename__ = "deposits"
-    
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     amount = Column(Float, nullable=False)
@@ -97,12 +87,10 @@ class Deposit(Base):
     confirmed_at = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
     network = Column(String(20), default="polygon")
-    
     user = relationship("User", back_populates="deposits")
 
 class DailyPayout(Base):
     __tablename__ = "daily_payouts"
-    
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     investment_id = Column(Integer, ForeignKey("investments.id"))
@@ -112,7 +100,6 @@ class DailyPayout(Base):
 
 class Withdrawal(Base):
     __tablename__ = "withdrawals"
-    
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     amount = Column(Float, nullable=False)
@@ -124,21 +111,47 @@ class Withdrawal(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime)
     network = Column(String(20), default="polygon")
-    
     user = relationship("User", back_populates="withdrawals")
     uncollected_fee = relationship("UncollectedFee", back_populates="withdrawal")
 
 class UncollectedFee(Base):
     __tablename__ = "uncollected_fees"
-    
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     withdrawal_id = Column(Integer, ForeignKey("withdrawals.id"))
-    amount = Column(Float, nullable=False)  # Fee amount (10%)
+    amount = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     collected = Column(Boolean, default=False)
     collected_at = Column(DateTime, nullable=True)
     tx_hash = Column(String(100), nullable=True)
-    
     user = relationship("User", back_populates="uncollected_fees")
     withdrawal = relationship("Withdrawal", back_populates="uncollected_fee")
+
+# ============================================
+# NEW REFERRAL SYSTEM TABLES
+# ============================================
+
+class ReferralUpgrade(Base):
+    __tablename__ = "referral_upgrades"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    tier = Column(String(20), nullable=False)  # bronze, silver, gold, diamond
+    amount_paid = Column(Float, nullable=False)
+    tx_hash = Column(String(100), nullable=True)
+    upgraded_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="referral_upgrades")
+
+class ActiveReferral(Base):
+    __tablename__ = "active_referrals"
+    
+    id = Column(Integer, primary_key=True)
+    referrer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    referred_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    bonus_amount = Column(Float, default=0.03)
+    awarded_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String(20), default="pending")  # pending, awarded
+    
+    referrer = relationship("User", foreign_keys=[referrer_id], back_populates="active_referrals_given")
+    referred_user = relationship("User", foreign_keys=[referred_user_id], back_populates="active_referrals_received")

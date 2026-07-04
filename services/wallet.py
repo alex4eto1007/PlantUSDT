@@ -13,7 +13,6 @@ class WalletService:
         self.network = "Polygon"
 
     def verify_wallet(self, wallet_address):
-        """Verify if wallet address is valid"""
         if not wallet_address or not wallet_address.startswith('0x') or len(wallet_address) != 42:
             return False, "Invalid wallet address format"
 
@@ -33,7 +32,6 @@ class WalletService:
             return False, f"Could not verify wallet on {self.network}"
 
     def get_usdt_balance(self, wallet_address):
-        """Get USDT balance on Polygon"""
         try:
             data = f"0x70a08231000000000000000000000000{wallet_address[2:].lower()}"
             result = self.w3.eth.call({
@@ -47,7 +45,6 @@ class WalletService:
             return 0
 
     def get_native_balance(self, wallet_address):
-        """Get MATIC balance on Polygon"""
         try:
             balance = self.w3.eth.get_balance(wallet_address)
             return self.w3.from_wei(balance, 'ether')

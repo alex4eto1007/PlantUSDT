@@ -7,132 +7,55 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        .network-badge-small {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(130, 71, 229, 0.12);
-            color: #8247E5;
-            padding: 2px 12px;
-            border-radius: 14px;
-            font-size: 11px;
-            font-weight: 500;
-            margin-left: 8px;
-        }
-        .network-badge-small .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #8247E5;
-            display: inline-block;
-        }
-        .fee-summary {
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
-        }
-        .fee-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            font-size: 14px;
-            color: #8892b0;
-        }
-        .fee-row.total {
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 8px;
-            margin-top: 4px;
-            font-weight: 700;
-            color: #00ff87;
-        }
-        .fee-row .net {
-            color: #00ff87;
-            font-size: 16px;
-        }
-        .fee-row .fee-amount {
-            color: #ff6b6b;
-        }
-        .fee-row .amount {
-            color: #ffffff;
-        }
-        .warning-text {
-            font-size: 12px;
-            color: #ffd93d;
-            margin-top: 8px;
-            padding: 10px;
-            background: rgba(255, 193, 7, 0.08);
-            border-radius: 6px;
-            border: 1px solid rgba(255, 193, 7, 0.15);
-        }
+        .network-badge-small { display: inline-flex; align-items: center; gap: 6px; background: rgba(130,71,229,0.12); color: #8247E5; padding: 2px 12px; border-radius: 14px; font-size: 11px; font-weight: 500; margin-left: 8px; }
+        .network-badge-small .dot { width: 6px; height: 6px; border-radius: 50%; background: #8247E5; display: inline-block; }
+        .fee-summary { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 16px; margin: 16px 0; }
+        .fee-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; color: #8892b0; }
+        .fee-row.total { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 4px; font-weight: 700; color: #00ff87; }
+        .fee-row .net { color: #00ff87; font-size: 16px; }
+        .fee-row .fee-amount { color: #ff6b6b; }
+        .fee-row .amount { color: #ffffff; }
+        .warning-text { font-size: 12px; color: #ffd93d; margin-top: 8px; padding: 10px; background: rgba(255,193,7,0.08); border-radius: 6px; border: 1px solid rgba(255,193,7,0.15); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="showInterstitialIfNeeded(); goBack()">←</button>
-            <h1 style="color: #00ff87; font-size: 20px;">🏦 Withdraw</h1>
-            <span class="network-badge-small">
-                <span class="dot"></span>
-                Polygon
-            </span>
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1 style="color:#00ff87;font-size:20px;">🏦 Withdraw</h1>
+            <span class="network-badge-small"><span class="dot"></span> Polygon</span>
         </div>
 
         <div class="info-card">
             <h3>📋 Withdrawal Instructions</h3>
-            <p style="font-size: 13px; color: #8892b0; line-height: 1.6;">
-                <strong>Min Amount:</strong> $2 USDT<br>
-                <strong>Fee:</strong> 10%<br>
-                <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
-                <strong>Token:</strong> USDT on Polygon<br>
-                <strong>Gas Fees:</strong> Covered by us!
-            </p>
-            <div class="warning-text">
-                ⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.
-            </div>
-            <p style="font-size: 12px; color: #8892b0; margin-top: 8px;">
-                🔒 Your funds will be sent to your Polygon wallet address.
-            </p>
+            <p style="font-size:13px;color:#8892b0;line-height:1.6;"><strong>Min Amount:</strong> $2 USDT<br><strong>Fee:</strong> 10%<br><strong>Network:</strong> Polygon (MATIC) ⛓️<br><strong>Token:</strong> USDT on Polygon<br><strong>Gas Fees:</strong> Covered by us!</p>
+            <div class="warning-text">⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.</div>
+            <p style="font-size:12px;color:#8892b0;margin-top:8px;">🔒 Your funds will be sent to your Polygon wallet address.</p>
         </div>
 
         <form id="withdrawForm">
             <div class="form-group">
-                <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">💰 Amount (USDT on Polygon)</label>
-                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $2)" min="2" step="0.01" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
+                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">💰 Amount (USDT on Polygon)</label>
+                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $2)" min="2" step="0.01" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
             </div>
 
             <div class="form-group">
-                <label style="font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px;">📤 Withdraw to (Polygon Wallet)</label>
-                <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none;">
-                <button type="button" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); setWallet()" style="margin-top: 4px; padding: 4px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 4px; color: #00ff87; cursor: pointer; font-size: 11px;">📂 Use Connected Wallet</button>
-                <p style="font-size: 11px; color: #495670; margin-top: 4px;">
-                    ⚠️ Must be a Polygon network wallet address
-                </p>
+                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">📤 Withdraw to (Polygon Wallet)</label>
+                <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+                <button type="button" onclick="setWallet()" style="margin-top:4px;padding:4px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:11px;">📂 Use Connected Wallet</button>
+                <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Must be a Polygon network wallet address</p>
             </div>
 
-            <div class="fee-summary" id="feeSummary" style="display: none;">
-                <div class="fee-row">
-                    <span>Amount:</span>
-                    <span class="amount" id="feeAmount">$0.00</span>
-                </div>
-                <div class="fee-row">
-                    <span>Fee (10%):</span>
-                    <span class="fee-amount" id="feeAmountFee">$0.00</span>
-                </div>
-                <div class="fee-row total">
-                    <span>You will receive on Polygon:</span>
-                    <span class="net" id="feeNet">$0.00</span>
-                </div>
+            <div class="fee-summary" id="feeSummary" style="display:none;">
+                <div class="fee-row"><span>Amount:</span><span class="amount" id="feeAmount">$0.00</span></div>
+                <div class="fee-row"><span>Fee (10%):</span><span class="fee-amount" id="feeAmountFee">$0.00</span></div>
+                <div class="fee-row total"><span>You will receive on Polygon:</span><span class="net" id="feeNet">$0.00</span></div>
             </div>
 
-            <button type="submit" class="withdraw-btn" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #00ff87, #00cc6a); border: none; color: #0a0e17;">
-                🌱 Request Withdrawal on Polygon
-            </button>
+            <button type="submit" class="withdraw-btn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">🌱 Request Withdrawal on Polygon</button>
         </form>
 
-        <button class="action-btn secondary" onclick="showInterstitialIfNeeded(); goBack()" style="width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: transparent; border: 1px solid rgba(255,255,255,0.08);">
-            📊 Back to Dashboard
-        </button>
+        <button class="action-btn secondary" onclick="goBack()" style="width:100%;margin-top:12px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">📊 Back to Dashboard</button>
     </div>
 
     <script src="js/app.js"></script>
@@ -171,25 +94,13 @@
                     .then(data => {
                         if (data.success && data.wallet_address) {
                             document.getElementById('withdrawAddress').value = data.wallet_address;
-                            window.Telegram.WebApp.showPopup({
-                                title: '✅ Wallet Set',
-                                message: 'Your connected Polygon wallet address has been set.',
-                                buttons: [{type: 'ok'}]
-                            });
+                            window.Telegram.WebApp.showPopup({ title: '✅ Wallet Set', message: 'Your connected Polygon wallet address has been set.', buttons: [{type: 'ok'}] });
                         } else {
-                            window.Telegram.WebApp.showPopup({
-                                title: '❌ No Wallet',
-                                message: 'Please connect a wallet first in the main app.',
-                                buttons: [{type: 'ok'}]
-                            });
+                            window.Telegram.WebApp.showPopup({ title: '❌ No Wallet', message: 'Please connect a wallet first in the main app.', buttons: [{type: 'ok'}] });
                         }
                     })
                     .catch(error => {
-                        window.Telegram.WebApp.showPopup({
-                            title: '❌ Error',
-                            message: 'Could not fetch wallet: ' + error.message,
-                            buttons: [{type: 'ok'}]
-                        });
+                        window.Telegram.WebApp.showPopup({ title: '❌ Error', message: 'Could not fetch wallet: ' + error.message, buttons: [{type: 'ok'}] });
                     });
             };
         });

@@ -1,25 +1,13 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 class Config:
-    # ============================================
-    # TELEGRAM BOT
-    # ============================================
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     ADMIN_IDS = [int(id) for id in os.getenv("ADMIN_IDS", "").split(",") if id]
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "Alex_PlantUSDT")
-
-    # ============================================
-    # DATABASE
-    # ============================================
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///plantusdt.db")
-
-    # ============================================
-    # POLYGON WALLET (Polygonscan API)
-    # ============================================
     USDT_CONTRACT = os.getenv("USDT_CONTRACT", "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
     POLYGON_RPC_URL = os.getenv("POLYGON_RPC_URL", "https://polygon-rpc.com")
     POLYGONSCAN_API_URL = os.getenv("POLYGONSCAN_API_URL", "https://api.polygonscan.com/api")
@@ -27,57 +15,38 @@ class Config:
     ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")
     WALLET_ADDRESS = os.getenv("WALLET_ADDRESS", "0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76")
     USDT_DECIMALS = int(os.getenv("USDT_DECIMALS", 6))
-
-    # ============================================
-    # INVESTMENT SETTINGS - UPDATED RATES
-    # ============================================
     DAILY_RATE = float(os.getenv("DAILY_RATE", 0.02))
     INVESTMENT_DAYS = int(os.getenv("INVESTMENT_DAYS", 30))
     MIN_INVESTMENT = float(os.getenv("MIN_INVESTMENT", 5))
     MAX_FIELD_AMOUNT = float(os.getenv("MAX_FIELD_AMOUNT", 100))
-
-    LOCK_MULTIPLIERS = {
-        1: 1.02,    # 2% return
-        7: 1.18,    # 18% return
-        30: 1.80    # 80% return
-    }
-
-    # ============================================
-    # WITHDRAWAL SETTINGS
-    # ============================================
+    LOCK_MULTIPLIERS = {1: 1.02, 7: 1.18, 30: 1.80}
     MIN_WITHDRAWAL = float(os.getenv("MIN_WITHDRAWAL", 2))
     WITHDRAWAL_FEE = float(os.getenv("WITHDRAWAL_FEE", 0.10))
-
-    # ============================================
-    # REFERRAL SETTINGS - UPDATED TO 1%
-    # ============================================
     REFERRAL_BONUS_PERCENT = float(os.getenv("REFERRAL_BONUS_PERCENT", 0.01))
     REFERRAL_WINDOW_SECONDS = int(os.getenv("REFERRAL_WINDOW_SECONDS", 180))
-
-    # ============================================
-    # APP URLS
-    # ============================================
     VERCEL_URL = os.getenv("VERCEL_URL", "https://plant-usdt.vercel.app")
     API_BASE_URL = os.getenv("API_BASE_URL", "https://plantusdt.ddns.net")
-
-    # ============================================
-    # DEPOSIT SCANNER
-    # ============================================
     SCAN_INTERVAL_SECONDS = int(os.getenv("SCAN_INTERVAL_SECONDS", 300))
     BLOCK_CONFIRMATIONS = int(os.getenv("BLOCK_CONFIRMATIONS", 6))
-
-    # ============================================
-    # LOGGING
-    # ============================================
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE = os.getenv("LOG_FILE", "plantusdt.log")
-
-    # ============================================
-    # NETWORK INFO
-    # ============================================
     NETWORK_NAME = "Polygon"
     NETWORK_SYMBOL = "MATIC"
     EXPLORER_URL = "https://polygonscan.com"
+
+    # ============================================
+    # REFERRAL TIER SETTINGS
+    # ============================================
+    REFERRAL_TIERS = {
+        "free": {"bonus_percent": 1, "price": 0, "emoji": "🌱"},
+        "bronze": {"bonus_percent": 2, "price": 40.00, "emoji": "🥉"},
+        "silver": {"bonus_percent": 3, "price": 78.40, "emoji": "🥈", "discount": "2%"},
+        "gold": {"bonus_percent": 4, "price": 114.00, "emoji": "🥇", "discount": "5%"},
+        "diamond": {"bonus_percent": 5, "price": 144.00, "emoji": "💎", "discount": "10%"}
+    }
+    
+    ACTIVE_REFERRAL_BONUS = 0.03  # 0.03 USDT per active referral
+    ADS_FOR_ACTIVE_REFERRAL = 50  # User must watch 50 ads to become active
 
     @classmethod
     def get_network_info(cls):
@@ -91,6 +60,14 @@ class Config:
         }
 
     @classmethod
+    def get_referral_tiers(cls):
+        return cls.REFERRAL_TIERS
+
+    @classmethod
+    def get_tier_by_name(cls, tier_name):
+        return cls.REFERRAL_TIERS.get(tier_name)
+
+    @classmethod
     def validate_config(cls):
         errors = []
         if not cls.BOT_TOKEN:
@@ -101,8 +78,6 @@ class Config:
             errors.append("WALLET_ADDRESS is not set")
         if not cls.DATABASE_URL:
             errors.append("DATABASE_URL is not set")
-        
         if errors:
             raise ValueError(f"Configuration errors: {', '.join(errors)}")
-        
         return True

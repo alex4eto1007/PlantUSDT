@@ -9,7 +9,6 @@ class NotificationService:
         self.bot = Bot(token=Config.BOT_TOKEN)
     
     async def send_deposit_notification(self, user_id: int, amount: float, tx_hash: str):
-        """Send notification when a deposit is detected"""
         try:
             message = (
                 f"💰 **Deposit Received on Polygon!**\n\n"
@@ -29,7 +28,6 @@ class NotificationService:
             logger.error(f"Failed to send deposit notification: {e}")
     
     async def send_unlock_notification(self, user_id: int, field_number: int, amount: float, profit: float, lock_period: int):
-        """Send notification when an investment unlocks"""
         try:
             total_return = amount + profit
             message = (
@@ -37,7 +35,8 @@ class NotificationService:
                 f"Your {lock_period}-day investment is complete!\n"
                 f"💰 Amount invested: **${amount:.2f}**\n"
                 f"📈 Profit earned: **+${profit:.2f}**\n"
-                f"💵 Total received: **${total_return:.2f}**\n\n"
+                f"💵 Total received: **${total_return:.2f}**\n"
+                f"⛓️ Network: **Polygon**\n\n"
                 f"Your funds are now in your balance! 🌱"
             )
             await self.bot.send_message(
@@ -50,9 +49,7 @@ class NotificationService:
             logger.error(f"Failed to send unlock notification: {e}")
     
     async def send_referral_notification(self, referrer_id: int, amount: float, referred_user):
-        """Send notification when a referral deposits (with username fallback)"""
         try:
-            # Handle username fallback
             if referred_user:
                 if hasattr(referred_user, 'username') and referred_user.username:
                     name = f"@{referred_user.username}"
@@ -65,9 +62,10 @@ class NotificationService:
             
             message = (
                 f"🎁 **Referral Bonus Earned!**\n\n"
-                f"Your referral **{name}** made a deposit!\n"
-                f"You earned **${amount:.2f} USDT** (5% bonus)\n"
-                f"💰 This has been added to your balance!\n\n"
+                f"Your referral **{name}** made a deposit on Polygon!\n"
+                f"You earned **${amount:.2f} USDT**\n"
+                f"💰 This has been added to your balance!\n"
+                f"⛓️ Network: **Polygon**\n\n"
                 f"Keep sharing your referral link to earn more! 👥"
             )
             await self.bot.send_message(

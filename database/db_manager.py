@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from config.settings import Config
-from database.models import Base, User, Investment, Deposit, DailyPayout, Withdrawal, UncollectedFee
+from database.models import Base, User, Investment, Deposit, DailyPayout, Withdrawal, UncollectedFee, ReferralUpgrade, ActiveReferral
 import logging
 from datetime import datetime
 
@@ -15,10 +15,8 @@ class DatabaseManager:
         self._init_engine()
 
     def _init_engine(self):
-        """Initialize database engine with connection pooling"""
         try:
             database_url = Config.DATABASE_URL
-            
             self.engine = create_engine(
                 database_url,
                 pool_size=10,
@@ -29,7 +27,6 @@ class DatabaseManager:
                 echo=False,
                 poolclass=QueuePool
             )
-            
             self.Session = scoped_session(
                 sessionmaker(
                     bind=self.engine,
@@ -38,15 +35,12 @@ class DatabaseManager:
                     expire_on_commit=False
                 )
             )
-            
             logger.info(f"Database engine initialized with pool_size=10, max_overflow=20")
-            
         except Exception as e:
             logger.error(f"Error initializing database engine: {e}")
             raise
 
     def get_session(self):
-        """Get a new database session"""
         try:
             return self.Session()
         except Exception as e:
@@ -54,7 +48,6 @@ class DatabaseManager:
             raise
 
     def create_tables(self):
-        """Create all tables"""
         try:
             Base.metadata.create_all(self.engine)
             logger.info("Database tables created successfully")
@@ -63,7 +56,6 @@ class DatabaseManager:
             raise
 
     def get_user(self, telegram_id):
-        """Get user by telegram_id"""
         session = self.get_session()
         try:
             return session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -71,7 +63,6 @@ class DatabaseManager:
             session.close()
 
     def get_user_by_id(self, user_id):
-        """Get user by database id"""
         session = self.get_session()
         try:
             return session.query(User).filter_by(id=user_id).first()
@@ -79,7 +70,6 @@ class DatabaseManager:
             session.close()
 
     def get_user_by_referral_code(self, referral_code):
-        """Get user by referral code"""
         session = self.get_session()
         try:
             return session.query(User).filter_by(referral_code=referral_code).first()
@@ -87,7 +77,6 @@ class DatabaseManager:
             session.close()
 
     def create_user(self, telegram_id, username=None, first_name=None, referred_by=None):
-        """Create a new user"""
         session = self.get_session()
         try:
             user = User(
@@ -108,7 +97,6 @@ class DatabaseManager:
             session.close()
 
     def get_pending_withdrawals(self):
-        """Get all pending withdrawals"""
         session = self.get_session()
         try:
             return session.query(Withdrawal).filter_by(status='pending').all()
@@ -116,7 +104,6 @@ class DatabaseManager:
             session.close()
 
     def get_withdrawal_by_id(self, withdrawal_id):
-        """Get withdrawal by id"""
         session = self.get_session()
         try:
             return session.query(Withdrawal).filter_by(id=withdrawal_id).first()
@@ -124,7 +111,6 @@ class DatabaseManager:
             session.close()
 
     def update_withdrawal_status(self, withdrawal_id, status, tx_hash=None):
-        """Update withdrawal status and create uncollected fee"""
         session = self.get_session()
         try:
             withdrawal = session.query(Withdrawal).filter_by(id=withdrawal_id).first()
@@ -133,8 +119,6 @@ class DatabaseManager:
                 if tx_hash:
                     withdrawal.tx_hash = tx_hash
                 withdrawal.processed_at = datetime.utcnow()
-                
-                # Create uncollected fee entry
                 if withdrawal.fee > 0:
                     uncollected_fee = UncollectedFee(
                         user_id=withdrawal.user_id,
@@ -143,7 +127,6 @@ class DatabaseManager:
                         collected=False
                     )
                     session.add(uncollected_fee)
-                
                 session.commit()
                 logger.info(f"Withdrawal {withdrawal_id} updated to {status} on Polygon")
                 return True
@@ -156,7 +139,6 @@ class DatabaseManager:
             session.close()
 
     def reset_user_referral(self, user_id):
-        """Reset a user's referral status"""
         session = self.get_session()
         try:
             user = session.query(User).filter_by(id=user_id).first()
@@ -176,11 +158,9 @@ class DatabaseManager:
             session.close()
 
     def get_user_by_telegram_id(self, telegram_id):
-        """Get user by telegram_id (alias for get_user)"""
         return self.get_user(telegram_id)
 
     def get_deposits_by_user(self, user_id):
-        """Get all deposits for a user"""
         session = self.get_session()
         try:
             return session.query(Deposit).filter_by(user_id=user_id).all()
@@ -188,7 +168,6 @@ class DatabaseManager:
             session.close()
 
     def get_payouts_by_user(self, user_id):
-        """Get all payouts for a user"""
         session = self.get_session()
         try:
             return session.query(DailyPayout).filter_by(user_id=user_id).all()
@@ -196,7 +175,6 @@ class DatabaseManager:
             session.close()
 
     def get_investments_by_user(self, user_id):
-        """Get all investments for a user"""
         session = self.get_session()
         try:
             return session.query(Investment).filter_by(user_id=user_id).all()
@@ -204,7 +182,6 @@ class DatabaseManager:
             session.close()
 
     def get_active_investments_by_user(self, user_id):
-        """Get all active investments for a user"""
         session = self.get_session()
         try:
             return session.query(Investment).filter_by(user_id=user_id, is_active=True).all()
@@ -212,7 +189,6 @@ class DatabaseManager:
             session.close()
 
     def get_referrals_by_user(self, user_id):
-        """Get all referrals for a user"""
         session = self.get_session()
         try:
             return session.query(User).filter_by(referred_by=user_id).all()
@@ -220,7 +196,6 @@ class DatabaseManager:
             session.close()
 
     def get_referral_count(self, user_id):
-        """Get referral count for a user"""
         session = self.get_session()
         try:
             return session.query(User).filter_by(referred_by=user_id).count()
@@ -228,7 +203,6 @@ class DatabaseManager:
             session.close()
 
     def update_user_balance(self, user_id, amount):
-        """Update user balance"""
         session = self.get_session()
         try:
             user = session.query(User).filter_by(id=user_id).first()
@@ -245,7 +219,6 @@ class DatabaseManager:
             session.close()
 
     def create_deposit(self, user_id, amount, tx_hash, from_address, block_number):
-        """Create a new deposit record"""
         session = self.get_session()
         try:
             deposit = Deposit(
@@ -268,7 +241,6 @@ class DatabaseManager:
             session.close()
 
     def get_deposit_by_tx_hash(self, tx_hash):
-        """Get deposit by transaction hash"""
         session = self.get_session()
         try:
             return session.query(Deposit).filter_by(tx_hash=tx_hash).first()
@@ -276,7 +248,6 @@ class DatabaseManager:
             session.close()
 
     def get_uncollected_fees_total(self):
-        """Get total uncollected fees"""
         session = self.get_session()
         try:
             total = session.query(UncollectedFee).filter_by(collected=False).with_entities(func.sum(UncollectedFee.amount)).scalar()
@@ -285,7 +256,6 @@ class DatabaseManager:
             session.close()
 
     def get_uncollected_fees(self):
-        """Get all uncollected fees with details"""
         session = self.get_session()
         try:
             return session.query(UncollectedFee).filter_by(collected=False).all()
@@ -293,7 +263,6 @@ class DatabaseManager:
             session.close()
 
     def mark_fees_collected(self, tx_hash=None):
-        """Mark all uncollected fees as collected"""
         session = self.get_session()
         try:
             fees = session.query(UncollectedFee).filter_by(collected=False).all()
@@ -313,7 +282,6 @@ class DatabaseManager:
             session.close()
 
     def close_all_sessions(self):
-        """Close all sessions (for cleanup)"""
         try:
             self.Session.remove()
             logger.info("All sessions closed")
@@ -321,7 +289,6 @@ class DatabaseManager:
             logger.error(f"Error closing sessions: {e}")
 
     def dispose_engine(self):
-        """Dispose the engine (for cleanup)"""
         try:
             if self.engine:
                 self.engine.dispose()

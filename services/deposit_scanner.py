@@ -24,7 +24,6 @@ class DepositScanner:
         self.scan_interval = 300
 
     async def scan_for_deposits(self, bot):
-        """Scan for deposits on Polygon using Etherscan V2 API"""
         try:
             logger.info("🔍 Scanning for Polygon deposits...")
             session = self.db.get_session()
@@ -44,7 +43,6 @@ class DepositScanner:
             logger.error(f"Scanner error: {e}")
 
     async def _check_user_deposits(self, user, bot):
-        """Check for new deposits from a specific user on Polygon using V2 API"""
         try:
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
@@ -85,7 +83,6 @@ class DepositScanner:
             logger.error(f"Error checking user deposits on Polygon: {e}")
 
     async def _process_deposit(self, user, amount, tx_hash, from_address, block_number, bot):
-        """Process a verified deposit on Polygon and send to channel"""
         try:
             session = self.db.get_session()
             
@@ -115,7 +112,6 @@ class DepositScanner:
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
-            # Send deposit notification to user
             try:
                 await self.notification_service.send_deposit_notification(
                     user_id=user.telegram_id,
@@ -125,7 +121,6 @@ class DepositScanner:
             except Exception as e:
                 logger.error(f"Error sending deposit notification: {e}")
             
-            # Send Telegram message to user
             try:
                 message = (
                     f"💰 **Deposit Detected on Polygon!**\n\n"
@@ -151,12 +146,11 @@ class DepositScanner:
                 channel_message = (
                     f"💰 **New Deposit!**\n"
                     f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"👤 User: @{user.username or 'User'}\n"
                     f"💵 Amount: **${amount:.2f} USDT**\n"
                     f"⛓️ Network: Polygon\n"
-                    f"🔗 TX: `{tx_hash[:10]}...{tx_hash[-8:]}`\n"
+                    f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
                     f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"🌱 Balance: **${user.balance:.2f}**"
+                    f"🏦 Project Wallet: `{Config.WALLET_ADDRESS}`"
                 )
                 await bot.send_message(
                     chat_id=-1004391112772,  # @PlantUSDTtransactions
@@ -174,7 +168,6 @@ class DepositScanner:
             session.close()
 
     async def _verify_transaction(self, tx_hash: str) -> bool:
-        """Verify transaction is valid and is USDT on Polygon using V2 API"""
         try:
             url = f"{self.api_url}?chainid={self.chain_id}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
@@ -201,35 +194,24 @@ class DepositScanner:
             return False
 
     async def _get_usdt_balance(self, wallet_address: str) -> float:
-        """Get USDT balance on Polygon using Etherscan V2 API"""
         try:
             url = f"{self.api_url}?chainid={self.chain_id}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
-            
-            logger.info(f"🔍 Fetching balance from: {url}")
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=10) as response:
                     data = await response.json()
-                    logger.info(f"📦 Balance API Response: {data}")
                     
                     if data and data.get('status') == '1':
                         result = data.get('result', '0')
                         if result and result != '0':
                             balance = float(result) / (10 ** self.decimals)
-                            logger.info(f"💰 Balance found: ${balance:.2f} USDT")
                             return balance
-                        else:
-                            logger.info(f"💰 Balance is zero or empty")
-                            return 0.0
-                    else:
-                        logger.error(f"❌ API error: {data.get('message', 'Unknown error')}")
-                        return 0.0
+                    return 0.0
         except Exception as e:
             logger.error(f"❌ Balance error on Polygon: {e}")
             return 0.0
 
     async def check_deposit_with_amount(self, user_id: int, expected_amount: float, bot):
-        """Manual deposit check - triggered by user clicking 'I've Sent USDT' on Polygon"""
         try:
             logger.info(f"🔍 Manual deposit check for user {user_id}, expected: ${expected_amount:.2f} on Polygon")
             session = self.db.get_session()

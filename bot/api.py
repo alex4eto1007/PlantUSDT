@@ -657,5 +657,75 @@ def claim_investment():
     finally:
         session.close()
 
+# ============================================
+# REFERRAL UPGRADE ENDPOINTS
+# ============================================
+
+@app.route('/api/referral_tiers', methods=['GET'])
+def get_referral_tiers():
+    """Get all referral tiers with pricing"""
+    from services.referral import REFERRAL_TIERS
+    return jsonify({
+        'success': True,
+        'tiers': REFERRAL_TIERS
+    })
+
+@app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
+def get_referral_stats_full(telegram_id):
+    """Get full referral stats including tier info"""
+    from services.referral import get_referral_stats
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        stats = get_referral_stats(user.id, session)
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/upgrade_tier', methods=['POST'])
+def upgrade_tier():
+    """Upgrade user's referral tier"""
+    from services.referral import upgrade_referral_tier
+    
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    tier = data.get('tier')
+    
+    if not telegram_id or not tier:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        success, msg = upgrade_referral_tier(user.id, tier, session)
+        
+        if success:
+            clear_user_cache(telegram_id)
+            return jsonify({
+                'success': True,
+                'message': msg,
+                'new_tier': tier,
+                'new_balance': user.balance
+            })
+        else:
+            return jsonify({'success': False, 'message': msg})
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)

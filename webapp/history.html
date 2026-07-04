@@ -7,77 +7,25 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        .network-tag {
-            display: inline-block;
-            background: rgba(130, 71, 229, 0.15);
-            color: #8247E5;
-            padding: 1px 8px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 500;
-            margin-left: 4px;
-        }
-        .history-item {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-        .history-item:hover {
-            background: rgba(255,255,255,0.06);
-        }
-        .history-left {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .history-type {
-            font-size: 14px;
-            font-weight: 600;
-        }
+        .network-tag { display: inline-block; background: rgba(130,71,229,0.15); color: #8247E5; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; margin-left: 4px; }
+        .history-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .history-item:hover { background: rgba(255,255,255,0.06); }
+        .history-type { font-size: 14px; font-weight: 600; }
         .history-type.deposit { color: #00ff87; }
         .history-type.withdraw { color: #ff6b6b; }
         .history-type.earnings { color: #ffd93d; }
         .history-type.investment { color: #a29bfe; }
         .history-type.referral_earnings { color: #6c5ce7; }
         .history-type.ad_earnings { color: #00d4ff; }
-        .history-date {
-            font-size: 11px;
-            color: rgba(255,255,255,0.4);
-        }
-        .history-right {
-            text-align: right;
-        }
-        .history-amount {
-            font-size: 16px;
-            font-weight: 700;
-        }
+        .history-date { font-size: 11px; color: rgba(255,255,255,0.4); }
+        .history-amount { font-size: 16px; font-weight: 700; }
         .history-amount.positive { color: #00ff87; }
         .history-amount.negative { color: #ff6b6b; }
-        .history-status {
-            font-size: 11px;
-            padding: 2px 10px;
-            border-radius: 10px;
-            display: inline-block;
-            margin-top: 2px;
-        }
-        .history-status.completed {
-            background: rgba(0,255,135,0.1);
-            color: #00ff87;
-        }
-        .history-status.pending {
-            background: rgba(255,213,0,0.1);
-            color: #ffd93d;
-        }
-        .history-status.failed {
-            background: rgba(255,107,107,0.1);
-            color: #ff6b6b;
-        }
+        .history-status { font-size: 11px; padding: 2px 10px; border-radius: 10px; display: inline-block; margin-top: 2px; }
+        .history-status.completed { background: rgba(0,255,135,0.1); color: #00ff87; }
+        .history-status.pending { background: rgba(255,213,0,0.1); color: #ffd93d; }
+        .history-status.failed { background: rgba(255,107,107,0.1); color: #ff6b6b; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #495670; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -85,7 +33,7 @@
         <div class="header">
             <button class="back-btn" onclick="goBack()">←</button>
             <h1>📜 Transaction History</h1>
-            <span style="font-size: 11px; color: #8247E5; background: rgba(130,71,229,0.1); padding: 2px 10px; border-radius: 12px;">Polygon</span>
+            <span style="font-size:11px;color:#8247E5;background:rgba(130,71,229,0.1);padding:2px 10px;border-radius:12px;">Polygon</span>
         </div>
 
         <div class="history-filters">
@@ -96,11 +44,9 @@
             <button class="filter-btn" onclick="filterHistory('investments')">Investments</button>
         </div>
 
-        <div id="historyList">
-            <p class="empty-state">No transactions found.</p>
-        </div>
+        <div id="historyList"><p class="empty-state">No transactions found.</p></div>
 
-        <button class="action-btn secondary" onclick="navigateTo('dashboard')" style="width: 100%; margin-top: 16px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <button class="action-btn secondary" onclick="navigateTo('dashboard')" style="width:100%;margin-top:16px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;background:transparent;border:1px solid rgba(255,255,255,0.08);">
             📊 Back to Dashboard
         </button>
     </div>

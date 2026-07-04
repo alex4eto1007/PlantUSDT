@@ -14,7 +14,7 @@
         <div class="header">
             <div class="logo">🌱 PlantUSDT</div>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <button onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); refreshData();" style="background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 8px; padding: 6px 12px; color: #00ff87; cursor: pointer; font-size: 14px;">🔄</button>
+                <button onclick="showInterstitialIfNeeded(); refreshData();" style="background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 8px; padding: 6px 12px; color: #00ff87; cursor: pointer; font-size: 14px;">🔄</button>
                 <div class="balance-display">
                     <span class="balance-label">💰 Balance</span>
                     <span class="balance-amount" id="balance">$0.000</span>
@@ -58,8 +58,8 @@
             <div class="wallet-input-group">
                 <input type="text" id="walletInput" placeholder="Enter your Polygon wallet address (0x...)" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;margin-bottom:8px;">
                 <div style="display:flex;gap:8px;">
-                    <button class="action-btn primary" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); saveWallet()" id="saveWalletBtn" style="flex:1;padding:12px;"><span class="btn-icon">💾</span> Save Wallet</button>
-                    <button class="action-btn warning" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); disconnectWallet()" id="disconnectWalletBtn" style="display:none;flex:1;padding:12px;background:linear-gradient(135deg,#ff6b6b,#ee5a24)!important;color:white!important;"><span class="btn-icon">🔓</span> Disconnect</button>
+                    <button class="action-btn primary" onclick="showInterstitialIfNeeded(); saveWallet()" id="saveWalletBtn" style="flex:1;padding:12px;"><span class="btn-icon">💾</span> Save Wallet</button>
+                    <button class="action-btn warning" onclick="showInterstitialIfNeeded(); disconnectWallet()" id="disconnectWalletBtn" style="display:none;flex:1;padding:12px;background:linear-gradient(135deg,#ff6b6b,#ee5a24)!important;color:white!important;"><span class="btn-icon">🔓</span> Disconnect</button>
                 </div>
             </div>
             <div class="wallet-address" id="walletAddressDisplay" style="display:none;font-size:12px;color:#00ff87;margin-top:8px;word-break:break-all;padding:8px 12px;background:rgba(0,255,135,0.05);border-radius:6px;border:1px solid rgba(0,255,135,0.1);"></div>
@@ -76,7 +76,7 @@
                 <div class="field-timer" id="field1Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress"><div class="progress-bar" id="field1Progress" style="width:0%"></div></div>
                 <div class="field-details"><span>Days: <span id="field1Days">0/30</span></span><span>Earned: <span id="field1Earned">$0.000</span></span></div>
-                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); investField(1)" id="field1Btn">🌱 Plant Now</button>
+                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); investField(1)" id="field1Btn">🌱 Plant Now</button>
             </div>
             <div class="field-card" id="field2">
                 <div class="field-number">🌾 Field #2</div>
@@ -85,7 +85,7 @@
                 <div class="field-timer" id="field2Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress"><div class="progress-bar" id="field2Progress" style="width:0%"></div></div>
                 <div class="field-details"><span>Days: <span id="field2Days">0/30</span></span><span>Earned: <span id="field2Earned">$0.000</span></span></div>
-                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); investField(2)" id="field2Btn">🌱 Plant Now</button>
+                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); investField(2)" id="field2Btn">🌱 Plant Now</button>
             </div>
             <div class="field-card" id="field3">
                 <div class="field-number">🌾 Field #3</div>
@@ -94,27 +94,85 @@
                 <div class="field-timer" id="field3Timer">⏳ Payout: --:--:-- UTC</div>
                 <div class="field-progress"><div class="progress-bar" id="field3Progress" style="width:0%"></div></div>
                 <div class="field-details"><span>Days: <span id="field3Days">0/30</span></span><span>Earned: <span id="field3Earned">$0.000</span></span></div>
-                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); investField(3)" id="field3Btn">🌱 Plant Now</button>
+                <button class="action-btn primary" onclick="showInterstitialIfNeeded(); investField(3)" id="field3Btn">🌱 Plant Now</button>
             </div>
         </div>
 
         <!-- Actions -->
         <div class="actions-grid">
-            <button class="action-btn" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); navigateTo('deposit')" style="background:linear-gradient(135deg,#00d4ff,#0088ff)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">💳</span> Deposit</button>
-            <button class="action-btn" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); navigateTo('withdraw')" style="background:linear-gradient(135deg,#00ff87,#00cc6a)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">🏦</span> Withdraw</button>
-            <button class="action-btn" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">📊</span> Dashboard</button>
+            <button class="action-btn" onclick="showInterstitialIfNeeded(); navigateTo('deposit')" style="background:linear-gradient(135deg,#00d4ff,#0088ff)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">💳</span> Deposit</button>
+            <button class="action-btn" onclick="showInterstitialIfNeeded(); navigateTo('withdraw')" style="background:linear-gradient(135deg,#00ff87,#00cc6a)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">🏦</span> Withdraw</button>
+            <button class="action-btn" onclick="showInterstitialIfNeeded(); navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">📊</span> Dashboard</button>
         </div>
 
         <!-- Referral -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
-            <p>Earn 1% of your referrals' deposits!</p>
-            <div class="referral-link-box"><span id="referralLinkText">Loading referral link...</span><button class="copy-btn" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); showInterstitialIfNeeded(); copyReferral()">📋</button></div>
+            <p>Earn up to 5% of your referrals' deposits based on your tier!</p>
+            <div class="referral-link-box"><span id="referralLinkText">Loading referral link...</span><button class="copy-btn" onclick="showInterstitialIfNeeded(); copyReferral()">📋</button></div>
             <div class="referral-stats"><span>Total Referrals: <strong id="referralCount">0</strong></span><span>Total Earned: <strong id="referralEarned">$0.000</strong></span></div>
             <div class="referral-details">
                 <div class="referral-detail-row"><span>👤 Referrals:</span><strong id="level1Count">0</strong></div>
                 <div class="referral-detail-row"><span>💰 Earnings from deposits:</span><strong id="level1Earnings">$0.000</strong></div>
             </div>
+        </div>
+
+        <!-- Referral Upgrade Section -->
+        <div class="referral-upgrade-section" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+            <h3 style="font-size: 18px; margin-bottom: 4px;">📊 Upgrade Referral Bonus</h3>
+            <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">Permanently increase your referral earnings!</p>
+            
+            <div class="tier-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-bottom: 12px;">
+                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 10px 8px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.05);">
+                    <div style="font-size: 20px;">🌱</div>
+                    <div style="font-size: 11px; font-weight: 600;">Free</div>
+                    <div style="font-size: 12px; color: #00ff87;">1%</div>
+                    <div style="font-size: 10px; color: #495670;">$0</div>
+                    <button style="background: #495670; width: 100%; padding: 4px; font-size: 10px; border: none; border-radius: 4px; color: white; cursor: not-allowed; margin-top: 4px;" disabled>Current</button>
+                </div>
+                
+                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 10px 8px; border-radius: 8px; border: 2px solid #cd7f32;">
+                    <div style="font-size: 20px;">🥉</div>
+                    <div style="font-size: 11px; font-weight: 600;">Bronze</div>
+                    <div style="font-size: 12px; color: #00ff87;">2%</div>
+                    <div style="font-size: 10px; color: #495670;">$40</div>
+                    <button onclick="upgradeReferralTier('bronze')" style="background: #cd7f32; width: 100%; padding: 4px; font-size: 10px; border: none; border-radius: 4px; color: white; cursor: pointer; margin-top: 4px;">Upgrade</button>
+                </div>
+                
+                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 10px 8px; border-radius: 8px; border: 2px solid #c0c0c0;">
+                    <div style="font-size: 20px;">🥈</div>
+                    <div style="font-size: 11px; font-weight: 600;">Silver</div>
+                    <div style="font-size: 12px; color: #00ff87;">3%</div>
+                    <div style="font-size: 10px; color: #495670;">$78.40</div>
+                    <div style="font-size: 8px; color: #00ff87;">Save $1.60</div>
+                    <button onclick="upgradeReferralTier('silver')" style="background: #c0c0c0; width: 100%; padding: 4px; font-size: 10px; border: none; border-radius: 4px; color: #0a0e17; cursor: pointer; margin-top: 2px;">Upgrade</button>
+                </div>
+                
+                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 10px 8px; border-radius: 8px; border: 2px solid #ffd700;">
+                    <div style="font-size: 20px;">🥇</div>
+                    <div style="font-size: 11px; font-weight: 600;">Gold</div>
+                    <div style="font-size: 12px; color: #00ff87;">4%</div>
+                    <div style="font-size: 10px; color: #495670;">$114</div>
+                    <div style="font-size: 8px; color: #00ff87;">Save $6</div>
+                    <button onclick="upgradeReferralTier('gold')" style="background: #ffd700; width: 100%; padding: 4px; font-size: 10px; border: none; border-radius: 4px; color: #0a0e17; cursor: pointer; margin-top: 2px;">Upgrade</button>
+                </div>
+                
+                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 10px 8px; border-radius: 8px; border: 2px solid #b9f2ff;">
+                    <div style="font-size: 20px;">💎</div>
+                    <div style="font-size: 11px; font-weight: 600;">Diamond</div>
+                    <div style="font-size: 12px; color: #00ff87;">5%</div>
+                    <div style="font-size: 10px; color: #495670;">$144</div>
+                    <div style="font-size: 8px; color: #00ff87;">Save $16</div>
+                    <button onclick="upgradeReferralTier('diamond')" style="background: #b9f2ff; width: 100%; padding: 4px; font-size: 10px; border: none; border-radius: 4px; color: #0a0e17; cursor: pointer; margin-top: 2px;">Upgrade</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 12px; padding: 10px; background: rgba(255,193,7,0.08); border-radius: 6px; border: 1px solid rgba(255,193,7,0.15);">
+                <strong style="font-size: 12px; color: #ffd93d;">⚠️ IMPORTANT:</strong>
+                <span style="font-size: 12px; color: #8892b0;"> These are the <strong style="color:#ffd93d;">LOWEST</strong> prices ever. They will go up as the project grows!</span>
+            </div>
+            
+            <div id="upgradeResult" style="margin-top: 10px; display: none; padding: 10px; border-radius: 6px;"></div>
         </div>
 
         <!-- Ads -->
@@ -125,7 +183,7 @@
                 <div class="ad-stat-box"><span class="ad-stat-label">📊 Ads Today</span><span class="ad-stat-value" id="adsToday">♾️ Unlimited</span></div>
                 <div class="ad-stat-box"><span class="ad-stat-label">💰 Total Earned</span><span class="ad-stat-value" id="adEarnings">$0.000</span></div>
             </div>
-            <button class="action-btn primary" onclick="showInterstitialIfNeeded(); showInterstitialIfNeeded(); watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad & Earn $0.001</button>
+            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad & Earn $0.001</button>
             <div id="adStatus" style="margin-top:10px;font-size:13px;color:#ffd93d;text-align:center;display:none;"></div>
             <p style="font-size:11px;color:#495670;margin-top:8px;text-align:center;">💚 More video ads = more rewards for you!</p>
         </div>
@@ -141,7 +199,7 @@
             <p>6. When period ends, click <strong>"🌾 Claim Now!"</strong></p>
             <p>7. Funds added to your balance and field resets</p>
             <p>8. Withdraw anytime (min $2, 10% fee)</p>
-            <p>9. Refer friends and earn 1% of their deposits!</p>
+            <p>9. Refer friends and earn up to 5% of their deposits based on your tier!</p>
             <p style="color:#8247E5;margin-top:8px;font-weight:500;">⛓️ Powered by Polygon Network</p>
         </div>
 

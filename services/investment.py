@@ -3,6 +3,7 @@ from database.db_manager import DatabaseManager
 from database.models import Investment, User, DailyPayout
 from config.settings import Config
 from services.notifications import NotificationService
+from services.referral import check_and_award_active_referrals, get_referral_bonus_percent, calculate_referral_bonus
 import logging
 import requests
 
@@ -12,7 +13,6 @@ class InvestmentService:
     def __init__(self):
         self.db = DatabaseManager()
         self.notification_service = NotificationService()
-        # Updated multipliers: 1 day 2%, 7 days 18%, 30 days 80%
         self.lock_multipliers = {
             1: 1.02,    # 2% return
             7: 1.18,    # 18% return
@@ -20,12 +20,10 @@ class InvestmentService:
         }
 
     def calculate_return(self, amount: float, lock_period: int) -> float:
-        """Calculate the total return based on lock period"""
         multiplier = self.lock_multipliers.get(lock_period, 1.80)
         return round(amount * multiplier, 2)
 
     async def process_referral_earnings(self, investment):
-        """Process referral earnings based on deposits (1% of deposit amount)"""
         logger.info("🔔🔔🔔 REFERRAL FUNCTION STARTED 🔔🔔🔔")
         try:
             session = self.db.get_session()
@@ -40,7 +38,9 @@ class InvestmentService:
                 logger.info(f"🔔 REFERRAL DEBUG: Referrer not found for user {investment.user_id}")
                 return 0
 
-            referral_bonus = investment.amount * 0.01  # 1% instead of 5%
+            # Get referrer's tier bonus
+            bonus_percent = get_referral_bonus_percent(referrer.id, session)
+            referral_bonus = investment.amount * (bonus_percent / 100)
 
             referrer.balance += referral_bonus
             referrer.total_earned += referral_bonus
@@ -49,9 +49,8 @@ class InvestmentService:
             referrer.total_earnings_all_time = (referrer.total_earnings_all_time or 0) + referral_bonus
 
             session.commit()
-            logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} from {user.telegram_id}'s deposit of ${investment.amount} on Polygon")
+            logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} ({bonus_percent}%) from {user.telegram_id}'s deposit of ${investment.amount} on Polygon")
 
-            # --- SEND REFERRAL NOTIFICATION ---
             try:
                 await self.notification_service.send_referral_notification(
                     referrer_id=referrer.telegram_id,
@@ -61,11 +60,7 @@ class InvestmentService:
             except Exception as e:
                 logger.error(f"Error sending referral notification: {e}")
 
-            # --- SEND TELEGRAM NOTIFICATION VIA API (Legacy backup) ---
-            logger.info("🔔🔔🔔 ENTERING NOTIFICATION SECTION 🔔🔔🔔")
             try:
-                logger.info(f"🔔 REFERRAL DEBUG: Attempting to send notification to {referrer.telegram_id}")
-                
                 bot_token = Config.BOT_TOKEN
                 username = user.username or user.first_name or "User"
                 total_refs = session.query(User).filter_by(referred_by=referrer.id).count()
@@ -73,7 +68,7 @@ class InvestmentService:
                 message = (
                     f"🎁 **Referral Bonus Received (Polygon)**\n\n"
                     f"Your referral **@{username}** deposited **${investment.amount:.2f} USDT**\n\n"
-                    f"**+${referral_bonus:.2f} USDT** credited to your balance! (1% bonus)\n"
+                    f"**+${referral_bonus:.2f} USDT** credited to your balance! ({bonus_percent}% bonus)\n"
                     f"━━━━━━━━━━━━━━━━━━━━\n"
                     f"💰 Your balance: **${referrer.balance:.2f}**\n"
                     f"👥 Total referrals: **{total_refs}**\n"
@@ -87,9 +82,7 @@ class InvestmentService:
                     "parse_mode": "Markdown"
                 }
                 
-                logger.info(f"🔔 REFERRAL DEBUG: Sending to URL: {url[:50]}...")
                 response = requests.post(url, json=payload, timeout=10)
-                logger.info(f"🔔 REFERRAL DEBUG: Response status: {response.status_code}")
                 
                 if response.status_code == 200:
                     logger.info(f"✅ Referral notification sent to {referrer.telegram_id}")
@@ -98,23 +91,17 @@ class InvestmentService:
                     
             except Exception as e:
                 logger.error(f"❌ Error sending notification: {e}")
-                import traceback
-                logger.error(traceback.format_exc())
-            # --- END NOTIFICATION ---
 
             return referral_bonus
 
         except Exception as e:
             logger.error(f"Error processing referral earnings: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
             session.rollback()
             return 0
         finally:
             session.close()
 
     def create_investment(self, user_id: int, field_number: int, amount: float, lock_period: int):
-        """Create a new locked investment on Polygon"""
         try:
             session = self.db.get_session()
 
@@ -163,7 +150,6 @@ class InvestmentService:
             session.close()
 
     async def process_locked_investments(self):
-        """Process investments that have reached their unlock date on Polygon"""
         try:
             session = self.db.get_session()
             now = datetime.utcnow()
@@ -182,26 +168,22 @@ class InvestmentService:
 
             for investment in unlocked:
                 try:
-                    # Get the user FIRST and attach to session
                     user = session.query(User).filter_by(id=investment.user_id).first()
                     if not user:
                         logger.error(f"User {investment.user_id} not found")
                         continue
 
-                    # Mark investment as unlocked
                     investment.is_locked = False
                     investment.is_active = False
                     investment.is_completed = True
                     investment.completed_at = now
                     investment.principal_returned = True
 
-                    # Update the user's balance
                     user.balance += investment.expected_return
                     user.total_earned += investment.expected_return
                     user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
                     user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
 
-                    # Create a DailyPayout record for the profit (so it appears in history)
                     profit = investment.expected_return - investment.amount
                     payout = DailyPayout(
                         user_id=user.id,
@@ -212,11 +194,12 @@ class InvestmentService:
                     )
                     session.add(payout)
 
-                    # COMMIT - this saves both the investment AND user changes
                     session.commit()
-                    logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f} (Field {investment.field_number})")
+                    logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f}")
 
-                    # Send unlock notification
+                    # Check for active referral bonuses
+                    await check_and_award_active_referrals(user.id, session)
+
                     try:
                         await self.notification_service.send_unlock_notification(
                             user_id=user.telegram_id,
@@ -228,14 +211,11 @@ class InvestmentService:
                     except Exception as e:
                         logger.error(f"Error sending unlock notification: {e}")
 
-                    # Process referral earnings
                     await self.process_referral_earnings(investment)
 
-                    # Send Telegram message
                     try:
                         from bot.main import application
                         if application and application.bot:
-                            profit = investment.expected_return - investment.amount
                             message = (
                                 f"🎉 **Investment Completed!**\n\n"
                                 f"Your investment in **Field #{investment.field_number}** has been completed!\n\n"
@@ -266,7 +246,6 @@ class InvestmentService:
             session.close()
 
     def get_available_lock_periods(self):
-        """Get available lock periods with their returns"""
         return [
             {'days': 1, 'return_percent': 2, 'multiplier': 1.02},
             {'days': 7, 'return_percent': 18, 'multiplier': 1.18},
@@ -274,7 +253,6 @@ class InvestmentService:
         ]
 
     def get_investment_status(self, user_id: int):
-        """Get investment status for a user on Polygon"""
         try:
             session = self.db.get_session()
             investments = session.query(Investment).filter_by(
