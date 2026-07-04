@@ -46,7 +46,6 @@ class DepositScanner:
     async def _check_user_deposits(self, user, bot):
         """Check for new deposits from a specific user on Polygon using V2 API"""
         try:
-            # V2 API: Keep &module=account (V2 still requires it)
             url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
             logger.info(f"🔍 Checking deposits for user {user.telegram_id}")
@@ -90,88 +89,112 @@ class DepositScanner:
         try:
             session = self.db.get_session()
             
+            # Verify transaction is valid
             is_valid = await self._verify_transaction(tx_hash)
             if not is_valid:
                 logger.warning(f"⚠️ Invalid transaction detected: {tx_hash} on Polygon")
+                session.close()
                 return
             
+            # Check if already processed
             existing = session.query(Deposit).filter_by(tx_hash=tx_hash).first()
             if existing:
-                logger.info(f"Deposit {tx_hash} already processed on Polygon")
+                if existing.processed:
+                    logger.info(f"Deposit {tx_hash} already processed on Polygon")
+                else:
+                    logger.info(f"Deposit {tx_hash} found but not processed, processing now...")
+                    # Process it
+                    existing.processed = True
+                    user.balance += amount
+                    user.total_deposited += amount
+                    session.commit()
+                    logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
+                    
+                    # Send notifications
+                    await self._send_notifications(user, amount, tx_hash, bot)
+                session.close()
                 return
             
+            # Create new deposit
             deposit = Deposit(
                 user_id=user.id,
                 amount=amount,
                 tx_hash=tx_hash,
                 from_address=from_address,
                 block_number=block_number,
-                network='polygon'
+                network='polygon',
+                processed=True  # Mark as processed immediately
             )
             session.add(deposit)
             
+            # Update user balance
             user.balance += amount
             user.total_deposited += amount
             
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
-            # Send deposit notification to user
-            try:
-                await self.notification_service.send_deposit_notification(
-                    user_id=user.telegram_id,
-                    amount=amount,
-                    tx_hash=tx_hash
-                )
-            except Exception as e:
-                logger.error(f"Error sending deposit notification: {e}")
+            # Send notifications
+            await self._send_notifications(user, amount, tx_hash, bot)
             
-            # Send Telegram message to user
-            try:
-                message = (
-                    f"💰 **Deposit Detected on Polygon!**\n\n"
-                    f"Amount: **${amount:.2f} USDT**\n"
-                    f"Network: **Polygon** ⛓️\n"
-                    f"TX: `{tx_hash[:10]}...{tx_hash[-8:]}`\n\n"
-                    f"🌱 Your balance: **${user.balance:.2f}**\n"
-                    f"💎 Total deposited: **${user.total_deposited:.2f}**"
-                )
-                await bot.send_message(
-                    chat_id=user.telegram_id,
-                    text=message,
-                    parse_mode='Markdown'
-                )
-                logger.info(f"✅ Deposit notification sent to {user.telegram_id}")
-            except Exception as e:
-                logger.error(f"Error sending deposit notification: {e}")
-            
-            # ============================================
-            # SEND TO TRANSACTION CHANNEL
-            # ============================================
-            try:
-                channel_message = (
-                    f"💰 **New Deposit!**\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"💵 Amount: **${amount:.2f} USDT**\n"
-                    f"⛓️ Network: Polygon\n"
-                    f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"🏦 Project Wallet: `{Config.WALLET_ADDRESS}`"
-                )
-                await bot.send_message(
-                    chat_id=-1004391112772,  # @PlantUSDTtransactions
-                    text=channel_message,
-                    parse_mode='Markdown'
-                )
-                logger.info("✅ Deposit posted to transaction channel")
-            except Exception as e:
-                logger.error(f"❌ Failed to send deposit to channel: {e}")
-                
         except Exception as e:
             logger.error(f"Error processing deposit on Polygon: {e}")
-            session.rollback()
+            if 'session' in locals():
+                session.rollback()
         finally:
-            session.close()
+            if 'session' in locals():
+                session.close()
+
+    async def _send_notifications(self, user, amount, tx_hash, bot):
+        """Send deposit notifications to user and channel"""
+        try:
+            # Send notification via service
+            await self.notification_service.send_deposit_notification(
+                user_id=user.telegram_id,
+                amount=amount,
+                tx_hash=tx_hash
+            )
+        except Exception as e:
+            logger.error(f"Error sending deposit notification: {e}")
+        
+        # Send Telegram message to user
+        try:
+            message = (
+                f"💰 **Deposit Detected on Polygon!**\n\n"
+                f"Amount: **${amount:.2f} USDT**\n"
+                f"Network: **Polygon** ⛓️\n"
+                f"TX: `{tx_hash[:10]}...{tx_hash[-8:]}`\n\n"
+                f"🌱 Your balance: **${user.balance:.2f}**\n"
+                f"💎 Total deposited: **${user.total_deposited:.2f}**"
+            )
+            await bot.send_message(
+                chat_id=user.telegram_id,
+                text=message,
+                parse_mode='Markdown'
+            )
+            logger.info(f"✅ Deposit notification sent to {user.telegram_id}")
+        except Exception as e:
+            logger.error(f"Error sending deposit notification: {e}")
+        
+        # Send to transaction channel
+        try:
+            channel_message = (
+                f"💰 **New Deposit!**\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"💵 Amount: **${amount:.2f} USDT**\n"
+                f"⛓️ Network: Polygon\n"
+                f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"🏦 Project Wallet: `{Config.WALLET_ADDRESS}`"
+            )
+            await bot.send_message(
+                chat_id=-1004391112772,  # @PlantUSDTtransactions
+                text=channel_message,
+                parse_mode='Markdown'
+            )
+            logger.info("✅ Deposit posted to transaction channel")
+        except Exception as e:
+            logger.error(f"❌ Failed to send deposit to channel: {e}")
 
     async def _verify_transaction(self, tx_hash: str) -> bool:
         """Verify transaction is a valid USDT transfer using V2 API"""
@@ -217,7 +240,6 @@ class DepositScanner:
     async def _get_usdt_balance(self, wallet_address: str) -> float:
         """Get USDT balance using V2 API"""
         try:
-            # V2 API: Keep &module=account (V2 still requires it)
             url = f"{self.api_url}&module=account&action=tokenbalance&contractaddress={self.usdt_contract}&address={wallet_address}&tag=latest&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
@@ -246,7 +268,6 @@ class DepositScanner:
             if not user.wallet_address:
                 return {'success': False, 'message': 'No wallet connected'}
 
-            # V2 API: Keep &module=account
             url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session_api:
@@ -270,6 +291,14 @@ class DepositScanner:
                                             bot=bot
                                         )
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT detected and processed on Polygon!'}
+                                    elif not existing.processed:
+                                        # Process the existing unprocessed deposit
+                                        existing.processed = True
+                                        user.balance += amount
+                                        user.total_deposited += amount
+                                        session.commit()
+                                        await self._send_notifications(user, amount, tx.get('hash'), bot)
+                                        return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT processed successfully!'}
                                     else:
                                         return {'success': True, 'message': 'Deposit already processed'}
             
