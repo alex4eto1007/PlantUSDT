@@ -72,7 +72,7 @@
             tg.expand();
 
             const userId = tg.initDataUnsafe?.user?.id || '0';
-            fetch(`https://plantusdt.ddns.net/api/get_wallet?telegram_id=${userId}`)
+            fetch('https://plantusdt.ddns.net/api/get_wallet?telegram_id=' + userId)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.wallet_address) {
@@ -88,11 +88,11 @@
                     document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
                 });
 
-            const amountInput = document.getElementById('depositAmount');
-            const statusDiv = document.getElementById('depositStatus');
+            var amountInput = document.getElementById('depositAmount');
+            var statusDiv = document.getElementById('depositStatus');
             if (amountInput && statusDiv) {
                 amountInput.addEventListener('input', function() {
-                    const amount = parseFloat(this.value);
+                    var amount = parseFloat(this.value);
                     if (amount >= 5) {
                         statusDiv.innerHTML = '✅ Amount entered: $' + amount.toFixed(2) + ' USDT';
                         statusDiv.className = 'deposit-status success';
@@ -109,27 +109,36 @@
         });
 
         function copyAddress() {
-            const address = document.getElementById('addressText').textContent;
+            var address = document.getElementById('addressText').textContent;
             if (address) {
-                navigator.clipboard.writeText(address).then(() => {
-                    window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
-                }).catch(() => {
-                    const textArea = document.createElement('textarea');
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(address).then(function() {
+                        window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                    }).catch(function() {
+                        var textArea = document.createElement('textarea');
+                        textArea.value = address;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                    });
+                } else {
+                    var textArea = document.createElement('textarea');
                     textArea.value = address;
                     document.body.appendChild(textArea);
                     textArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
                     window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
-                });
+                }
             }
         }
 
         async function checkDepositWithAmount() {
-            showInterstitialIfNeeded();
-            const userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
-            const amountInput = document.getElementById('depositAmount');
-            const amount = amountInput?.value;
+            var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
+            var amountInput = document.getElementById('depositAmount');
+            var amount = amountInput?.value;
             
             if (!amount || parseFloat(amount) < 5) {
                 window.Telegram.WebApp.showPopup({
@@ -140,19 +149,18 @@
                 return;
             }
             
-            const statusDiv = document.getElementById('depositStatus');
+            var statusDiv = document.getElementById('depositStatus');
             if (statusDiv) {
                 statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
                 statusDiv.className = 'deposit-status pending';
                 statusDiv.style.display = 'block';
                 try {
-                    const response = await fetch(`https://plantusdt.ddns.net/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
-                    const data = await response.json();
+                    var response = await fetch('https://plantusdt.ddns.net/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
+                    var data = await response.json();
                     if (data.success) {
                         statusDiv.innerHTML = '✅ ' + data.message;
                         statusDiv.className = 'deposit-status success';
-                        // Refresh data after successful deposit
-                        setTimeout(() => {
+                        setTimeout(function() {
                             window.location.reload();
                         }, 2000);
                     } else {
@@ -170,10 +178,9 @@
             window.history.back();
         }
 
-        window.checkDepositWithAmount = checkDepositWithAmount;
         window.copyAddress = copyAddress;
+        window.checkDepositWithAmount = checkDepositWithAmount;
         window.goBack = goBack;
-        window.showInterstitialIfNeeded = showInterstitialIfNeeded;
     </script>
     <script src="js/app.js"></script>
 </body>
