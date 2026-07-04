@@ -12,26 +12,16 @@
         @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         .warning-box-critical { background: rgba(255,107,107,0.15); border: 2px solid rgba(255,107,107,0.4); border-radius: 8px; padding: 14px; margin-top: 12px; }
         .warning-box-critical p { font-size: 12px; color: #ff6b6b; margin: 0; line-height: 1.6; }
+        .deposit-timer-message { margin-top: 10px; padding: 12px; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); border-radius: 8px; }
+        .deposit-timer-message p { font-size: 13px; color: #ffd93d; margin: 0; line-height: 1.6; }
+        .deposit-timer-message .sub-text { font-size: 12px; opacity: 0.8; }
         .contact-support { margin-top: 12px; padding: 12px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); border-radius: 8px; text-align: center; }
         .contact-support p { font-size: 13px; color: #00d4ff; margin: 0; line-height: 1.6; }
         .contact-support a { color: #00d4ff; text-decoration: none; font-weight: 600; }
-        .memo-box { background: rgba(0,255,135,0.05); border: 2px solid rgba(0,255,135,0.3); border-radius: 12px; padding: 16px; margin: 16px 0; text-align: center; }
-        .memo-box .memo-code { font-size: 28px; font-weight: 700; color: #00ff87; font-family: monospace; letter-spacing: 3px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; display: inline-block; }
-        .memo-box .timer { font-size: 18px; font-weight: 700; margin-top: 10px; }
-        .memo-box .timer .countdown { color: #00ff87; }
-        .memo-box .timer .countdown.warning { color: #ffd93d; }
-        .memo-box .timer .countdown.expired { color: #ff6b6b; }
-        .memo-box .expired-text { display: none; color: #ff6b6b; font-weight: 700; margin-top: 8px; font-size: 16px; }
-        .step-indicator { display: flex; justify-content: space-between; margin: 20px 0; padding: 0 10px; }
-        .step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
-        .step .circle { width: 30px; height: 30px; border-radius: 50%; background: #495670; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; z-index: 2; }
-        .step .circle.active { background: #00ff87; color: #0a0e17; }
-        .step .circle.done { background: #8247E5; color: white; }
-        .step .label { font-size: 10px; color: #8892b0; margin-top: 4px; text-align: center; }
-        .step .line { position: absolute; top: 15px; left: 50%; width: 100%; height: 2px; background: #495670; z-index: 1; }
-        .step:last-child .line { display: none; }
-        .step .line.active { background: #00ff87; }
-        .step .line.done { background: #8247E5; }
+        .deposit-status { padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; margin: 12px 0; background: rgba(0,0,0,0.3); }
+        .deposit-status.success { border: 1px solid rgba(0,255,135,0.3); color: #00ff87; }
+        .deposit-status.error { border: 1px solid rgba(255,107,107,0.3); color: #ff6b6b; }
+        .deposit-status.pending { border: 1px solid rgba(130,71,229,0.3); color: #8247E5; }
     </style>
 </head>
 <body>
@@ -46,100 +36,36 @@
             <div class="network-badge-large"><span class="dot"></span> 🟣 Polygon Network <span style="font-size:11px;opacity:0.7;margin-left:4px;">(Low fees)</span></div>
         </div>
 
-        <div class="step-indicator" id="stepIndicator">
-            <div class="step" id="step1">
-                <div class="circle active" id="circle1">1</div>
-                <div class="label">Enter Amount</div>
-                <div class="line" id="line1"></div>
-            </div>
-            <div class="step" id="step2">
-                <div class="circle" id="circle2">2</div>
-                <div class="label">Get Memo</div>
-                <div class="line" id="line2"></div>
-            </div>
-            <div class="step" id="step3">
-                <div class="circle" id="circle3">3</div>
-                <div class="label">Send USDT</div>
-                <div class="line" id="line3"></div>
-            </div>
-            <div class="step" id="step4">
-                <div class="circle" id="circle4">4</div>
-                <div class="label">Verify</div>
-            </div>
-        </div>
-
         <div id="walletDisplay" style="margin-bottom:16px;padding:12px;background:rgba(0,255,135,0.05);border:1px solid rgba(0,255,135,0.1);border-radius:8px;">
             <p style="font-size:12px;color:#8892b0;margin:0;">🔗 <strong>Connected Wallet:</strong> <span id="connectedWalletDisplay" style="color:#00ff87;font-family:monospace;font-size:12px;word-break:break-all;">Not connected</span></p>
             <p style="font-size:11px;color:#ffd93d;margin:4px 0 0 0;">⚠️ Send USDT ONLY from this wallet on Polygon network!</p>
         </div>
 
-        <div id="step1Content">
-            <div class="info-card">
-                <p style="font-size:13px;color:#8892b0;line-height:1.6;margin-bottom:8px;"><strong>Network:</strong> Polygon ⛓️ &nbsp;|&nbsp; <strong>Token:</strong> USDT &nbsp;|&nbsp; <strong>Min:</strong> $5</p>
-            </div>
-
-            <div class="form-group" style="margin:16px 0;">
-                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">💰 Deposit Amount (USDT)</label>
-                <input type="number" id="depositAmount" placeholder="Enter amount (min $5)" min="5" step="0.01" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
-                <p style="font-size:11px;color:#495670;margin-top:4px;">Enter the amount you want to deposit</p>
-            </div>
-
-            <button class="action-btn primary" onclick="generateMemo()" id="generateMemoBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">🔑 Generate Deposit Memo</button>
-        </div>
-
-        <div id="step2Content" style="display:none;">
-            <div class="memo-box">
-                <p style="font-size:14px;color:#8892b0;margin-bottom:8px;">📋 Your Deposit Memo</p>
-                <div class="memo-code" id="memoDisplay">------</div>
-                <button onclick="copyMemo()" style="margin-top:8px;padding:6px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:12px;">📋 Copy Memo</button>
-                <div class="timer" id="memoTimer">⏳ Valid for: <span class="countdown" id="timerCountdown">6:00</span></div>
-                <div class="expired-text" id="memoExpired">❌ Memo Expired! Generate a new one.</div>
-            </div>
-
+        <div class="info-card">
+            <p style="font-size:13px;color:#8892b0;line-height:1.6;margin-bottom:8px;"><strong>Network:</strong> Polygon ⛓️ &nbsp;|&nbsp; <strong>Token:</strong> USDT &nbsp;|&nbsp; <strong>Min:</strong> $5</p>
+            <div class="deposit-timer-message"><p>⏳ Deposits may take up to 5 minutes to be detected.<br><span class="sub-text">The scanner runs automatically every 5 minutes.</span></p></div>
             <div class="deposit-address-box" style="margin-top:12px;">
-                <p style="font-size:12px;color:#8892b0;margin-bottom:4px;">📌 Send USDT to:</p>
+                <p style="font-size:12px;color:#8892b0;margin-bottom:4px;">📌 Deposit Address:</p>
                 <div class="address" style="font-size:13px;word-break:break-all;padding:10px;background:rgba(0,0,0,0.4);border-radius:8px;font-family:monospace;color:#00ff87;border:1px solid rgba(0,255,135,0.1);" id="addressText">0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76</div>
                 <button onclick="copyAddress()" style="margin-top:8px;padding:6px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:12px;">📋 Copy Address</button>
             </div>
-
-            <div class="warning-box-critical"><p>⚠️ <strong>IMPORTANT:</strong> Send USDT <strong>WITH THE EXACT MEMO</strong> shown above.<br>Sending without the memo = <strong>PERMANENT LOSS</strong>.</p></div>
-
-            <button class="action-btn primary" onclick="showVerifyStep()" id="verifyStepBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#8247E5,#a29bfe);border:none;color:white;margin-top:12px;">✅ I've Sent USDT - Verify Now</button>
-            <button class="action-btn secondary" onclick="resetDeposit()" style="width:100%;margin-top:8px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">🔄 Generate New Memo</button>
+            <div class="warning-box-critical"><p>⚠️ <strong>IMPORTANT:</strong> Send USDT <strong>FROM YOUR CONNECTED WALLET</strong> on Polygon.<br>Sending from a different wallet or network = <strong>PERMANENT LOSS</strong>.</p></div>
+            <div class="contact-support"><p>❓ Didn't receive your deposit after 5 minutes?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>! 👨‍🔧</p></div>
         </div>
 
-        <div id="step3Content" style="display:none;">
-            <div class="info-card">
-                <h3>🔍 Verify Your Deposit</h3>
-                <p style="font-size:13px;color:#8892b0;line-height:1.6;">Enter the transaction hash from your USDT transfer.</p>
-            </div>
-
-            <div class="form-group" style="margin:16px 0;">
-                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">🔗 Transaction Hash</label>
-                <input type="text" id="txHashInput" placeholder="0x..." style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
-                <p style="font-size:11px;color:#495670;margin-top:4px;">Paste the transaction hash from your wallet</p>
-            </div>
-
-            <div id="verifyStatus" style="display:none;padding:12px;border-radius:8px;margin:12px 0;text-align:center;"></div>
-
-            <button class="action-btn primary" onclick="verifyDeposit()" id="verifyBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">✅ Verify Deposit</button>
-            <button class="action-btn secondary" onclick="resetDeposit()" style="width:100%;margin-top:8px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">🔄 Start Over</button>
+        <div class="form-group" style="margin:16px 0;">
+            <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">💰 Deposit Amount (USDT)</label>
+            <input type="number" id="depositAmount" placeholder="Enter exact amount sent" min="5" step="0.01" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+            <p style="font-size:11px;color:#495670;margin-top:4px;">Enter the exact amount to help us detect your deposit faster.</p>
         </div>
 
-        <div class="contact-support" style="margin-top:16px;padding:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;text-align:center;">
-            <p style="font-size:13px;color:#00d4ff;margin:0;line-height:1.6;">❓ Need help?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>! 👨‍🔧</p>
-        </div>
+        <div id="depositStatus" class="deposit-status" style="display:none;"></div>
 
+        <button class="action-btn primary" onclick="checkDepositWithAmount()" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">🔍 I've Sent USDT</button>
         <button class="action-btn secondary" onclick="goBack()" style="width:100%;margin-top:12px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">📊 Back to Dashboard</button>
     </div>
 
     <script>
-        let currentMemo = null;
-        let memoExpiresAt = null;
-        let memoAmount = null;
-        let timerInterval = null;
-        let isVerified = false;
-
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
             tg.ready();
@@ -161,171 +87,32 @@
                     document.getElementById('connectedWalletDisplay').textContent = '❌ Error loading wallet';
                     document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
                 });
-        });
 
-        function updateStep(step) {
-            for (let i = 1; i <= 4; i++) {
-                const circle = document.getElementById(`circle${i}`);
-                const line = document.getElementById(`line${i}`);
-                circle.className = 'circle';
-                if (i < step) {
-                    circle.classList.add('done');
-                    if (line) line.className = 'line done';
-                } else if (i === step) {
-                    circle.classList.add('active');
-                    if (line) line.className = 'line active';
-                } else {
-                    if (line) line.className = 'line';
-                }
-            }
-        }
-
-        async function generateMemo() {
             const amountInput = document.getElementById('depositAmount');
-            const amount = parseFloat(amountInput.value);
-            
-            if (!amount || amount < 5) {
-                window.Telegram.WebApp.showPopup({
-                    title: '⚠️ Invalid Amount',
-                    message: 'Please enter at least $5 USDT.',
-                    buttons: [{type: 'ok'}]
-                });
-                return;
-            }
-
-            const userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
-            
-            document.getElementById('generateMemoBtn').disabled = true;
-            document.getElementById('generateMemoBtn').textContent = '⏳ Generating...';
-
-            try {
-                const response = await fetch('https://plantusdt.ddns.net/api/generate_deposit_memo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: userId,
-                        amount: amount
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentMemo = data.memo;
-                    memoAmount = amount;
-                    isVerified = false;
-                    
-                    // Hardcode 6 minutes from NOW
-                    memoExpiresAt = new Date();
-                    memoExpiresAt.setMinutes(memoExpiresAt.getMinutes() + 6);
-                    
-                    document.getElementById('memoDisplay').textContent = currentMemo;
-                    document.getElementById('step1Content').style.display = 'none';
-                    document.getElementById('step2Content').style.display = 'block';
-                    document.getElementById('step3Content').style.display = 'none';
-                    
-                    updateStep(2);
-                    
-                    // Reset timer display
-                    const countdownEl = document.getElementById('timerCountdown');
-                    countdownEl.textContent = '6:00';
-                    countdownEl.className = 'countdown';
-                    document.getElementById('memoExpired').style.display = 'none';
-                    
-                    // Clear any existing timer and start fresh
-                    if (timerInterval) clearInterval(timerInterval);
-                    startTimer();
-                    
-                    window.Telegram.WebApp.showPopup({
-                        title: '✅ Memo Generated!',
-                        message: `Send $${amount.toFixed(2)} USDT with memo: ${currentMemo}\n\nValid for 6 minutes.`,
-                        buttons: [{type: 'ok'}]
-                    });
-                } else {
-                    window.Telegram.WebApp.showPopup({
-                        title: '❌ Error',
-                        message: data.message || 'Failed to generate memo',
-                        buttons: [{type: 'ok'}]
-                    });
-                }
-            } catch (error) {
-                window.Telegram.WebApp.showPopup({
-                    title: '❌ Error',
-                    message: 'Network error. Please try again.',
-                    buttons: [{type: 'ok'}]
+            const statusDiv = document.getElementById('depositStatus');
+            if (amountInput && statusDiv) {
+                amountInput.addEventListener('input', function() {
+                    const amount = parseFloat(this.value);
+                    if (amount >= 5) {
+                        statusDiv.innerHTML = '✅ Amount entered: $' + amount.toFixed(2) + ' USDT';
+                        statusDiv.className = 'deposit-status success';
+                        statusDiv.style.display = 'block';
+                    } else if (this.value && amount < 5) {
+                        statusDiv.innerHTML = '⚠️ Minimum deposit is $5 USDT';
+                        statusDiv.className = 'deposit-status error';
+                        statusDiv.style.display = 'block';
+                    } else {
+                        statusDiv.style.display = 'none';
+                    }
                 });
             }
-            
-            document.getElementById('generateMemoBtn').disabled = false;
-            document.getElementById('generateMemoBtn').textContent = '🔑 Generate Deposit Memo';
-        }
-
-        function startTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            updateTimerDisplay();
-            timerInterval = setInterval(updateTimerDisplay, 1000);
-        }
-
-        function updateTimerDisplay() {
-            const countdownEl = document.getElementById('timerCountdown');
-            const expiredEl = document.getElementById('memoExpired');
-            
-            if (!memoExpiresAt) {
-                countdownEl.textContent = '6:00';
-                countdownEl.className = 'countdown';
-                return;
-            }
-            
-            const now = new Date();
-            const diff = Math.floor((memoExpiresAt - now) / 1000);
-            
-            if (diff <= 0) {
-                countdownEl.textContent = '00:00';
-                countdownEl.className = 'countdown expired';
-                expiredEl.style.display = 'block';
-                if (timerInterval) clearInterval(timerInterval);
-                return;
-            }
-            
-            const minutes = Math.floor(diff / 60);
-            const seconds = diff % 60;
-            countdownEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (diff < 60) {
-                countdownEl.className = 'countdown warning';
-            } else {
-                countdownEl.className = 'countdown';
-            }
-            
-            expiredEl.style.display = 'none';
-        }
-
-        function copyMemo() {
-            if (!currentMemo) return;
-            navigator.clipboard.writeText(currentMemo).then(() => {
-                window.Telegram.WebApp.showPopup({
-                    title: '✅ Copied!',
-                    message: 'Memo copied to clipboard.',
-                    buttons: [{type: 'ok'}]
-                });
-            }).catch(() => {
-                window.Telegram.WebApp.showPopup({
-                    title: '📋 Memo',
-                    message: currentMemo,
-                    buttons: [{type: 'ok'}]
-                });
-            });
-        }
+        });
 
         function copyAddress() {
             const address = document.getElementById('addressText').textContent;
             if (address) {
                 navigator.clipboard.writeText(address).then(() => {
-                    window.Telegram.WebApp.showPopup({
-                        title: '✅ Copied!',
-                        message: 'Polygon address copied.',
-                        buttons: [{type: 'ok'}]
-                    });
+                    window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
                 }).catch(() => {
                     const textArea = document.createElement('textarea');
                     textArea.value = address;
@@ -333,128 +120,60 @@
                     textArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
-                    window.Telegram.WebApp.showPopup({
-                        title: '✅ Copied!',
-                        message: 'Polygon address copied.',
-                        buttons: [{type: 'ok'}]
-                    });
+                    window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
                 });
             }
         }
 
-        function showVerifyStep() {
-            if (!currentMemo) {
-                window.Telegram.WebApp.showPopup({
-                    title: '❌ Error',
-                    message: 'Please generate a memo first.',
-                    buttons: [{type: 'ok'}]
-                });
-                return;
-            }
-            
-            const now = new Date();
-            if (now > memoExpiresAt) {
-                window.Telegram.WebApp.showPopup({
-                    title: '❌ Expired',
-                    message: 'Memo has expired. Please generate a new one.',
-                    buttons: [{type: 'ok'}]
-                });
-                return;
-            }
-            
-            document.getElementById('step2Content').style.display = 'none';
-            document.getElementById('step3Content').style.display = 'block';
-            document.getElementById('step1Content').style.display = 'none';
-            updateStep(3);
-        }
-
-        async function verifyDeposit() {
-            const txHash = document.getElementById('txHashInput').value.trim();
-            if (!txHash || !txHash.startsWith('0x')) {
-                window.Telegram.WebApp.showPopup({
-                    title: '⚠️ Invalid Hash',
-                    message: 'Please enter a valid transaction hash starting with 0x.',
-                    buttons: [{type: 'ok'}]
-                });
-                return;
-            }
-
+        async function checkDepositWithAmount() {
+            showInterstitialIfNeeded();
             const userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
-            const statusDiv = document.getElementById('verifyStatus');
-            const verifyBtn = document.getElementById('verifyBtn');
+            const amountInput = document.getElementById('depositAmount');
+            const amount = amountInput?.value;
             
-            statusDiv.style.display = 'block';
-            statusDiv.className = 'deposit-status pending';
-            statusDiv.innerHTML = '⏳ Verifying deposit...';
-            verifyBtn.disabled = true;
-
-            try {
-                const response = await fetch('https://plantusdt.ddns.net/api/verify_deposit_memo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: userId,
-                        memo: currentMemo,
-                        tx_hash: txHash
-                    })
+            if (!amount || parseFloat(amount) < 5) {
+                window.Telegram.WebApp.showPopup({
+                    title: '⚠️ Invalid Amount',
+                    message: 'Please enter at least $5 USDT on Polygon.',
+                    buttons: [{type: 'ok'}]
                 });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    isVerified = true;
-                    statusDiv.className = 'deposit-status success';
-                    statusDiv.innerHTML = `✅ ${data.message}<br>💰 New Balance: $${data.new_balance.toFixed(2)}`;
-                    
-                    window.Telegram.WebApp.showPopup({
-                        title: '🎉 Deposit Verified!',
-                        message: `Deposit of $${memoAmount.toFixed(2)} USDT confirmed!\nNew Balance: $${data.new_balance.toFixed(2)}`,
-                        buttons: [{type: 'ok'}]
-                    });
-                    
-                    updateStep(4);
-                    if (timerInterval) clearInterval(timerInterval);
-                } else {
-                    statusDiv.className = 'deposit-status error';
-                    statusDiv.innerHTML = `❌ ${data.message}`;
-                }
-            } catch (error) {
-                statusDiv.className = 'deposit-status error';
-                statusDiv.innerHTML = '❌ Network error. Please try again.';
+                return;
             }
             
-            verifyBtn.disabled = false;
-        }
-
-        function resetDeposit() {
-            if (timerInterval) clearInterval(timerInterval);
-            currentMemo = null;
-            memoExpiresAt = null;
-            memoAmount = null;
-            isVerified = false;
-            document.getElementById('txHashInput').value = '';
-            document.getElementById('step1Content').style.display = 'block';
-            document.getElementById('step2Content').style.display = 'none';
-            document.getElementById('step3Content').style.display = 'none';
-            document.getElementById('verifyStatus').style.display = 'none';
-            const countdownEl = document.getElementById('timerCountdown');
-            countdownEl.textContent = '6:00';
-            countdownEl.className = 'countdown';
-            document.getElementById('memoExpired').style.display = 'none';
-            updateStep(1);
+            const statusDiv = document.getElementById('depositStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
+                statusDiv.className = 'deposit-status pending';
+                statusDiv.style.display = 'block';
+                try {
+                    const response = await fetch(`https://plantusdt.ddns.net/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        statusDiv.innerHTML = '✅ ' + data.message;
+                        statusDiv.className = 'deposit-status success';
+                        // Refresh data after successful deposit
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        statusDiv.innerHTML = '⏳ ' + data.message;
+                        statusDiv.className = 'deposit-status pending';
+                    }
+                } catch (error) {
+                    statusDiv.innerHTML = '❌ Error checking deposits on Polygon. Please try again.';
+                    statusDiv.className = 'deposit-status error';
+                }
+            }
         }
 
         function goBack() {
             window.history.back();
         }
 
-        window.generateMemo = generateMemo;
-        window.copyMemo = copyMemo;
+        window.checkDepositWithAmount = checkDepositWithAmount;
         window.copyAddress = copyAddress;
-        window.showVerifyStep = showVerifyStep;
-        window.verifyDeposit = verifyDeposit;
-        window.resetDeposit = resetDeposit;
         window.goBack = goBack;
+        window.showInterstitialIfNeeded = showInterstitialIfNeeded;
     </script>
     <script src="js/app.js"></script>
 </body>
