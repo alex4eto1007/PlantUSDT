@@ -772,7 +772,7 @@ def main():
         application.add_handler(CommandHandler("pending_fees", pending_fees))
         application.add_handler(CommandHandler("collect_fees", collect_fees))
         application.add_handler(CommandHandler("test_channel", test_channel))
-        application.add_handler(CommandHandler("adminhelp", admin_help))
+        application.add_handler(CommandHandler("admin_help", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
 
         # Referral system commands
