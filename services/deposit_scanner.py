@@ -174,9 +174,9 @@ class DepositScanner:
             session.close()
 
     async def _verify_transaction(self, tx_hash: str) -> bool:
-        """Verify transaction is valid using V2 API"""
+        """Verify transaction is a valid USDT transfer using V2 API"""
         try:
-            # V2 API: Keep &module=transaction (V2 still requires it)
+            # First check if transaction was successful
             url = f"{self.api_url}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
@@ -184,18 +184,31 @@ class DepositScanner:
                     data = await response.json()
                     
                     if data.get('status') != '1':
-                        logger.warning(f"Transaction {tx_hash} not found on Polygon")
+                        logger.warning(f"Transaction {tx_hash} not found or failed on Polygon")
                         return False
                     
-                    receipt = data.get('result', {})
-                    logs = receipt.get('logs', [])
+                    result = data.get('result', {})
+                    if result.get('status') != '1':
+                        logger.warning(f"Transaction {tx_hash} failed (status: {result.get('status')})")
+                        return False
+            
+            # Now check if this transaction was a USDT transfer to the project wallet
+            token_url = f"{self.api_url}&module=account&action=tokentx&address={self.project_wallet}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(token_url, timeout=15) as response:
+                    data = await response.json()
                     
-                    for log in logs:
-                        if log.get('address', '').lower() == self.usdt_contract:
-                            return True
-                    
-                    logger.warning(f"No USDT transfer found in transaction {tx_hash} on Polygon")
-                    return False
+                    if data.get('status') == '1':
+                        transactions = data.get('result', [])
+                        for tx in transactions:
+                            if tx.get('hash') == tx_hash:
+                                amount = int(tx.get('value', '0')) / 10**self.decimals
+                                logger.info(f"✅ Found USDT transfer in transaction {tx_hash[:16]}... Amount: ${amount:.2f}")
+                                return True
+            
+            logger.warning(f"No USDT transfer found in transaction {tx_hash}")
+            return False
                     
         except Exception as e:
             logger.error(f"Error verifying transaction on Polygon: {e}")
