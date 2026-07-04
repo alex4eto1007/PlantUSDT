@@ -254,12 +254,9 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if len(context.args) < 2:
-        await update.message.reply_text(
-            "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
-            "Example: /complete_payout 1 0xabc123..."
-            + get_community_footer(),
-            parse_mode='Markdown'
-        )
+        msg = "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\nExample: /complete_payout 1 0xabc123..."
+        msg += get_community_footer()
+        await update.message.reply_text(msg)
         return
 
     try:
