@@ -89,14 +89,12 @@ class DepositScanner:
         try:
             session = self.db.get_session()
             
-            # Verify transaction is valid
             is_valid = await self._verify_transaction(tx_hash)
             if not is_valid:
                 logger.warning(f"⚠️ Invalid transaction detected: {tx_hash} on Polygon")
                 session.close()
                 return
             
-            # Check if already processed
             existing = session.query(Deposit).filter_by(tx_hash=tx_hash).first()
             if existing:
                 if existing.processed:
@@ -112,7 +110,6 @@ class DepositScanner:
                 session.close()
                 return
             
-            # Create new deposit
             deposit = Deposit(
                 user_id=user.id,
                 amount=amount,
@@ -124,14 +121,12 @@ class DepositScanner:
             )
             session.add(deposit)
             
-            # Update user balance
             user.balance += amount
             user.total_deposited += amount
             
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
-            # Send notifications
             await self._send_notifications(user, amount, tx_hash, bot)
             
         except Exception as e:
@@ -147,7 +142,6 @@ class DepositScanner:
         logger.info(f"🔔 Sending notifications for deposit: ${amount:.2f}")
         
         try:
-            # Send notification via service
             await self.notification_service.send_deposit_notification(
                 user_id=user.telegram_id,
                 amount=amount,
@@ -156,7 +150,6 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error sending deposit notification: {e}")
         
-        # Send Telegram message to user
         try:
             message = (
                 f"💰 **Deposit Detected on Polygon!**\n\n"
@@ -198,7 +191,6 @@ class DepositScanner:
     async def _verify_transaction(self, tx_hash: str) -> bool:
         """Verify transaction is a valid USDT transfer using V2 API"""
         try:
-            # First check if transaction was successful
             url = f"{self.api_url}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
@@ -214,7 +206,6 @@ class DepositScanner:
                         logger.warning(f"Transaction {tx_hash} failed (status: {result.get('status')})")
                         return False
             
-            # Now check if this transaction was a USDT transfer to the project wallet
             token_url = f"{self.api_url}&module=account&action=tokentx&address={self.project_wallet}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
