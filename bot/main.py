@@ -318,7 +318,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"✅ Your withdrawal request has been processed!\n\n"
                          f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
                          f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
-                         f"🔗 TX: {tx_hash}\n"
+                         f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
                          f"⛓️ Network: Polygon\n\n"
                          f"Check your wallet!"
                          + get_community_footer(),
@@ -697,7 +697,6 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     session = db.get_session()
     try:
-        # Get the user from the database to get the correct ID
         user_obj = session.query(User).filter_by(telegram_id=user.id).first()
         if not user_obj:
             await update.message.reply_text("❌ User not found.")
@@ -759,7 +758,6 @@ def main():
     """Start the bot"""
     global application
     try:
-        # Start scheduler
         scheduler.start()
 
         application = Application.builder().token(Config.BOT_TOKEN).build()
@@ -791,12 +789,10 @@ def main():
                     logger.error(f"Error in deposit scanner loop: {e}")
                 await asyncio.sleep(300)
 
-        # Run the scanner in background
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
 
-        # Set persistent menu button
         async def set_menu_button():
             try:
                 await application.bot.set_chat_menu_button(
