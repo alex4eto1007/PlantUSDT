@@ -204,7 +204,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================
-# ADMIN COMMANDS
+# ADMIN COMMANDS (with underscores)
 # ============================================
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -237,14 +237,14 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"🏦 Wallet: <code>{w.wallet_address}</code>\n"
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
         text += f"Status: ⏳ Pending\n"
-        text += f"To complete: /completepayout {w.id} TX_HASH\n\n"
+        text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
 
     await update.message.reply_text(
         text + get_community_footer(),
         parse_mode='HTML'
     )
 
-async def completepayout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -255,8 +255,8 @@ async def completepayout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "❌ Usage: /completepayout <withdrawal_id> <tx_hash>\n\n"
-            "Example: /completepayout 1 0xabc123..."
+            "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
+            "Example: /complete_payout 1 0xabc123..."
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -324,8 +324,8 @@ async def completepayout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ Failed to update withdrawal {withdrawal_id}.")
 
-async def pendingfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 pendingfees command received!")
+async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 pending_fees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -361,7 +361,7 @@ async def pendingfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
     text += f"To collect all fees:\n"
-    text += f"`/collectfees TX_HASH`\n\n"
+    text += f"`/collect_fees TX_HASH`\n\n"
     text += f"⚠️ This will mark ALL uncollected fees as collected."
     
     await update.message.reply_text(
@@ -369,8 +369,8 @@ async def pendingfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-async def collectfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 collectfees command received!")
+async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 collect_fees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -381,8 +381,8 @@ async def collectfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "❌ Usage: /collectfees <tx_hash>\n\n"
-            "Example: /collectfees 0xabc123..."
+            "❌ Usage: /collect_fees <tx_hash>\n\n"
+            "Example: /collect_fees 0xabc123..."
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -412,7 +412,7 @@ async def collectfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-async def testchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_admin(user.id):
         await update.message.reply_text("❌ Not authorized.")
@@ -430,7 +430,7 @@ async def testchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Error sending to channel: {e}")
 
-async def adminhelp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -442,26 +442,26 @@ async def adminhelp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """ADMIN COMMANDS
 
 /pending - View all pending withdrawals
-/completepayout <id> <tx_hash> - Mark a payout as completed
-/pendingfees - View total uncollected withdrawal fees
-/collectfees <tx_hash> - Collect ALL uncollected fees
-/testchannel - Test channel connection
-/resetreferral <user_id> - Reset a user's referral status
+/complete_payout <id> <tx_hash> - Mark a payout as completed
+/pending_fees - View total uncollected withdrawal fees
+/collect_fees <tx_hash> - Collect ALL uncollected fees
+/test_channel - Test channel connection
+/reset_referral <user_id> - Reset a user's referral status
 
 Example:
 /pending
-/completepayout 1 0xabc123...
-/pendingfees
-/collectfees 0xdef456...
-/testchannel
-/resetreferral 123456789
+/complete_payout 1 0xabc123...
+/pending_fees
+/collect_fees 0xdef456...
+/test_channel
+/reset_referral 123456789
 
 Transactions are on Polygon (MATIC) network using USDT on Polygon
 
 Fee Collection System:
 - Fees are automatically tracked when withdrawals are completed
-- Use /pendingfees to see how much is uncollected
-- Use /collectfees TX_HASH to mark all fees as collected
+- Use /pending_fees to see how much is uncollected
+- Use /collect_fees TX_HASH to mark all fees as collected
 - Send the total fees to your personal wallet in one transaction"""
 
     await update.message.reply_text(
@@ -469,7 +469,7 @@ Fee Collection System:
         parse_mode='Markdown'
     )
 
-async def resetreferral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -480,8 +480,8 @@ async def resetreferral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "❌ Usage: /resetreferral <user_id>\n\n"
-            "Example: /resetreferral 123456789\n\n"
+            "❌ Usage: /reset_referral <user_id>\n\n"
+            "Example: /reset_referral 123456789\n\n"
             "This will allow the user to accept a new referral."
             + get_community_footer(),
             parse_mode='Markdown'
@@ -722,14 +722,22 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
 
-        # Admin commands (SIMPLE - no underscores)
+        # Admin commands (with underscores)
         application.add_handler(CommandHandler("pending", pending))
-        application.add_handler(CommandHandler("completepayout", completepayout))
-        application.add_handler(CommandHandler("pendingfees", pendingfees))
-        application.add_handler(CommandHandler("collectfees", collectfees))
-        application.add_handler(CommandHandler("testchannel", testchannel))
-        application.add_handler(CommandHandler("adminhelp", adminhelp))
-        application.add_handler(CommandHandler("resetreferral", resetreferral))
+        application.add_handler(CommandHandler("complete_payout", complete_payout))
+        application.add_handler(CommandHandler("pending_fees", pending_fees))
+        application.add_handler(CommandHandler("collect_fees", collect_fees))
+        application.add_handler(CommandHandler("test_channel", test_channel))
+        application.add_handler(CommandHandler("admin_help", admin_help))
+        application.add_handler(CommandHandler("reset_referral", reset_referral))
+
+        # Admin aliases (without underscores - for convenience)
+        application.add_handler(CommandHandler("pendingfees", pending_fees))
+        application.add_handler(CommandHandler("collectfees", collect_fees))
+        application.add_handler(CommandHandler("completepayout", complete_payout))
+        application.add_handler(CommandHandler("testchannel", test_channel))
+        application.add_handler(CommandHandler("resetreferral", reset_referral))
+        application.add_handler(CommandHandler("adminhelp", admin_help))
 
         # Referral system commands
         application.add_handler(CommandHandler("upgrade", upgrade))
