@@ -8,7 +8,7 @@ const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
 let lastAdTime = 0;
-const AD_COOLDOWN = 2000;
+const AD_COOLDOWN = 5000;
 
 // ============================================
 // SAFE POPUP – Works on both Web & Mobile
@@ -72,7 +72,7 @@ function showInterstitialIfNeeded() {
 // PAGE NAVIGATION
 // ============================================
 let pageViewCount = 0;
-const INTERSTITIAL_INTERVAL = 1; // Not used anymore, but kept for compatibility
+const INTERSTITIAL_INTERVAL = 1;
 
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -119,7 +119,6 @@ function navigateTo(page) {
 }
 
 function goBack() {
-    // NO interstitial on back button
     window.history.back();
 }
 
@@ -221,7 +220,7 @@ function updateDashboardUI(data) {
 }
 
 // ============================================
-// UPDATE FIELDS WITH CLAIM BUTTON - FIXED
+// UPDATE FIELDS WITH CLAIM BUTTON
 // ============================================
 
 function updateFields(data) {
@@ -229,7 +228,6 @@ function updateFields(data) {
     window.fieldData = {};
 
     for (var i = 1; i <= 3; i++) {
-        // Check if elements exist before trying to update them
         var statusEl = document.getElementById('field' + i + 'Status');
         var amountEl = document.getElementById('field' + i + 'Amount');
         var daysEl = document.getElementById('field' + i + 'Days');
@@ -239,7 +237,6 @@ function updateFields(data) {
         var btnEl = document.getElementById('field' + i + 'Btn');
         var timerEl = document.getElementById('field' + i + 'Timer');
 
-        // Skip if this page doesn't have fields (like dashboard or history)
         if (!statusEl || !amountEl || !daysEl || !earnedEl || !progressEl || !cardEl || !btnEl || !timerEl) {
             continue;
         }
@@ -305,12 +302,19 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT FUNCTION
+// CLAIM INVESTMENT FUNCTION - FIXED
 // ============================================
 
 async function claimInvestment(fieldNumber) {
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
     
+    // Prevent multiple clicks
+    if (window.claimInProgress) {
+        console.log('⏳ Claim already in progress...');
+        return;
+    }
+    window.claimInProgress = true;
+
     const userId = tgUser ? tgUser.id : '0';
     if (!userId || userId === '0') {
         safePopup({
@@ -318,9 +322,10 @@ async function claimInvestment(fieldNumber) {
             message: 'User not authenticated. Please restart the app.',
             buttons: [{type: 'ok'}]
         });
+        window.claimInProgress = false;
         return;
     }
-    
+
     safePopupWithCallback({
         title: '🌾 Claim Investment',
         message: 'Are you sure you want to claim Field #' + fieldNumber + '?',
@@ -352,18 +357,18 @@ async function claimInvestment(fieldNumber) {
                         buttons: [{type: 'ok'}]
                     });
                     
-                    // Show rewarded ad after claim
-                    if (window.watchRewardedAd) {
-                        console.log("📢 Showing rewarded ad after claim...");
-                        setTimeout(function() {
-                            window.watchRewardedAd();
-                        }, 500);
-                    }
-                    
-                    // Reload data
+                    // Wait for user to close popup, then show ad and reload
                     setTimeout(function() {
-                        loadUserData();
-                        loadAdStats();
+                        if (window.watchRewardedAd) {
+                            console.log("📢 Showing rewarded ad after claim...");
+                            window.watchRewardedAd();
+                        }
+                        // Reload data after ad
+                        setTimeout(function() {
+                            loadUserData();
+                            loadAdStats();
+                            window.claimInProgress = false;
+                        }, 3000);
                     }, 1000);
                     
                 } else {
@@ -372,6 +377,7 @@ async function claimInvestment(fieldNumber) {
                         message: data.message || 'Failed to claim.',
                         buttons: [{type: 'ok'}]
                     });
+                    window.claimInProgress = false;
                 }
             } catch (error) {
                 console.error('❌ Error claiming:', error);
@@ -380,7 +386,10 @@ async function claimInvestment(fieldNumber) {
                     message: 'Network error. Please try again.',
                     buttons: [{type: 'ok'}]
                 });
+                window.claimInProgress = false;
             }
+        } else {
+            window.claimInProgress = false;
         }
     });
 }
@@ -726,9 +735,9 @@ async function setWallet() {
 
 function calculateReturn(amount, days) {
     const multipliers = {
-        1: 1.02,    // 2%
-        7: 1.18,    // 18%
-        30: 1.80    // 80%
+        1: 1.02,
+        7: 1.18,
+        30: 1.80
     };
     const multiplier = multipliers[days] || 1.80;
     return amount * multiplier;
@@ -853,7 +862,7 @@ function copyAddress() {
             navigator.clipboard.writeText(address).then(function() {
                 safePopup({
                     title: '✅ Copied!',
-                    message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                    message: 'Polygon address copied.',
                     buttons: [{type: 'ok'}]
                 });
             }).catch(function() {
@@ -865,7 +874,7 @@ function copyAddress() {
                 document.body.removeChild(textArea);
                 safePopup({
                     title: '✅ Copied!',
-                    message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                    message: 'Polygon address copied.',
                     buttons: [{type: 'ok'}]
                 });
             });
@@ -878,7 +887,7 @@ function copyAddress() {
             document.body.removeChild(textArea);
             safePopup({
                 title: '✅ Copied!',
-                message: 'Polygon address copied: ' + address.slice(0,6) + '...' + address.slice(-4),
+                message: 'Polygon address copied.',
                 buttons: [{type: 'ok'}]
             });
         }
@@ -1219,7 +1228,7 @@ async function watchRewardedAd() {
             if (credited) {
                 safePopup({
                     title: '🎁 Bonus Earned!',
-                    message: 'You earned $0.001 USDT for watching the ad!\n\n💡 Tip: Clicking on links inside ads helps support the project and may earn you higher rewards in the future!',
+                    message: 'You earned $0.001 USDT for watching the ad!',
                     buttons: [{type: 'ok'}]
                 });
                 loadUserData();
@@ -1227,7 +1236,6 @@ async function watchRewardedAd() {
                 return true;
             }
         }
-        // If ad didn't complete or errored, show the "Ad Not Available" popup
         safePopup({
             title: '❌ Ad Not Available',
             message: 'No ads available right now. Please try again later.',
@@ -1248,7 +1256,6 @@ async function watchRewardedAd() {
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        // Get user data for ad earnings only
         const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
         const userData = await userResponse.json();
         
@@ -1257,13 +1264,11 @@ async function loadAdStats() {
             adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
         }
         
-        // Set ads today to Unlimited
         const adsTodayEl = document.getElementById('adsToday');
         if (adsTodayEl) {
             adsTodayEl.textContent = '♾️ Unlimited';
         }
         
-        // Always enable the button
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
