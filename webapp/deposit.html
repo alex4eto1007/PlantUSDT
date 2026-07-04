@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>💳 Deposit - PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=4">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         .network-badge-large { display: inline-flex; align-items: center; gap: 8px; background: rgba(130,71,229,0.15); color: #8247E5; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
@@ -67,14 +70,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const tg = window.Telegram.WebApp;
+            var tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
 
-            const userId = tg.initDataUnsafe?.user?.id || '0';
+            var userId = tg.initDataUnsafe?.user?.id || '0';
             fetch('https://plantusdt.ddns.net/api/get_wallet?telegram_id=' + userId)
-                .then(response => response.json())
-                .then(data => {
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
                     if (data.success && data.wallet_address) {
                         document.getElementById('connectedWalletDisplay').textContent = data.wallet_address;
                         document.getElementById('connectedWalletDisplay').style.color = '#00ff87';
@@ -83,7 +86,7 @@
                         document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
                     }
                 })
-                .catch(() => {
+                .catch(function() {
                     document.getElementById('connectedWalletDisplay').textContent = '❌ Error loading wallet';
                     document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
                 });
@@ -182,6 +185,6 @@
         window.checkDepositWithAmount = checkDepositWithAmount;
         window.goBack = goBack;
     </script>
-    <script src="js/app.js?v=3"></script>
+    <script src="js/app.js?v=4"></script>
 </body>
 </html>
