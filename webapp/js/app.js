@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function navigateTo(page) {
     const pages = {
         'dashboard': 'dashboard.html',
-        'deposit': 'deposit.html',
+        'deposit': 'deposit_new.html',
         'withdraw': 'withdraw.html',
         'history': 'history.html',
         'index': 'index.html'
