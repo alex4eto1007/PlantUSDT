@@ -55,7 +55,7 @@ body {
 }
 
 .balance-amount {
-    font-size: 20px;
+    font-size: 26px;
     font-weight: 700;
     color: #00ff87;
 }
@@ -150,7 +150,7 @@ body {
     border-color: rgba(130,71,229,0.3);
     transform: translateY(-2px);
 }
-.stat-icon { font-size: 20px; margin-bottom: 4px; }
+.stat-icon { font-size: 26px; margin-bottom: 4px; }
 .stat-label { font-size: 9px; color: #8892b0; text-transform: uppercase; letter-spacing: 0.5px; }
 .stat-value { font-size: 16px; font-weight: 700; color: #00ff87; margin-top: 2px; }
 
@@ -318,7 +318,7 @@ body {
     background: linear-gradient(135deg, rgba(255,107,107,0.15), rgba(238,90,36,0.15));
     border-color: rgba(255,107,107,0.2);
 }
-.btn-icon { font-size: 20px; }
+.btn-icon { font-size: 26px; }
 
 .referral-section {
     background: rgba(0,0,0,0.3);
