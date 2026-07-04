@@ -12,9 +12,6 @@
         @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         .warning-box-critical { background: rgba(255,107,107,0.15); border: 2px solid rgba(255,107,107,0.4); border-radius: 8px; padding: 14px; margin-top: 12px; }
         .warning-box-critical p { font-size: 12px; color: #ff6b6b; margin: 0; line-height: 1.6; }
-        .deposit-timer-message { margin-top: 10px; padding: 12px; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); border-radius: 8px; }
-        .deposit-timer-message p { font-size: 13px; color: #ffd93d; margin: 0; line-height: 1.6; }
-        .deposit-timer-message .sub-text { font-size: 12px; opacity: 0.8; }
         .contact-support { margin-top: 12px; padding: 12px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); border-radius: 8px; text-align: center; }
         .contact-support p { font-size: 13px; color: #00d4ff; margin: 0; line-height: 1.6; }
         .contact-support a { color: #00d4ff; text-decoration: none; font-weight: 600; }
@@ -215,9 +212,12 @@
                 
                 if (data.success) {
                     currentMemo = data.memo;
-                    memoExpiresAt = new Date(data.expires_at);
                     memoAmount = amount;
                     isVerified = false;
+                    
+                    // Hardcode 6 minutes from NOW
+                    memoExpiresAt = new Date();
+                    memoExpiresAt.setMinutes(memoExpiresAt.getMinutes() + 6);
                     
                     document.getElementById('memoDisplay').textContent = currentMemo;
                     document.getElementById('step1Content').style.display = 'none';
@@ -226,16 +226,14 @@
                     
                     updateStep(2);
                     
-                    // Reset and start timer
+                    // Reset timer display
                     const countdownEl = document.getElementById('timerCountdown');
                     countdownEl.textContent = '6:00';
                     countdownEl.className = 'countdown';
                     document.getElementById('memoExpired').style.display = 'none';
                     
-                    // Clear any existing timer
+                    // Clear any existing timer and start fresh
                     if (timerInterval) clearInterval(timerInterval);
-                    
-                    // Start the timer
                     startTimer();
                     
                     window.Telegram.WebApp.showPopup({
@@ -264,9 +262,7 @@
 
         function startTimer() {
             if (timerInterval) clearInterval(timerInterval);
-            // Update immediately
             updateTimerDisplay();
-            // Then every second
             timerInterval = setInterval(updateTimerDisplay, 1000);
         }
 
