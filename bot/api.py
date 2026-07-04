@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import sys
 import os
@@ -752,6 +752,14 @@ def upgrade_tier():
         return jsonify({'success': False, 'message': str(e)})
     finally:
         session.close()
+
+# ============================================
+# SERVE DEPOSIT PAGE DIRECTLY (BYPASS CACHE)
+# ============================================
+
+@app.route('/deposit')
+def deposit_page():
+    return send_from_directory('../webapp', 'deposit_new.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
