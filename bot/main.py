@@ -69,12 +69,12 @@ async def send_to_channel(bot, message: str):
 def get_community_footer():
     """Return the community footer with channel and group links"""
     return (
-        "\n\n━━━━━━━━━━━━━━━━━━━━\n"
+        "\n\n\n"
         "🌱 **Join our community!**\n"
         "📢 Channel: [PlantUSDTchannel](https://t.me/PlantUSDTchannel)\n"
         "💬 Group: [PlantUSDT](https://t.me/PlantUSDT)\n"
         "📊 Transactions: [PlantUSDTtransactions](https://t.me/PlantUSDTtransactions)\n"
-        "━━━━━━━━━━━━━━━━━━━━"
+        ""
     )
 
 def is_admin(user_id: int) -> bool:
@@ -299,11 +299,11 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             channel_message = (
                 f"📤 **Withdrawal Completed!**\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"\n"
                 f"💵 Amount: **${withdrawal.net_amount:.2f} USDT**\n"
                 f"⛓️ Network: Polygon\n"
                 f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"\n"
                 f"🏦 Project Wallet: `{PROJECT_WALLET}`"
             )
             await send_to_channel(context.bot, channel_message)
@@ -356,7 +356,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     text = f"💰 **Uncollected Withdrawal Fees**\n"
-    text += f"━━━━━━━━━━━━━━━━━━━━\n"
+    text += f"\n"
     text += f"📊 Total: **${total_fees:.2f} USDT**\n"
     text += f"📋 Number of fees: **{len(fees)}**\n\n"
     
@@ -369,7 +369,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(fees) > 5:
             text += f"  ... and {len(fees) - 5} more\n"
     
-    text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
+    text += f"\n\n"
     text += f"To collect all fees:\n"
     text += f"`/collect_fees TX_HASH`\n\n"
     text += f"⚠️ This will mark ALL uncollected fees as collected."
@@ -415,11 +415,11 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         f"✅ **Fees Collected!**\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"\n"
         f"💰 Total collected: **${total_fees:.2f} USDT**\n"
         f"📋 Number of fees: **{count}**\n"
         f"🔗 TX: `{tx_hash}`\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"\n"
         f"All fees have been marked as collected."
         + get_community_footer(),
         parse_mode='Markdown'
@@ -481,10 +481,10 @@ Example:
 💡 Transactions are on Polygon (MATIC) network using USDT on Polygon
 
 📊 Fee Collection System:
-• Fees are automatically tracked when withdrawals are completed
-• Use /pending_fees to see how much is uncollected
-• Use /collect_fees TX_HASH to mark all fees as collected
-• Send the total fees to your personal wallet in one transaction"""
+- Fees are automatically tracked when withdrawals are completed
+- Use /pending_fees to see how much is uncollected
+- Use /collect_fees TX_HASH to mark all fees as collected
+- Send the total fees to your personal wallet in one transaction"""
 
     await update.message.reply_text(
         help_text + get_community_footer(),
@@ -714,7 +714,7 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = f"📊 **Your Referral Stats**\n\n"
         response += f"{stats['tier_emoji']} **Tier:** {stats['current_tier'].title()}\n"
         response += f"📈 **Bonus:** {stats['tier_bonus']}%\n"
-        response += f"━━━━━━━━━━━━━━━━━━━━\n"
+        response += f"\n"
         response += f"👥 **Total Referrals:** {stats['total_referred']}\n"
         response += f"✅ **Active Referrals:** {stats['active_referrals']}\n"
         response += f"⏳ **Pending Active:** {stats['pending_active']}\n"
