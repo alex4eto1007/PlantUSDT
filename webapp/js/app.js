@@ -1345,6 +1345,57 @@ async function upgradeReferralTier(tier) {
     });
 }
 
+// ============================================
+// DEPOSIT MEMO FUNCTIONS
+// ============================================
+
+async function generateMemo() {
+    showInterstitialIfNeeded();
+    const userId = tgUser ? tgUser.id : '0';
+    const amount = document.getElementById('depositAmount')?.value;
+    
+    if (!amount || parseFloat(amount) < 5) {
+        safePopup({
+            title: '⚠️ Invalid Amount',
+            message: 'Please enter at least $5 USDT.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+    
+    try {
+        const response = await fetch(API_BASE + '/api/generate_deposit_memo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: userId,
+                amount: parseFloat(amount)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('memoDisplay').textContent = data.memo;
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            startMemoTimer(data.expires_at);
+        } else {
+            safePopup({
+                title: '❌ Error',
+                message: data.message || 'Failed to generate memo',
+                buttons: [{type: 'ok'}]
+            });
+        }
+    } catch (error) {
+        safePopup({
+            title: '❌ Error',
+            message: 'Network error. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+    }
+}
+
 // Expose functions globally
 window.navigateTo = navigateTo;
 window.goBack = goBack;
@@ -1365,6 +1416,7 @@ window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
 window.showInterstitialIfNeeded = showInterstitialIfNeeded;
 window.upgradeReferralTier = upgradeReferralTier;
+window.generateMemo = generateMemo;
 
 console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);

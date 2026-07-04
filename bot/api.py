@@ -5,11 +5,14 @@ import os
 import asyncio
 import time
 import logging
+import random
+import string
+from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.db_manager import DatabaseManager
-from database.models import User, Withdrawal, Investment, Deposit, DailyPayout
+from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, DepositMemo
 from sqlalchemy import func
 from datetime import datetime
 
@@ -56,6 +59,143 @@ PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
+
+# ============================================
+# DEPOSIT MEMO SYSTEM
+# ============================================
+
+def generate_memo(length=12):
+    """Generate a random 12-character alphanumeric memo"""
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choices(chars, k=length))
+
+@app.route('/api/generate_deposit_memo', methods=['POST'])
+def generate_deposit_memo():
+    """Generate a deposit memo for a user"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    amount = data.get('amount')
+    
+    if not telegram_id or not amount:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    try:
+        amount = float(amount)
+        if amount < 5:
+            return jsonify({'success': False, 'message': 'Minimum deposit is $5'})
+    except:
+        return jsonify({'success': False, 'message': 'Invalid amount'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        # Generate unique memo
+        memo = generate_memo()
+        # Make sure it's unique
+        while session.query(DepositMemo).filter_by(memo=memo).first():
+            memo = generate_memo()
+        
+        # Create memo record (valid for 6 minutes)
+        now = datetime.utcnow()
+        expires_at = now + timedelta(minutes=6)
+        
+        deposit_memo = DepositMemo(
+            user_id=user.id,
+            memo=memo,
+            amount=amount,
+            created_at=now,
+            expires_at=expires_at,
+            used=False
+        )
+        session.add(deposit_memo)
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'memo': memo,
+            'expires_at': expires_at.isoformat(),
+            'message': f'Please send ${amount:.2f} USDT with memo: {memo} (valid for 6 minutes)'
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/verify_deposit_memo', methods=['POST'])
+def verify_deposit_memo():
+    """Verify a deposit memo and credit the user"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    memo = data.get('memo')
+    tx_hash = data.get('tx_hash')
+    
+    if not telegram_id or not memo or not tx_hash:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        # Find the memo
+        deposit_memo = session.query(DepositMemo).filter_by(
+            memo=memo,
+            user_id=user.id,
+            used=False
+        ).first()
+        
+        if not deposit_memo:
+            return jsonify({'success': False, 'message': 'Invalid or expired memo'})
+        
+        # Check if expired
+        now = datetime.utcnow()
+        if now > deposit_memo.expires_at:
+            return jsonify({'success': False, 'message': 'Memo has expired (6 minutes)'})
+        
+        # Mark as used
+        deposit_memo.used = True
+        
+        # Credit the user
+        amount = deposit_memo.amount
+        user.balance += amount
+        user.total_deposited += amount
+        
+        # Create deposit record
+        deposit = Deposit(
+            user_id=user.id,
+            amount=amount,
+            tx_hash=tx_hash,
+            from_address=user.wallet_address,
+            block_number=0,
+            network='polygon',
+            processed=True
+        )
+        session.add(deposit)
+        
+        session.commit()
+        
+        # Clear cache
+        clear_user_cache(telegram_id)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Deposit of ${amount:.2f} USDT verified and credited!',
+            'new_balance': user.balance
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+# ============================================
+# EXISTING ENDPOINTS
+# ============================================
 
 @app.route('/api/get_wallet', methods=['GET'])
 def get_wallet():
