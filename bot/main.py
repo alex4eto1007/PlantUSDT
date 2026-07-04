@@ -743,6 +743,27 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
+# COMMAND ALIASES (without underscores for easier typing)
+# ============================================
+async def pendingfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await pending_fees(update, context)
+
+async def collectfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await collect_fees(update, context)
+
+async def completepayout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await complete_payout(update, context)
+
+async def testchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await test_channel(update, context)
+
+async def resetreferral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await reset_referral(update, context)
+
+async def adminhelp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await admin_help(update, context)
+
+# ============================================
 # ADMIN CHECK
 # ============================================
 
@@ -766,7 +787,7 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
 
-        # Admin commands
+        # Admin commands (with underscores)
         application.add_handler(CommandHandler("pending", pending_withdrawals))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
         application.add_handler(CommandHandler("pending_fees", pending_fees))
@@ -774,6 +795,14 @@ def main():
         application.add_handler(CommandHandler("test_channel", test_channel))
         application.add_handler(CommandHandler("admin_help", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
+
+        # Admin aliases (without underscores)
+        application.add_handler(CommandHandler("pendingfees", pendingfees))
+        application.add_handler(CommandHandler("collectfees", collectfees))
+        application.add_handler(CommandHandler("completepayout", completepayout))
+        application.add_handler(CommandHandler("testchannel", testchannel))
+        application.add_handler(CommandHandler("resetreferral", resetreferral))
+        application.add_handler(CommandHandler("adminhelp", adminhelp))
 
         # Referral system commands
         application.add_handler(CommandHandler("upgrade", upgrade))
