@@ -103,14 +103,11 @@ class DepositScanner:
                     logger.info(f"Deposit {tx_hash} already processed on Polygon")
                 else:
                     logger.info(f"Deposit {tx_hash} found but not processed, processing now...")
-                    # Process it
                     existing.processed = True
                     user.balance += amount
                     user.total_deposited += amount
                     session.commit()
                     logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
-                    
-                    # Send notifications
                     await self._send_notifications(user, amount, tx_hash, bot)
                 session.close()
                 return
@@ -123,7 +120,7 @@ class DepositScanner:
                 from_address=from_address,
                 block_number=block_number,
                 network='polygon',
-                processed=True  # Mark as processed immediately
+                processed=True
             )
             session.add(deposit)
             
@@ -147,6 +144,8 @@ class DepositScanner:
 
     async def _send_notifications(self, user, amount, tx_hash, bot):
         """Send deposit notifications to user and channel"""
+        logger.info(f"🔔 Sending notifications for deposit: ${amount:.2f}")
+        
         try:
             # Send notification via service
             await self.notification_service.send_deposit_notification(
@@ -188,7 +187,7 @@ class DepositScanner:
                 f"🏦 Project Wallet: `{Config.WALLET_ADDRESS}`"
             )
             await bot.send_message(
-                chat_id=-1004391112772,  # @PlantUSDTtransactions
+                chat_id=-1004391112772,
                 text=channel_message,
                 parse_mode='Markdown'
             )
@@ -292,7 +291,6 @@ class DepositScanner:
                                         )
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT detected and processed on Polygon!'}
                                     elif not existing.processed:
-                                        # Process the existing unprocessed deposit
                                         existing.processed = True
                                         user.balance += amount
                                         user.total_deposited += amount
