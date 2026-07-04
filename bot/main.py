@@ -536,6 +536,8 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Upgrade referral tier"""
     user = update.effective_user
+    logger.info(f"📊 upgrade command received from user {user.id}")
+    
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
@@ -687,6 +689,8 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show referral statistics"""
     user = update.effective_user
+    logger.info(f"📊 referral_stats command received from user {user.id}")
+    
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
@@ -694,6 +698,7 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = db.get_session()
     try:
         stats = get_referral_stats(user.id, session)
+        logger.info(f"📊 Stats retrieved: {stats}")
         
         if not stats:
             await update.message.reply_text("❌ Error loading stats.")
@@ -723,10 +728,11 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response += get_community_footer()
         
         await update.message.reply_text(response, parse_mode='Markdown')
+        logger.info(f"✅ referral_stats response sent to user {user.id}")
         
     except Exception as e:
         logger.error(f"Referral stats error: {e}")
-        await update.message.reply_text("❌ Error fetching stats.")
+        await update.message.reply_text(f"❌ Error fetching stats: {str(e)}")
     finally:
         session.close()
 
