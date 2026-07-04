@@ -19,9 +19,12 @@
         .contact-support p { font-size: 13px; color: #00d4ff; margin: 0; line-height: 1.6; }
         .contact-support a { color: #00d4ff; text-decoration: none; font-weight: 600; }
         .memo-box { background: rgba(0,255,135,0.05); border: 2px solid rgba(0,255,135,0.3); border-radius: 12px; padding: 16px; margin: 16px 0; text-align: center; }
-        .memo-box .memo-code { font-size: 24px; font-weight: 700; color: #00ff87; font-family: monospace; letter-spacing: 2px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; display: inline-block; }
-        .memo-box .timer { font-size: 14px; color: #ffd93d; margin-top: 8px; }
-        .memo-box .expired { color: #ff6b6b; }
+        .memo-box .memo-code { font-size: 28px; font-weight: 700; color: #00ff87; font-family: monospace; letter-spacing: 3px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; display: inline-block; }
+        .memo-box .timer { font-size: 18px; font-weight: 700; margin-top: 10px; }
+        .memo-box .timer .countdown { color: #00ff87; }
+        .memo-box .timer .countdown.warning { color: #ffd93d; }
+        .memo-box .timer .countdown.expired { color: #ff6b6b; }
+        .memo-box .expired-text { display: none; color: #ff6b6b; font-weight: 700; margin-top: 8px; font-size: 16px; }
         .step-indicator { display: flex; justify-content: space-between; margin: 20px 0; padding: 0 10px; }
         .step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
         .step .circle { width: 30px; height: 30px; border-radius: 50%; background: #495670; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; z-index: 2; }
@@ -96,8 +99,8 @@
                 <p style="font-size:14px;color:#8892b0;margin-bottom:8px;">📋 Your Deposit Memo</p>
                 <div class="memo-code" id="memoDisplay">------</div>
                 <button onclick="copyMemo()" style="margin-top:8px;padding:6px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:12px;">📋 Copy Memo</button>
-                <div class="timer" id="memoTimer">⏳ Valid for: 6:00</div>
-                <div id="memoExpired" style="display:none; color:#ff6b6b; font-weight:700; margin-top:8px;">❌ Memo Expired! Generate a new one.</div>
+                <div class="timer" id="memoTimer">⏳ Valid for: <span class="countdown" id="timerCountdown">6:00</span></div>
+                <div class="expired-text" id="memoExpired">❌ Memo Expired! Generate a new one.</div>
             </div>
 
             <div class="deposit-address-box" style="margin-top:12px;">
@@ -144,6 +147,7 @@
         let memoExpiresAt = null;
         let memoAmount = null;
         let timerInterval = null;
+        let isVerified = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
@@ -219,6 +223,7 @@
                     currentMemo = data.memo;
                     memoExpiresAt = new Date(data.expires_at);
                     memoAmount = amount;
+                    isVerified = false;
                     
                     document.getElementById('memoDisplay').textContent = currentMemo;
                     document.getElementById('step1Content').style.display = 'none';
@@ -265,19 +270,27 @@
             
             const timerEl = document.getElementById('memoTimer');
             const expiredEl = document.getElementById('memoExpired');
+            const countdownEl = document.getElementById('timerCountdown');
             
             if (diff <= 0) {
-                timerEl.textContent = '⏳ Expired!';
-                timerEl.className = 'timer expired';
+                countdownEl.textContent = '00:00';
+                countdownEl.className = 'countdown expired';
                 expiredEl.style.display = 'block';
+                timerEl.className = 'timer';
                 clearInterval(timerInterval);
                 return;
             }
             
             const minutes = Math.floor(diff / 60);
             const seconds = diff % 60;
-            timerEl.textContent = `⏳ Valid for: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            timerEl.className = 'timer';
+            countdownEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (diff < 60) {
+                countdownEl.className = 'countdown warning';
+            } else {
+                countdownEl.className = 'countdown';
+            }
+            
             expiredEl.style.display = 'none';
         }
 
@@ -383,6 +396,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    isVerified = true;
                     statusDiv.className = 'deposit-status success';
                     statusDiv.innerHTML = `✅ ${data.message}<br>💰 New Balance: $${data.new_balance.toFixed(2)}`;
                     
@@ -411,6 +425,7 @@
             currentMemo = null;
             memoExpiresAt = null;
             memoAmount = null;
+            isVerified = false;
             document.getElementById('txHashInput').value = '';
             document.getElementById('step1Content').style.display = 'block';
             document.getElementById('step2Content').style.display = 'none';
@@ -418,6 +433,8 @@
             document.getElementById('verifyStatus').style.display = 'none';
             document.getElementById('memoTimer').className = 'timer';
             document.getElementById('memoExpired').style.display = 'none';
+            document.getElementById('timerCountdown').textContent = '6:00';
+            document.getElementById('timerCountdown').className = 'countdown';
             updateStep(1);
         }
 
