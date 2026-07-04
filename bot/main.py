@@ -48,10 +48,9 @@ PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 # ============================================
 # CHANNEL FOR TRANSACTION UPDATES
 # ============================================
-CHANNEL_ID = -1004391112772  # @PlantUSDTtransactions
+CHANNEL_ID = -1004391112772
 
 async def send_to_channel(bot, message: str):
-    """Send a message to the transaction channel"""
     try:
         await bot.send_message(
             chat_id=CHANNEL_ID,
@@ -67,14 +66,13 @@ async def send_to_channel(bot, message: str):
 # ============================================
 
 def get_community_footer():
-    """Return the community footer with channel and group links"""
     return (
-        "\n\n\n"
+        "\n\n━━━━━━━━━━━━━━━━━━━━\n"
         "🌱 **Join our community!**\n"
         "📢 Channel: [PlantUSDTchannel](https://t.me/PlantUSDTchannel)\n"
         "💬 Group: [PlantUSDT](https://t.me/PlantUSDT)\n"
         "📊 Transactions: [PlantUSDTtransactions](https://t.me/PlantUSDTtransactions)\n"
-        ""
+        "━━━━━━━━━━━━━━━━━━━━"
     )
 
 def is_admin(user_id: int) -> bool:
@@ -135,7 +133,6 @@ Use /app to open the Mini App!"""
         )
         return
 
-    # Referral handling – only for new users, silently ignore existing
     if context.args and len(context.args) > 0:
         referral_code = context.args[0]
         if existing_user.can_be_referred and existing_user.referred_by is None:
@@ -210,7 +207,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ADMIN COMMANDS
 # ============================================
 
-async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -219,9 +216,9 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
 
-    pending = db.get_pending_withdrawals()
+    pending_w = db.get_pending_withdrawals()
 
-    if not pending:
+    if not pending_w:
         await update.message.reply_text(
             "📋 No pending withdrawals." + get_community_footer(),
             parse_mode='Markdown'
@@ -229,7 +226,7 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     text = "📋 PENDING WITHDRAWALS\n\n"
-    for w in pending:
+    for w in pending_w:
         user_obj = db.get_user_by_id(w.user_id)
         username = user_obj.username if user_obj else "Unknown"
         text += f"ID: {w.id}\n"
@@ -240,14 +237,14 @@ async def pending_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE
         text += f"🏦 Wallet: <code>{w.wallet_address}</code>\n"
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
         text += f"Status: ⏳ Pending\n"
-        text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
+        text += f"To complete: /completepayout {w.id} TX_HASH\n\n"
 
     await update.message.reply_text(
         text + get_community_footer(),
         parse_mode='HTML'
     )
 
-async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def completepayout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -258,9 +255,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
-            "Example: /complete_payout 1 0xabc123...\n\n"
-            "💡 Transaction hash should be from sending USDT on Polygon network."
+            "❌ Usage: /completepayout <withdrawal_id> <tx_hash>\n\n"
+            "Example: /completepayout 1 0xabc123..."
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -270,7 +266,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         withdrawal_id = int(context.args[0])
         tx_hash = context.args[1]
     except ValueError:
-        await update.message.reply_text("❌ Invalid withdrawal ID. Please provide a valid number.")
+        await update.message.reply_text("❌ Invalid withdrawal ID.")
         return
 
     withdrawal = db.get_withdrawal_by_id(withdrawal_id)
@@ -295,15 +291,14 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
-        # Send channel message
         try:
             channel_message = (
                 f"📤 **Withdrawal Completed!**\n"
-                f"\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"💵 Amount: **${withdrawal.net_amount:.2f} USDT**\n"
                 f"⛓️ Network: Polygon\n"
                 f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
-                f"\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🏦 Project Wallet: `{PROJECT_WALLET}`"
             )
             await send_to_channel(context.bot, channel_message)
@@ -329,13 +324,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ Failed to update withdrawal {withdrawal_id}.")
 
-# ============================================
-# FEE COLLECTION COMMANDS (ADMIN ONLY)
-# ============================================
-
-async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show total uncollected withdrawal fees"""
-    logger.info("🔥 pending_fees command received!")
+async def pendingfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 pendingfees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -356,7 +346,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     text = f"💰 **Uncollected Withdrawal Fees**\n"
-    text += f"\n"
+    text += f"━━━━━━━━━━━━━━━━━━━━\n"
     text += f"📊 Total: **${total_fees:.2f} USDT**\n"
     text += f"📋 Number of fees: **{len(fees)}**\n\n"
     
@@ -369,9 +359,9 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(fees) > 5:
             text += f"  ... and {len(fees) - 5} more\n"
     
-    text += f"\n\n"
+    text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
     text += f"To collect all fees:\n"
-    text += f"`/collect_fees TX_HASH`\n\n"
+    text += f"`/collectfees TX_HASH`\n\n"
     text += f"⚠️ This will mark ALL uncollected fees as collected."
     
     await update.message.reply_text(
@@ -379,9 +369,8 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Collect all uncollected fees (admin only)"""
-    logger.info("🔥 collect_fees command received!")
+async def collectfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("🔥 collectfees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -392,10 +381,8 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "❌ Usage: /collect_fees <tx_hash>\n\n"
-            "Example: /collect_fees 0xabc123...\n\n"
-            "This will mark ALL uncollected fees as collected.\n"
-            "The transaction hash should be from sending the total fees to your wallet."
+            "❌ Usage: /collectfees <tx_hash>\n\n"
+            "Example: /collectfees 0xabc123..."
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -415,22 +402,17 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         f"✅ **Fees Collected!**\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"💰 Total collected: **${total_fees:.2f} USDT**\n"
         f"📋 Number of fees: **{count}**\n"
         f"🔗 TX: `{tx_hash}`\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"All fees have been marked as collected."
         + get_community_footer(),
         parse_mode='Markdown'
     )
 
-# ============================================
-# TEST CHANNEL COMMAND
-# ============================================
-
-async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Test channel connection"""
+async def testchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_admin(user.id):
         await update.message.reply_text("❌ Not authorized.")
@@ -448,11 +430,7 @@ async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Error sending to channel: {e}")
 
-# ============================================
-# ADMIN HELP COMMAND
-# ============================================
-
-async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def adminhelp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -461,29 +439,29 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
 
-    help_text = """👑 ADMIN COMMANDS
+    help_text = """ADMIN COMMANDS
 
 /pending - View all pending withdrawals
-/complete_payout <id> <tx_hash> - Mark a payout as completed
-/pending_fees - View total uncollected withdrawal fees
-/collect_fees <tx_hash> - Collect ALL uncollected fees
-/test_channel - Test channel connection
-/reset_referral <user_id> - Reset a user's referral status
+/completepayout <id> <tx_hash> - Mark a payout as completed
+/pendingfees - View total uncollected withdrawal fees
+/collectfees <tx_hash> - Collect ALL uncollected fees
+/testchannel - Test channel connection
+/resetreferral <user_id> - Reset a user's referral status
 
 Example:
 /pending
-/complete_payout 1 0xabc123...
-/pending_fees
-/collect_fees 0xdef456...
-/test_channel
-/reset_referral 123456789
+/completepayout 1 0xabc123...
+/pendingfees
+/collectfees 0xdef456...
+/testchannel
+/resetreferral 123456789
 
-💡 Transactions are on Polygon (MATIC) network using USDT on Polygon
+Transactions are on Polygon (MATIC) network using USDT on Polygon
 
-📊 Fee Collection System:
+Fee Collection System:
 - Fees are automatically tracked when withdrawals are completed
-- Use /pending_fees to see how much is uncollected
-- Use /collect_fees TX_HASH to mark all fees as collected
+- Use /pendingfees to see how much is uncollected
+- Use /collectfees TX_HASH to mark all fees as collected
 - Send the total fees to your personal wallet in one transaction"""
 
     await update.message.reply_text(
@@ -491,7 +469,7 @@ Example:
         parse_mode='Markdown'
     )
 
-async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def resetreferral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -502,8 +480,8 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "❌ Usage: /reset_referral <user_id>\n\n"
-            "Example: /reset_referral 123456789\n\n"
+            "❌ Usage: /resetreferral <user_id>\n\n"
+            "Example: /resetreferral 123456789\n\n"
             "This will allow the user to accept a new referral."
             + get_community_footer(),
             parse_mode='Markdown'
@@ -534,7 +512,6 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================
 
 async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Upgrade referral tier"""
     user = update.effective_user
     logger.info(f"📊 upgrade command received from user {user.id}")
     
@@ -587,7 +564,6 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         current_tier = user_obj.referral_tier or "free"
         
-        # Check if already at this tier
         if current_tier == tier:
             await update.message.reply_text(
                 f"✅ You're already on the {REFERRAL_TIERS[tier]['emoji']} {tier.title()} tier!\n"
@@ -598,7 +574,6 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.close()
             return
         
-        # Calculate cost
         current_price = REFERRAL_TIERS[current_tier]["price"]
         new_price = REFERRAL_TIERS[tier]["price"]
         cost = new_price - current_price
@@ -608,7 +583,6 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.close()
             return
         
-        # Show confirmation
         keyboard = [
             [
                 InlineKeyboardButton("✅ Confirm Upgrade", callback_data=f"upgrade_confirm_{tier}"),
@@ -636,7 +610,6 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle upgrade callback"""
     query = update.callback_query
     await query.answer()
     
@@ -644,10 +617,7 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     
     if data == "upgrade_cancel":
-        await query.edit_message_text(
-            "❌ Upgrade cancelled.",
-            parse_mode='Markdown'
-        )
+        await query.edit_message_text("❌ Upgrade cancelled.", parse_mode='Markdown')
         return
     
     if data.startswith("upgrade_confirm_"):
@@ -674,11 +644,7 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
             else:
-                await query.edit_message_text(
-                    f"❌ {msg}"
-                    + get_community_footer(),
-                    parse_mode='Markdown'
-                )
+                await query.edit_message_text(f"❌ {msg}" + get_community_footer(), parse_mode='Markdown')
             session.close()
             
         except Exception as e:
@@ -687,7 +653,6 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.close()
 
 async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show referral statistics"""
     user = update.effective_user
     logger.info(f"📊 referral_stats command received from user {user.id}")
     
@@ -714,7 +679,7 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = f"📊 **Your Referral Stats**\n\n"
         response += f"{stats['tier_emoji']} **Tier:** {stats['current_tier'].title()}\n"
         response += f"📈 **Bonus:** {stats['tier_bonus']}%\n"
-        response += f"\n"
+        response += f"━━━━━━━━━━━━━━━━━━━━\n"
         response += f"👥 **Total Referrals:** {stats['total_referred']}\n"
         response += f"✅ **Active Referrals:** {stats['active_referrals']}\n"
         response += f"⏳ **Pending Active:** {stats['pending_active']}\n"
@@ -743,40 +708,10 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
-# COMMAND ALIASES (without underscores for easier typing)
-# ============================================
-async def pendingfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await pending_fees(update, context)
-
-async def collectfees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await collect_fees(update, context)
-
-async def completepayout(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await complete_payout(update, context)
-
-async def testchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await test_channel(update, context)
-
-async def resetreferral(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await reset_referral(update, context)
-
-async def adminhelp(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await admin_help(update, context)
-
-# ============================================
-# ADMIN CHECK
-# ============================================
-
-def is_admin(user_id: int) -> bool:
-    user = db.get_user(user_id)
-    return user and user.is_admin
-
-# ============================================
 # MAIN FUNCTION
 # ============================================
 
 def main():
-    """Start the bot"""
     global application
     try:
         scheduler.start()
@@ -787,29 +722,20 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
 
-        # Admin commands (with underscores)
-        application.add_handler(CommandHandler("pending", pending_withdrawals))
-        application.add_handler(CommandHandler("complete_payout", complete_payout))
-        application.add_handler(CommandHandler("pending_fees", pending_fees))
-        application.add_handler(CommandHandler("collect_fees", collect_fees))
-        application.add_handler(CommandHandler("test_channel", test_channel))
-        application.add_handler(CommandHandler("admin_help", admin_help))
-        application.add_handler(CommandHandler("reset_referral", reset_referral))
-
-        # Admin aliases (without underscores)
+        # Admin commands (SIMPLE - no underscores)
+        application.add_handler(CommandHandler("pending", pending))
+        application.add_handler(CommandHandler("completepayout", completepayout))
         application.add_handler(CommandHandler("pendingfees", pendingfees))
         application.add_handler(CommandHandler("collectfees", collectfees))
-        application.add_handler(CommandHandler("completepayout", completepayout))
         application.add_handler(CommandHandler("testchannel", testchannel))
-        application.add_handler(CommandHandler("resetreferral", resetreferral))
         application.add_handler(CommandHandler("adminhelp", adminhelp))
+        application.add_handler(CommandHandler("resetreferral", resetreferral))
 
         # Referral system commands
         application.add_handler(CommandHandler("upgrade", upgrade))
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
 
-        # Start deposit scanner in background
         async def start_deposit_scanner():
             while True:
                 try:
