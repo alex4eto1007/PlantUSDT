@@ -152,6 +152,7 @@ def get_referral_stats(user_id: int, session: Session) -> dict:
     """Get referral statistics for a user"""
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
+        logger.error(f"User {user_id} not found in get_referral_stats")
         return {}
     
     # Get total referred users
@@ -171,12 +172,12 @@ def get_referral_stats(user_id: int, session: Session) -> dict:
     
     # Get tier info
     tier = user.referral_tier or "free"
-    tier_info = REFERRAL_TIERS[tier]
+    tier_info = REFERRAL_TIERS.get(tier, REFERRAL_TIERS["free"])
     
     # Get next tier info
     next_tier = None
     next_price = None
-    tier_index = TIER_ORDER.index(tier)
+    tier_index = TIER_ORDER.index(tier) if tier in TIER_ORDER else 0
     if tier_index < len(TIER_ORDER) - 1:
         next_tier = TIER_ORDER[tier_index + 1]
         next_price = REFERRAL_TIERS[next_tier]["price"] - REFERRAL_TIERS[tier]["price"]
