@@ -527,13 +527,16 @@ def check_deposit_with_amount():
         return jsonify({'success': False, 'message': 'Missing required fields'})
     
     try:
+        from telegram import Bot
+        bot = Bot(token=Config.BOT_TOKEN)
+        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
             deposit_scanner.check_deposit_with_amount(
                 int(telegram_id),
                 expected_amount,
-                None
+                bot
             )
         )
         loop.close()
@@ -672,7 +675,6 @@ def get_referral_tiers():
 
 @app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
 def get_referral_stats_full(telegram_id):
-    # This endpoint expects telegram_id, not user_id
     """Get full referral stats including tier info"""
     from services.referral import get_referral_stats
     
