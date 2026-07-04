@@ -28,9 +28,6 @@ function safePopup(options) {
     }
 }
 
-// ============================================
-// SAFE POPUP WITH CALLBACK
-// ============================================
 function safePopupWithCallback(options, callback) {
     try {
         if (typeof tg !== 'undefined' && tg.showPopup) {
@@ -50,7 +47,7 @@ function safePopupWithCallback(options, callback) {
 }
 
 // ============================================
-// SHOW INTERSTITIAL AD ON BUTTON CLICKS - WITH COOLDOWN
+// SHOW INTERSTITIAL AD ON BUTTON CLICKS
 // ============================================
 function showInterstitialIfNeeded() {
     var now = Date.now();
@@ -71,9 +68,6 @@ function showInterstitialIfNeeded() {
 // ============================================
 // PAGE NAVIGATION
 // ============================================
-let pageViewCount = 0;
-const INTERSTITIAL_INTERVAL = 1;
-
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
     tg.expand();
@@ -83,19 +77,16 @@ document.addEventListener('DOMContentLoaded', function() {
     startCountdownTimer();
     loadAdStats();
     
-    // GLOBAL CLICK LISTENER - Triggers interstitial on all buttons
     document.addEventListener('click', function(e) {
         var target = e.target.closest('button');
         if (!target) return;
         
-        // Skip back button, watch ad button, and no-ad buttons
         if (target.classList.contains('back-btn') || 
             target.classList.contains('no-ad') || 
             target.id === 'watchAdBtn') {
             return;
         }
         
-        // Also skip the withdraw form submit
         if (target.type === 'submit' && target.closest('#withdrawForm')) {
             return;
         }
@@ -122,6 +113,9 @@ function goBack() {
     window.history.back();
 }
 
+// ============================================
+// USER DATA
+// ============================================
 async function loadUserData() {
     try {
         const userId = tgUser ? tgUser.id : '0';
@@ -220,9 +214,8 @@ function updateDashboardUI(data) {
 }
 
 // ============================================
-// UPDATE FIELDS WITH CLAIM BUTTON
+// FIELDS
 // ============================================
-
 function updateFields(data) {
     var fields = data.fields || [];
     window.fieldData = {};
@@ -302,9 +295,8 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT FUNCTION
+// CLAIM INVESTMENT
 // ============================================
-
 async function claimInvestment(fieldNumber) {
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
     
@@ -392,9 +384,8 @@ async function claimInvestment(fieldNumber) {
 }
 
 // ============================================
-// UPDATE TIMERS
+// TIMERS
 // ============================================
-
 function updateFieldTimers() {
     if (document.getElementById('historyList')) {
         return;
@@ -515,7 +506,6 @@ function updateFieldTimers() {
     }
 }
 
-// Add pulse animation
 var style = document.createElement('style');
 style.textContent = `
     @keyframes pulse-gold {
@@ -541,9 +531,8 @@ function stopCountdownTimer() {
 }
 
 // ============================================
-// UPDATE REFERRAL
+// REFERRAL
 // ============================================
-
 async function updateReferral(data) {
     var referralLink = document.getElementById('referralLinkText');
     var walletText = document.getElementById('walletText');
@@ -574,7 +563,6 @@ async function updateReferral(data) {
 // ============================================
 // WALLET FUNCTIONS
 // ============================================
-
 async function saveWallet() {
     showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
@@ -725,9 +713,8 @@ async function setWallet() {
 }
 
 // ============================================
-// INVESTMENT FUNCTIONS - UPDATED RATES
+// INVESTMENT FUNCTIONS
 // ============================================
-
 function calculateReturn(amount, days) {
     const multipliers = {
         1: 1.02,
@@ -835,9 +822,8 @@ async function investField(fieldNumber) {
 }
 
 // ============================================
-// ADDRESS COPY AND REFERRAL
+// COPY FUNCTIONS
 // ============================================
-
 function copyAddress() {
     showInterstitialIfNeeded();
     var addressElement = document.getElementById('addressText');
@@ -930,7 +916,6 @@ async function copyReferral() {
 // ============================================
 // DEPOSIT FUNCTIONS
 // ============================================
-
 async function checkDeposit() {
     var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
@@ -972,14 +957,16 @@ async function checkDepositWithAmount() {
         statusDiv.className = 'deposit-status pending';
         statusDiv.style.display = 'block';
         try {
-            const response = await fetch(API_BASE + '/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
+            const response = await fetch(`${API_BASE}/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
             const data = await response.json();
             if (data.success) {
-                statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
+                statusDiv.innerHTML = '✅ ' + data.message;
                 statusDiv.className = 'deposit-status success';
-                loadUserData();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
             } else {
-                statusDiv.innerHTML = '⏳ No new deposits found on Polygon. Please wait a few minutes and try again.';
+                statusDiv.innerHTML = '⏳ ' + data.message;
                 statusDiv.className = 'deposit-status pending';
             }
         } catch (error) {
@@ -992,7 +979,6 @@ async function checkDepositWithAmount() {
 // ============================================
 // HISTORY FUNCTIONS
 // ============================================
-
 function filterHistory(type) {
     var buttons = document.querySelectorAll('.filter-btn');
     for (var i = 0; i < buttons.length; i++) {
@@ -1115,7 +1101,6 @@ function renderHistory(transactions) {
 // ============================================
 // EVENT LISTENERS
 // ============================================
-
 function setupEventListeners() {
     var withdrawForm = document.getElementById('withdrawForm');
     if (withdrawForm) {
@@ -1177,9 +1162,8 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - UNLIMITED ADS, $0.001 REWARD
+// AD REWARD FUNCTIONS
 // ============================================
-
 async function canWatchAd() {
     return true;
 }
@@ -1281,7 +1265,6 @@ async function loadAdStats() {
 // ============================================
 // REFERRAL UPGRADE FUNCTIONS
 // ============================================
-
 async function upgradeReferralTier(tier) {
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
@@ -1346,57 +1329,8 @@ async function upgradeReferralTier(tier) {
 }
 
 // ============================================
-// DEPOSIT MEMO FUNCTIONS
+// EXPOSE FUNCTIONS
 // ============================================
-
-async function generateMemo() {
-    showInterstitialIfNeeded();
-    const userId = tgUser ? tgUser.id : '0';
-    const amount = document.getElementById('depositAmount')?.value;
-    
-    if (!amount || parseFloat(amount) < 5) {
-        safePopup({
-            title: '⚠️ Invalid Amount',
-            message: 'Please enter at least $5 USDT.',
-            buttons: [{type: 'ok'}]
-        });
-        return;
-    }
-    
-    try {
-        const response = await fetch(API_BASE + '/api/generate_deposit_memo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegram_id: userId,
-                amount: parseFloat(amount)
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('memoDisplay').textContent = data.memo;
-            document.getElementById('step1').style.display = 'none';
-            document.getElementById('step2').style.display = 'block';
-            startMemoTimer(data.expires_at);
-        } else {
-            safePopup({
-                title: '❌ Error',
-                message: data.message || 'Failed to generate memo',
-                buttons: [{type: 'ok'}]
-            });
-        }
-    } catch (error) {
-        safePopup({
-            title: '❌ Error',
-            message: 'Network error. Please try again.',
-            buttons: [{type: 'ok'}]
-        });
-    }
-}
-
-// Expose functions globally
 window.navigateTo = navigateTo;
 window.goBack = goBack;
 window.refreshData = refreshData;
@@ -1416,7 +1350,6 @@ window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
 window.showInterstitialIfNeeded = showInterstitialIfNeeded;
 window.upgradeReferralTier = upgradeReferralTier;
-window.generateMemo = generateMemo;
 
 console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);

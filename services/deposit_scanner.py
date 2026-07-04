@@ -1,20 +1,18 @@
 import aiohttp
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from database.db_manager import DatabaseManager
-from database.models import User, Deposit
+from database.models import User, Deposit, PendingDepositCheck
 from config.settings import Config
 from services.notifications import NotificationService
 import logging
 import sys
 import os
 
-# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
-# Import clear_user_cache function
 try:
     from bot.api import clear_user_cache
 except ImportError:
@@ -37,72 +35,73 @@ class DepositScanner:
         self.scan_interval = 300
 
     async def scan_for_deposits(self, bot):
-        """Scan for deposits on Polygon using Etherscan V2 API"""
+        """Scan only users with pending deposit checks (last 30 minutes)"""
         try:
-            logger.info("🔍 Scanning for Polygon deposits...")
+            logger.info("🔍 Scanning pending deposits...")
             session = self.db.get_session()
-            users = session.query(User).filter(
-                User.wallet_address.isnot(None),
-                User.wallet_address != ''
+            
+            cutoff = datetime.utcnow() - timedelta(minutes=30)
+            
+            pending = session.query(PendingDepositCheck).filter(
+                PendingDepositCheck.created_at > cutoff,
+                PendingDepositCheck.checked == False
             ).all()
             
-            for user in users:
-                try:
-                    await self._check_user_deposits(user, bot)
-                except Exception as e:
-                    logger.error(f"Error checking user {user.telegram_id}: {e}")
+            if not pending:
+                logger.info("📊 No pending deposit checks")
+                session.close()
+                return
+            
+            logger.info(f"📊 Found {len(pending)} pending deposit checks")
+            
+            for pending_check in pending:
+                user = session.query(User).filter_by(id=pending_check.user_id).first()
+                if user:
+                    try:
+                        await self._check_user_deposit_with_amount(user, pending_check.amount, bot)
+                        pending_check.checked = True
+                        session.commit()
+                    except Exception as e:
+                        logger.error(f"Error checking pending deposit for user {user.telegram_id}: {e}")
             
             session.close()
         except Exception as e:
             logger.error(f"Scanner error: {e}")
 
-    async def _check_user_deposits(self, user, bot):
-        """Check for new deposits from a specific user on Polygon using V2 API"""
+    async def _check_user_deposit_with_amount(self, user, expected_amount, bot):
+        """Check if a specific user has made a deposit with the expected amount"""
         try:
-            url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
-            
-            logger.info(f"🔍 Checking deposits for user {user.telegram_id}")
+            url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=30) as response:
                     data = await response.json()
                     
-                    if data.get('status') != '1':
-                        logger.debug(f"No transactions found for user {user.telegram_id}")
-                        return
-                    
-                    transactions = data.get('result', [])
-                    logger.info(f"📦 Found {len(transactions)} transactions for user {user.telegram_id}")
-                    
-                    for tx in transactions:
-                        tx_to = tx.get('to', '').lower()
-                        
-                        if tx_to == self.project_wallet:
-                            existing = self.db.get_deposit_by_tx_hash(tx.get('hash'))
-                            if existing:
-                                continue
-                            
-                            amount = int(tx.get('value', '0')) / 10**self.decimals
-                            logger.info(f"💰 Processing deposit: ${amount:.2f}")
-                            
-                            await self._process_deposit(
-                                user=user,
-                                amount=amount,
-                                tx_hash=tx.get('hash'),
-                                from_address=tx.get('from'),
-                                block_number=int(tx.get('blockNumber', 0)),
-                                bot=bot
-                            )
-                            
+                    if data.get('status') == '1':
+                        transactions = data.get('result', [])
+                        for tx in transactions:
+                            if tx.get('to', '').lower() == self.project_wallet:
+                                amount = int(tx.get('value', '0')) / 10**self.decimals
+                                if abs(amount - expected_amount) < 0.01:
+                                    await self._process_deposit(
+                                        user=user,
+                                        amount=amount,
+                                        tx_hash=tx.get('hash'),
+                                        from_address=tx.get('from'),
+                                        block_number=int(tx.get('blockNumber', 0)),
+                                        bot=bot
+                                    )
+                                    return True
+            return False
         except Exception as e:
-            logger.error(f"Error checking user deposits on Polygon: {e}")
+            logger.error(f"Error checking user deposit: {e}")
+            return False
 
     async def _process_deposit(self, user, amount, tx_hash, from_address, block_number, bot):
         """Process a verified deposit on Polygon and send to channel"""
         try:
             session = self.db.get_session()
             
-            # Reload user from database to avoid stale object
             fresh_user = session.query(User).filter_by(id=user.id).first()
             if not fresh_user:
                 logger.error(f"User {user.id} not found in database")
@@ -190,7 +189,6 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error sending deposit notification: {e}")
         
-        # Send to transaction channel
         try:
             channel_message = (
                 f"💰 **New Deposit!**\n"
@@ -228,7 +226,7 @@ class DepositScanner:
                         logger.warning(f"Transaction {tx_hash} failed (status: {result.get('status')})")
                         return False
             
-            token_url = f"{self.api_url}&module=account&action=tokentx&address={self.project_wallet}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
+            token_url = f"{self.api_url}&module=account&action=tokentx&address={self.project_wallet}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(token_url, timeout=15) as response:
@@ -280,6 +278,28 @@ class DepositScanner:
             if not user.wallet_address:
                 return {'success': False, 'message': 'No wallet connected'}
 
+            # Create pending check record
+            pending = PendingDepositCheck(
+                user_id=user.id,
+                amount=expected_amount
+            )
+            session.add(pending)
+            session.commit()
+
+            # Check for existing processed deposit first
+            existing_deposit = session.query(Deposit).filter_by(
+                user_id=user.id,
+                processed=True
+            ).order_by(Deposit.id.desc()).first()
+            
+            if existing_deposit and abs(existing_deposit.amount - expected_amount) < 0.01:
+                time_diff = (datetime.utcnow() - existing_deposit.confirmed_at).total_seconds() / 60
+                if time_diff < 60:
+                    pending.checked = True
+                    session.commit()
+                    session.close()
+                    return {'success': True, 'message': f'Deposit of ${existing_deposit.amount:.2f} USDT already processed! Balance updated.'}
+
             url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session_api:
@@ -302,6 +322,9 @@ class DepositScanner:
                                             block_number=int(tx.get('blockNumber', 0)),
                                             bot=bot
                                         )
+                                        pending.checked = True
+                                        session.commit()
+                                        session.close()
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT detected and processed on Polygon!'}
                                     elif not existing.processed:
                                         existing.processed = True
@@ -310,10 +333,19 @@ class DepositScanner:
                                         session.commit()
                                         clear_user_cache(user.telegram_id)
                                         await self._send_notifications(user, amount, tx.get('hash'), bot)
+                                        pending.checked = True
+                                        session.commit()
+                                        session.close()
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT processed successfully!'}
                                     else:
-                                        return {'success': True, 'message': 'Deposit already processed'}
+                                        pending.checked = True
+                                        session.commit()
+                                        session.close()
+                                        return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT already processed! Check your balance.'}
             
+            pending.checked = True
+            session.commit()
+            session.close()
             return {'success': False, 'message': f'No deposit of ${expected_amount:.2f} USDT found on Polygon. Please make sure you sent USDT on the Polygon network.'}
 
         except Exception as e:

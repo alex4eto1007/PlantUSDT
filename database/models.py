@@ -38,9 +38,6 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_deposit_check = Column(DateTime, default=datetime.utcnow)
     
-    # ============================================
-    # REFERRAL SYSTEM FIELDS
-    # ============================================
     referral_tier = Column(String(20), default="free")
     referral_tier_upgraded_at = Column(DateTime, nullable=True)
     referral_upgrade_total_spent = Column(Float, default=0.0)
@@ -55,7 +52,7 @@ class User(Base):
     referral_upgrades = relationship("ReferralUpgrade", back_populates="user")
     active_referrals_given = relationship("ActiveReferral", foreign_keys="ActiveReferral.referrer_id", back_populates="referrer")
     active_referrals_received = relationship("ActiveReferral", foreign_keys="ActiveReferral.referred_user_id", back_populates="referred_user")
-    deposit_memos = relationship("DepositMemo", back_populates="user")
+    pending_deposit_checks = relationship("PendingDepositCheck", back_populates="user")
 
 class Investment(Base):
     __tablename__ = "investments"
@@ -128,10 +125,6 @@ class UncollectedFee(Base):
     user = relationship("User", back_populates="uncollected_fees")
     withdrawal = relationship("Withdrawal", back_populates="uncollected_fee")
 
-# ============================================
-# REFERRAL SYSTEM TABLES
-# ============================================
-
 class ReferralUpgrade(Base):
     __tablename__ = "referral_upgrades"
     
@@ -157,19 +150,13 @@ class ActiveReferral(Base):
     referrer = relationship("User", foreign_keys=[referrer_id], back_populates="active_referrals_given")
     referred_user = relationship("User", foreign_keys=[referred_user_id], back_populates="active_referrals_received")
 
-# ============================================
-# DEPOSIT MEMO SYSTEM
-# ============================================
-
-class DepositMemo(Base):
-    __tablename__ = "deposit_memos"
+class PendingDepositCheck(Base):
+    __tablename__ = "pending_deposit_checks"
     
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    memo = Column(String(12), unique=True, nullable=False)
     amount = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    used = Column(Boolean, default=False)
+    checked = Column(Boolean, default=False)
     
-    user = relationship("User", back_populates="deposit_memos")
+    user = relationship("User", back_populates="pending_deposit_checks")
