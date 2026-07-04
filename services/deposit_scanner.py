@@ -6,8 +6,22 @@ from database.models import User, Deposit
 from config.settings import Config
 from services.notifications import NotificationService
 import logging
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
+
+# Import clear_user_cache function
+try:
+    from bot.api import clear_user_cache
+except ImportError:
+    # Define a fallback if import fails
+    def clear_user_cache(telegram_id):
+        logger.info(f"Cache cleared for user {telegram_id} (fallback)")
+        return True
 
 class DepositScanner:
     def __init__(self):
@@ -106,6 +120,8 @@ class DepositScanner:
                     user.total_deposited += amount
                     session.commit()
                     logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
+                    # Clear cache after processing
+                    clear_user_cache(user.telegram_id)
                     await self._send_notifications(user, amount, tx_hash, bot)
                 session.close()
                 return
@@ -127,6 +143,9 @@ class DepositScanner:
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {user.telegram_id} +${amount:.2f} USDT")
             
+            # Clear cache after processing
+            clear_user_cache(user.telegram_id)
+            
             await self._send_notifications(user, amount, tx_hash, bot)
             
         except Exception as e:
@@ -141,6 +160,7 @@ class DepositScanner:
         """Send deposit notifications to user and channel"""
         logger.info(f"🔔 Sending notifications for deposit: ${amount:.2f}")
         
+        # Send notification via service
         try:
             await self.notification_service.send_deposit_notification(
                 user_id=user.telegram_id,
@@ -150,6 +170,7 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error sending deposit notification: {e}")
         
+        # Send Telegram message to user
         try:
             message = (
                 f"💰 **Deposit Detected on Polygon!**\n\n"
@@ -191,6 +212,7 @@ class DepositScanner:
     async def _verify_transaction(self, tx_hash: str) -> bool:
         """Verify transaction is a valid USDT transfer using V2 API"""
         try:
+            # First check if transaction was successful
             url = f"{self.api_url}&module=transaction&action=gettxreceiptstatus&txhash={tx_hash}&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
@@ -206,6 +228,7 @@ class DepositScanner:
                         logger.warning(f"Transaction {tx_hash} failed (status: {result.get('status')})")
                         return False
             
+            # Now check if this transaction was a USDT transfer to the project wallet
             token_url = f"{self.api_url}&module=account&action=tokentx&address={self.project_wallet}&contractaddress={self.usdt_contract}&page=1&offset=50&sort=desc&apikey={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
@@ -286,6 +309,8 @@ class DepositScanner:
                                         user.balance += amount
                                         user.total_deposited += amount
                                         session.commit()
+                                        # Clear cache after processing
+                                        clear_user_cache(user.telegram_id)
                                         await self._send_notifications(user, amount, tx.get('hash'), bot)
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT processed successfully!'}
                                     else:
