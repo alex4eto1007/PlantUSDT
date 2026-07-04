@@ -231,6 +231,13 @@
                     document.getElementById('step3Content').style.display = 'none';
                     
                     updateStep(2);
+                    
+                    // Reset timer display before starting
+                    const countdownEl = document.getElementById('timerCountdown');
+                    countdownEl.textContent = '6:00';
+                    countdownEl.className = 'countdown';
+                    document.getElementById('memoExpired').style.display = 'none';
+                    
                     startTimer();
                     
                     window.Telegram.WebApp.showPopup({
@@ -259,12 +266,21 @@
 
         function startTimer() {
             if (timerInterval) clearInterval(timerInterval);
+            updateTimer(); // Update immediately
             timerInterval = setInterval(updateTimer, 1000);
-            updateTimer();
         }
 
         function updateTimer() {
-            if (!memoExpiresAt) return;
+            if (!memoExpiresAt) {
+                // If no expiry, show 6:00 as default
+                const countdownEl = document.getElementById('timerCountdown');
+                if (countdownEl) {
+                    countdownEl.textContent = '6:00';
+                    countdownEl.className = 'countdown';
+                }
+                return;
+            }
+            
             const now = new Date();
             const diff = Math.floor((memoExpiresAt - now) / 1000);
             
@@ -433,8 +449,9 @@
             document.getElementById('verifyStatus').style.display = 'none';
             document.getElementById('memoTimer').className = 'timer';
             document.getElementById('memoExpired').style.display = 'none';
-            document.getElementById('timerCountdown').textContent = '6:00';
-            document.getElementById('timerCountdown').className = 'countdown';
+            const countdownEl = document.getElementById('timerCountdown');
+            countdownEl.textContent = '6:00';
+            countdownEl.className = 'countdown';
             updateStep(1);
         }
 
