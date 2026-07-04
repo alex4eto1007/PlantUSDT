@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        .network-tag { display: inline-block; background: rgba(130,71,229,0.15); color: #8247E5; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; margin-left: 4px; }
+        .network-tag { display: inline-block; background: rgba(130,71,229,0.15); color: #8247E5; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; flex-shrink: 0; }
         .history-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { background: rgba(255,255,255,0.06); }
         .history-type { font-size: 14px; font-weight: 600; }
@@ -30,10 +30,11 @@
 </head>
 <body>
     <div class="container">
-        <div class="header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
-            <button class="back-btn" onclick="goBack()">←</button>
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
+            <button class="back-btn" onclick="goBack()" style="font-size: 28px; padding: 8px 16px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
             <h1 style="margin: 0; flex: 1; text-align: center; font-size: 20px; color: #ccd6f0;">📜 Transaction History</h1>
-            <span style="font-size:11px;color:#8247E5;background:rgba(130,71,229,0.1);padding:2px 10px;border-radius:12px; flex-shrink: 0;">Polygon</span>
+            <span class="network-tag">Polygon</span>
         </div>
 
         <div class="history-filters">
