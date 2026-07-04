@@ -55,7 +55,7 @@ async def send_to_channel(bot, message: str):
         await bot.send_message(
             chat_id=CHANNEL_ID,
             text=message,
-            parse_mode=None
+            parse_mode='Markdown'
         )
         logger.info("✅ Transaction update sent to channel")
     except Exception as e:
@@ -129,7 +129,7 @@ Use /app to open the Mini App!"""
         await update.message.reply_text(
             welcome_text + get_community_footer(),
             reply_markup=reply_markup,
-            parse_mode=None
+            parse_mode='Markdown'
         )
         return
 
@@ -153,7 +153,7 @@ Use /app to open the Mini App!"""
                             f"Welcome to the PlantUSDT community! 🌱\n\n"
                             f"💡 Your referrer will earn from your future deposits based on their referral tier!"
                             + get_community_footer(),
-                            parse_mode=None
+                            parse_mode='Markdown'
                         )
                         try:
                             await context.bot.send_message(
@@ -162,7 +162,7 @@ Use /app to open the Mini App!"""
                                      f"@{existing_user.username or 'User'} accepted your referral!\n"
                                      f"💡 You will earn from their future deposits based on your tier!"
                                      + get_community_footer(),
-                                parse_mode=None
+                                parse_mode='Markdown'
                             )
                         except Exception as e:
                             logger.error(f"Error notifying referrer: {e}")
@@ -176,7 +176,7 @@ Use /app to open the Mini App!"""
         f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:"
         + get_community_footer(),
         reply_markup=reply_markup,
-        parse_mode=None
+        parse_mode='Markdown'
     )
 
 # ============================================
@@ -200,11 +200,11 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Start growing your USDT today on Polygon! 🚀"
         + get_community_footer(),
         reply_markup=reply_markup,
-        parse_mode=None
+        parse_mode='Markdown'
     )
 
 # ============================================
-# ADMIN COMMANDS (with underscores)
+# ADMIN COMMANDS
 # ============================================
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -221,7 +221,7 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not pending_w:
         await update.message.reply_text(
             "📋 No pending withdrawals." + get_community_footer(),
-            parse_mode=None
+            parse_mode='Markdown'
         )
         return
 
@@ -258,7 +258,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
             "Example: /complete_payout 1 0xabc123..."
             + get_community_footer(),
-            parse_mode=None
+            parse_mode='Markdown'
         )
         return
 
@@ -288,7 +288,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔗 TX: {tx_hash}\n"
             f"⛓️ Network: Polygon"
             + get_community_footer(),
-            parse_mode=None
+            parse_mode='Markdown'
         )
 
         try:
@@ -317,7 +317,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
                          f"⛓️ Network: Polygon\n\n"
                          f"Check your wallet!"
                          + get_community_footer(),
-                    parse_mode=None
+                    parse_mode='Markdown'
                 )
             except Exception as e:
                 logger.error(f"Error notifying user: {e}")
@@ -325,7 +325,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Failed to update withdrawal {withdrawal_id}.")
 
 async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 pending_fees command received!")
+    logger.info("pending_fees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -338,11 +338,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fees = db.get_uncollected_fees()
 
     if total_fees == 0:
-        await update.message.reply_text(
-            "📋 No uncollected fees.\n\nAll withdrawal fees have been collected! ✅"
-            + get_community_footer(),
-            parse_mode=None
-        )
+        await update.message.reply_text("📋 No uncollected fees.\n\nAll withdrawal fees have been collected! ✅" + get_community_footer())
         return
 
     text = f"💰 Uncollected Withdrawal Fees\n"
@@ -361,16 +357,13 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
     text += f"To collect all fees:\n"
-    text += f"`/collect_fees TX_HASH`\n\n"
+    text += f"/collect_fees TX_HASH\n\n"
     text += f"⚠️ This will mark ALL uncollected fees as collected."
     
-    await update.message.reply_text(
-        text + get_community_footer(),
-        parse_mode=None
-    )
+    await update.message.reply_text(text + get_community_footer())
 
 async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("🔥 collect_fees command received!")
+    logger.info("collect_fees command received!")
     user = update.effective_user
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -383,8 +376,7 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ Usage: /collect_fees <tx_hash>\n\n"
             "Example: /collect_fees 0xabc123..."
-            + get_community_footer(),
-            parse_mode=None
+            + get_community_footer()
         )
         return
 
@@ -392,24 +384,20 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     total_fees = db.get_uncollected_fees_total()
     if total_fees == 0:
-        await update.message.reply_text(
-            "📋 No uncollected fees to collect." + get_community_footer(),
-            parse_mode=None
-        )
+        await update.message.reply_text("📋 No uncollected fees to collect." + get_community_footer())
         return
 
     count = db.mark_fees_collected(tx_hash)
     
     await update.message.reply_text(
-        f"✅ **Fees Collected!**\n"
+        f"✅ Fees Collected!\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 Total collected: **${total_fees:.2f} USDT**\n"
-        f"📋 Number of fees: **{count}**\n"
-        f"🔗 TX: `{tx_hash}`\n"
+        f"💰 Total collected: ${total_fees:.2f} USDT\n"
+        f"📋 Number of fees: {count}\n"
+        f"🔗 TX: {tx_hash}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"All fees have been marked as collected."
-        + get_community_footer(),
-        parse_mode=None
+        + get_community_footer()
     )
 
 async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -424,7 +412,7 @@ async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             chat_id=CHANNEL_ID,
             text="✅ PlantUSDT bot is connected to the transaction channel!",
-            parse_mode=None
+            parse_mode='Markdown'
         )
         await update.message.reply_text("✅ Message sent to channel successfully!")
     except Exception as e:
@@ -464,10 +452,7 @@ Fee Collection System:
 - Use /collect_fees TX_HASH to mark all fees as collected
 - Send the total fees to your personal wallet in one transaction"""
 
-    await update.message.reply_text(
-        help_text + get_community_footer(),
-        parse_mode=None
-    )
+    await update.message.reply_text(help_text + get_community_footer())
 
 async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -483,8 +468,7 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Usage: /reset_referral <user_id>\n\n"
             "Example: /reset_referral 123456789\n\n"
             "This will allow the user to accept a new referral."
-            + get_community_footer(),
-            parse_mode=None
+            + get_community_footer()
         )
         return
 
@@ -501,8 +485,7 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ Referral reset for @{target_user.username or 'User'}!\n\n"
             f"They can now accept a new referral."
-            + get_community_footer(),
-            parse_mode=None
+            + get_community_footer()
         )
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID.")
@@ -531,7 +514,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Example: `/upgrade diamond`\n\n"
             f"⚠️ **IMPORTANT**: These are the LOWEST prices ever. They will go up!"
             + get_community_footer(),
-            parse_mode=None
+            parse_mode='Markdown'
         )
         return
     
@@ -540,7 +523,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"❌ Invalid tier. Available: {', '.join([t for t in REFERRAL_TIERS.keys() if t != 'free'])}"
             + get_community_footer(),
-            parse_mode=None
+            parse_mode='Markdown'
         )
         return
     
@@ -550,7 +533,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Upgrade to earn more from your referrals!\n"
             "Use `/upgrade` to see available tiers."
             + get_community_footer(),
-            parse_mode=None
+            parse_mode='Markdown'
         )
         return
     
@@ -569,7 +552,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ You're already on the {REFERRAL_TIERS[tier]['emoji']} {tier.title()} tier!\n"
                 f"Bonus: {REFERRAL_TIERS[tier]['bonus_percent']}%"
                 + get_community_footer(),
-                parse_mode=None
+                parse_mode='Markdown'
             )
             session.close()
             return
@@ -600,7 +583,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"⚠️ This is a PERMANENT upgrade. No refunds.\n"
             f"⚠️ Prices will increase as the project grows!",
             reply_markup=reply_markup,
-            parse_mode=None
+            parse_mode='Markdown'
         )
         session.close()
         
@@ -617,7 +600,7 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     
     if data == "upgrade_cancel":
-        await query.edit_message_text("❌ Upgrade cancelled.", parse_mode=None)
+        await query.edit_message_text("❌ Upgrade cancelled.", parse_mode='Markdown')
         return
     
     if data.startswith("upgrade_confirm_"):
@@ -641,10 +624,10 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"💡 Your referrals will now earn you more!\n"
                     f"Share your referral link to start earning."
                     + get_community_footer(),
-                    parse_mode=None
+                    parse_mode='Markdown'
                 )
             else:
-                await query.edit_message_text(f"❌ {msg}" + get_community_footer(), parse_mode=None)
+                await query.edit_message_text(f"❌ {msg}" + get_community_footer(), parse_mode='Markdown')
             session.close()
             
         except Exception as e:
@@ -698,7 +681,7 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         response += get_community_footer()
         
-        await update.message.reply_text(response, parse_mode=None)
+        await update.message.reply_text(response, parse_mode='Markdown')
         logger.info(f"✅ referral_stats response sent to user {user.id}")
         
     except Exception as e:
@@ -718,11 +701,11 @@ def main():
 
         application = Application.builder().token(Config.BOT_TOKEN).build()
 
-        # User commands
+        # User commands (only these show in menu)
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
 
-        # Admin commands (with underscores)
+        # Admin commands
         application.add_handler(CommandHandler("pending", pending))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
         application.add_handler(CommandHandler("pending_fees", pending_fees))
@@ -730,14 +713,6 @@ def main():
         application.add_handler(CommandHandler("test_channel", test_channel))
         application.add_handler(CommandHandler("admin_help", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
-
-        # Admin aliases (without underscores - for convenience)
-        application.add_handler(CommandHandler("pendingfees", pending_fees))
-        application.add_handler(CommandHandler("collectfees", collect_fees))
-        application.add_handler(CommandHandler("completepayout", complete_payout))
-        application.add_handler(CommandHandler("testchannel", test_channel))
-        application.add_handler(CommandHandler("resetreferral", reset_referral))
-        application.add_handler(CommandHandler("adminhelp", admin_help))
 
         # Referral system commands
         application.add_handler(CommandHandler("upgrade", upgrade))
