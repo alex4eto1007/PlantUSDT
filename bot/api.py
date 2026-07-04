@@ -1,5 +1,3 @@
-from flask import Flask, jsonify, request, send_from_directory
-from flask_cors import CORS
 import sys
 import os
 import asyncio
@@ -9,12 +7,68 @@ import random
 import string
 from datetime import datetime, timedelta
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# ============================================
+# READ CONFIG FROM ENVIRONMENT VARIABLES
+# ============================================
+class Config:
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    ADMIN_IDS = [int(id) for id in os.getenv("ADMIN_IDS", "").split(",") if id]
+    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "Alex_PlantUSDT")
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///plantusdt.db")
+    USDT_CONTRACT = os.getenv("USDT_CONTRACT", "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
+    POLYGON_RPC_URL = os.getenv("POLYGON_RPC_URL", "https://polygon-rpc.com")
+    POLYGONSCAN_API_URL = os.getenv("POLYGONSCAN_API_URL", "https://api.etherscan.io/v2/api?chainid=137")
+    POLYGON_CHAIN_ID = os.getenv("POLYGON_CHAIN_ID", "137")
+    ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")
+    WALLET_ADDRESS = os.getenv("WALLET_ADDRESS", "0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76")
+    USDT_DECIMALS = int(os.getenv("USDT_DECIMALS", 6))
+    DAILY_RATE = float(os.getenv("DAILY_RATE", 0.02))
+    INVESTMENT_DAYS = int(os.getenv("INVESTMENT_DAYS", 30))
+    MIN_INVESTMENT = float(os.getenv("MIN_INVESTMENT", 5))
+    MAX_FIELD_AMOUNT = float(os.getenv("MAX_FIELD_AMOUNT", 100))
+    MIN_WITHDRAWAL = float(os.getenv("MIN_WITHDRAWAL", 2))
+    WITHDRAWAL_FEE = float(os.getenv("WITHDRAWAL_FEE", 0.10))
+    REFERRAL_BONUS_PERCENT = float(os.getenv("REFERRAL_BONUS_PERCENT", 0.01))
+    REFERRAL_WINDOW_SECONDS = int(os.getenv("REFERRAL_WINDOW_SECONDS", 180))
+    VERCEL_URL = os.getenv("VERCEL_URL", "https://plant-usdt.vercel.app")
+    API_BASE_URL = os.getenv("API_BASE_URL", "https://plantusdt.ddns.net")
+    SCAN_INTERVAL_SECONDS = int(os.getenv("SCAN_INTERVAL_SECONDS", 300))
+    BLOCK_CONFIRMATIONS = int(os.getenv("BLOCK_CONFIRMATIONS", 6))
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    LOG_FILE = os.getenv("LOG_FILE", "plantusdt.log")
+    NETWORK_NAME = "Polygon"
+    NETWORK_SYMBOL = "MATIC"
+    EXPLORER_URL = "https://polygonscan.com"
+    
+    # Referral tier settings
+    REFERRAL_TIERS = {
+        "free": {"bonus_percent": 1, "price": 0, "emoji": "🌱"},
+        "bronze": {"bonus_percent": 2, "price": 40.00, "emoji": "🥉"},
+        "silver": {"bonus_percent": 3, "price": 78.40, "emoji": "🥈", "discount": "2%"},
+        "gold": {"bonus_percent": 4, "price": 114.00, "emoji": "🥇", "discount": "5%"},
+        "diamond": {"bonus_percent": 5, "price": 144.00, "emoji": "💎", "discount": "10%"}
+    }
+    ACTIVE_REFERRAL_BONUS = float(os.getenv("ACTIVE_REFERRAL_BONUS", 0.03))
+    ADS_FOR_ACTIVE_REFERRAL = int(os.getenv("ADS_FOR_ACTIVE_REFERRAL", 50))
+
+    @classmethod
+    def get_network_info(cls):
+        return {
+            'name': cls.NETWORK_NAME,
+            'symbol': cls.NETWORK_SYMBOL,
+            'chain_id': cls.POLYGON_CHAIN_ID,
+            'explorer': cls.EXPLORER_URL,
+            'usdt_contract': cls.USDT_CONTRACT,
+            'usdt_decimals': cls.USDT_DECIMALS
+        }
+
+# Now import Flask and other dependencies
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
 
 from database.db_manager import DatabaseManager
 from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, PendingDepositCheck
 from sqlalchemy import func
-from datetime import datetime
 
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
@@ -55,13 +109,13 @@ def after_request(response):
     return response
 
 db = DatabaseManager()
-PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
+PROJECT_WALLET = Config.WALLET_ADDRESS
 
 from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
 # ============================================
-# EXISTING ENDPOINTS
+# EXISTING ENDPOINTS (same as before)
 # ============================================
 
 @app.route('/api/get_wallet', methods=['GET'])
@@ -421,8 +475,6 @@ def invest():
         if existing:
             return jsonify({'success': False, 'message': f'Field #{field_number} is already planted'})
         
-        from config.settings import Config
-        from datetime import datetime, timedelta
         total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
         now = datetime.utcnow()
         
@@ -485,7 +537,6 @@ def invest_locked():
         if existing:
             return jsonify({'success': False, 'message': f'Field #{field_number} is already active'})
         
-        from datetime import datetime, timedelta
         now = datetime.utcnow()
         
         multipliers = {1: 1.02, 7: 1.18, 30: 1.80}
@@ -540,13 +591,10 @@ def check_deposit_with_amount():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        # Create a pending check record
         session = db.get_session()
         user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if user:
-            # Remove old pending checks for this user
             session.query(PendingDepositCheck).filter_by(user_id=user.id).delete()
-            
             pending = PendingDepositCheck(
                 user_id=user.id,
                 amount=expected_amount
@@ -760,6 +808,18 @@ def upgrade_tier():
 @app.route('/deposit')
 def deposit_page():
     return send_from_directory('../webapp', 'deposit_new.html')
+
+# ============================================
+# SERVE STATIC FILES (BYPASS NGINX PERMISSIONS)
+# ============================================
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory('../webapp/js', filename)
+
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    return send_from_directory('../webapp/css', filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
