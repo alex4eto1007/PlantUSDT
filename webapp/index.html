@@ -11,8 +11,16 @@
 <body>
     <div class="container">
         <!-- Header -->
-        <div class="header">
-            <div class="logo">🌱 PlantUSDT</div>
+<div class="header">
+    <div class="logo">🌱 PlantUSDT</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+        <button onclick="showInterstitialIfNeeded(); refreshData();" style="background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 6px; padding: 6px 10px; color: #00ff87; cursor: pointer; font-size: 14px;">🔄</button>
+        <div class="balance-display" style="text-align: right;">
+            <span class="balance-label">💰 Balance</span>
+            <span class="balance-amount" id="balance">$0.000</span>
+        </div>
+    </div>
+</div>
             <div style="flex:1; display:flex; justify-content:center;">
                 <button onclick="showInterstitialIfNeeded(); refreshData();" style="background:rgba(0,255,135,0.1); border:1px solid rgba(0,255,135,0.2); border-radius:6px; padding:4px 8px; color:#00ff87; cursor:pointer; font-size:12px; line-height:1;">🔄</button>
                 <div class="balance-display" style="text-align:center;">
