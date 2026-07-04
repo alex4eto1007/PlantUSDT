@@ -697,7 +697,14 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     session = db.get_session()
     try:
-        stats = get_referral_stats(user.id, session)
+        # Get the user from the database to get the correct ID
+        user_obj = session.query(User).filter_by(telegram_id=user.id).first()
+        if not user_obj:
+            await update.message.reply_text("❌ User not found.")
+            session.close()
+            return
+        
+        stats = get_referral_stats(user_obj.id, session)
         logger.info(f"📊 Stats retrieved: {stats}")
         
         if not stats:
