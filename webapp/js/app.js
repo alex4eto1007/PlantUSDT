@@ -219,7 +219,6 @@ function updateUI(data) {
         adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
     }
 
-    // NEW: tasks earnings
     var tasksEarningsDisplayEl = document.getElementById('tasksEarningsDisplay');
     if (tasksEarningsDisplayEl) {
         tasksEarningsDisplayEl.textContent = '$' + (data.tasks_earnings || 0).toFixed(3);
@@ -1505,34 +1504,51 @@ async function disableInterstitialAds() {
     });
 }
 
+// ============================================
+// TASKS - UPDATED WITH CLAIM FUNCTION
+// ============================================
+
 async function loadTasks() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/get_tasks/${userId}`);
+        const response = await fetch(`${API_BASE}/api/get_user_tasks/${userId}`);
         const data = await response.json();
         
         if (data.success) {
             const tasksEl = document.getElementById('tasksList');
             if (tasksEl) {
                 let html = '';
+                let completedCount = 0;
                 
-                for (const [key, task] of Object.entries(data.tasks)) {
+                for (const task of data.tasks) {
                     const isCompleted = task.completed;
+                    const isClaimed = task.claimed;
+                    if (isCompleted) completedCount++;
                     
-                    const progressBar = task.progress ? 
-                        `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;">
-                            <div style="width:${task.progress}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
-                        </div>` : '';
+                    const statusBadge = isCompleted ? 
+                        (isClaimed ? '✅ Claimed' : '🟡 Complete - Claim Reward!') : 
+                        '⏳ Pending';
+                    const statusColor = isCompleted ? 
+                        (isClaimed ? '#00ff87' : '#ffd93d') : 
+                        '#495670';
                     
                     html += `
-                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
-                            <div style="font-size:20px;">${isCompleted ? '✅' : '⬜'}</div>
-                            <div style="flex:1;">
-                                <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
-                                <div style="font-size:12px;color:#8892b0;">${task.description}</div>
-                                ${progressBar}
+                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:10px;flex:1;">
+                                    <div style="font-size:20px;">${isCompleted ? '✅' : '⬜'}</div>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
+                                        <div style="font-size:12px;color:#8892b0;">${task.description}</div>
+                                        <div style="font-size:11px;color:#ffd93d;">💰 ${task.reward} USDT</div>
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:12px;color:${statusColor};">${statusBadge}</div>
+                                    ${isCompleted && !isClaimed ? `<button onclick="claimTaskReward(${task.id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    ${!isCompleted ? `<button onclick="completeUserTask(${task.id})" style="margin-top:4px;padding:4px 10px;background:rgba(0,255,135,0.15);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;font-weight:600;font-size:11px;cursor:pointer;">✅ Complete</button>` : ''}
+                                </div>
                             </div>
-                            ${isCompleted ? '<span style="font-size:11px;color:#00ff87;font-weight:600;">✅ Done</span>' : '<span style="font-size:11px;color:#495670;">⏳ Pending</span>'}
                         </div>
                     `;
                 }
@@ -1541,16 +1557,115 @@ async function loadTasks() {
                 
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
-                    const total = data.total_count;
-                    const done = data.completed_count;
-                    progressEl.textContent = `${done}/${total} tasks completed`;
-                    progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
+                    const total = data.tasks.length;
+                    progressEl.textContent = `${completedCount}/${total} tasks completed`;
+                    progressEl.style.color = completedCount === total ? '#00ff87' : '#ccd6f0';
                 }
             }
         }
     } catch (error) {
         console.error('Error loading tasks:', error);
     }
+}
+
+async function completeUserTask(taskId) {
+    const userId = tgUser ? tgUser.id : '0';
+    
+    safePopupWithCallback({
+        title: '✅ Complete Task',
+        message: 'Mark this task as complete?',
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'confirm', type: 'ok', text: '✅ Complete'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(`${API_BASE}/api/complete_task`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        task_id: taskId
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    safePopup({
+                        title: '✅ Done!',
+                        message: data.message,
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadTasks();
+                    loadUserData();
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Failed to complete task.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error completing task:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
+}
+
+async function claimTaskReward(taskId) {
+    const userId = tgUser ? tgUser.id : '0';
+    
+    safePopupWithCallback({
+        title: '💰 Claim Reward',
+        message: 'Claim your reward for completing this task?',
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'confirm', type: 'ok', text: '💰 Claim'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(`${API_BASE}/api/claim_task_reward`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        task_id: taskId
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    safePopup({
+                        title: '🎉 Reward Claimed!',
+                        message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(2),
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadTasks();
+                    loadUserData();
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Failed to claim reward.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error claiming reward:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
 }
 
 // ============================================
@@ -1579,6 +1694,8 @@ window.loadActiveReferrals = loadActiveReferrals;
 window.claimWelcomeBonus = claimWelcomeBonus;
 window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
+window.completeUserTask = completeUserTask;
+window.claimTaskReward = claimTaskReward;
 
 console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);
@@ -1589,3 +1706,4 @@ console.log('📢 No popups - Only video ads!');
 console.log('📢 Active referrals: 30 ads = active status');
 console.log('📢 Welcome bonus: 0.1 USDT for referred users');
 console.log('📢 Disable interstitial ads: $10');
+console.log('📢 Task management system active');

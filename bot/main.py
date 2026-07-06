@@ -8,6 +8,10 @@ from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
 from services.scheduler import SchedulerService
 from services.referral import upgrade_referral_tier, get_referral_stats, REFERRAL_TIERS
+from services.task_manager import (
+    create_task, get_all_tasks, get_user_tasks,
+    complete_task, claim_task_reward, delete_task
+)
 import logging
 import asyncio
 from datetime import datetime, timedelta
@@ -42,7 +46,7 @@ deposit_scanner = DepositScanner()
 
 db.create_tables()
 
-VERCEL_URL = "https://plant-usdt.vercel.app"
+VERCEL_URL = "https://plantusdt.ddns.net"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
@@ -80,23 +84,11 @@ def is_admin(user_id: int) -> bool:
     return user and user.is_admin
 
 # ============================================
-# START COMMAND (FIXED - WITH SMART DUPLICATE PREVENTION)
+# START COMMAND
 # ============================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
-    # Prevent duplicate messages - smart way
-    if context.user_data.get('start_processed', False):
-        logger.info(f"⚠️ Start already processed for {user.id}, skipping duplicate")
-        return
-    context.user_data['start_processed'] = True
-    
-    # Clear flag after 10 seconds so next /start works
-    async def clear_flag():
-        await asyncio.sleep(10)
-        context.user_data['start_processed'] = False
-    asyncio.create_task(clear_flag())
     
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -452,13 +444,17 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /test_channel - Test channel connection
 /reset_referral <user_id> - Reset a user's referral status
 
+TASK MANAGEMENT:
+/add_task <title> | <description> | <reward> - Create a new task
+/list_tasks - List all active tasks
+/delete_task <task_id> - Delete a task
+/complete_task <user_id> <task_id> - Mark task as completed for a user
+
 Example:
-/pending
-/complete_payout 1 0xabc123...
-/pending_fees
-/collect_fees 0xdef456...
-/test_channel
-/reset_referral 123456789
+/add_task Watch 3 Ads | Watch 3 rewarded ads | 0.10
+/list_tasks
+/delete_task 1
+/complete_task 123456789 1
 
 Transactions are on Polygon (MATIC) network using USDT on Polygon
 
@@ -505,6 +501,213 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID.")
+
+# ============================================
+# ADMIN TASK COMMANDS
+# ============================================
+
+async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to add a new task"""
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    args = context.args
+    if len(args) < 3:
+        await update.message.reply_text(
+            "❌ Usage: /add_task <title> | <description> | <reward>\n\n"
+            "Example: /add_task Watch 3 Ads | Watch 3 rewarded ads | 0.10\n\n"
+            "Note: Use | as separator between title, description, and reward."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        full_text = ' '.join(args)
+        parts = full_text.split('|')
+        
+        if len(parts) != 3:
+            await update.message.reply_text(
+                "❌ Invalid format. Use: /add_task <title> | <description> | <reward>"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            return
+
+        title = parts[0].strip()
+        description = parts[1].strip()
+        reward = float(parts[2].strip())
+
+        if reward <= 0:
+            await update.message.reply_text("❌ Reward must be greater than 0.")
+            return
+
+        session = db.get_session()
+        success, result = create_task(title, description, reward, user.id, session)
+        session.close()
+
+        if success:
+            await update.message.reply_text(
+                f"✅ Task created successfully!\n\n"
+                f"📌 Title: {title}\n"
+                f"📝 Description: {description}\n"
+                f"💰 Reward: ${reward:.2f} USDT\n"
+                f"🆔 Task ID: {result.id}\n\n"
+                f"Users can see this task in the Mini App!"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(f"❌ Failed to create task: {result}")
+            
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid reward amount. Please enter a valid number."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error adding task: {e}")
+        await update.message.reply_text(f"❌ Error: {str(e)}")
+
+async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to list all tasks"""
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    session = db.get_session()
+    tasks = get_all_tasks(session)
+    session.close()
+
+    if not tasks:
+        await update.message.reply_text(
+            "📋 No active tasks found."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    text = "📋 **Active Tasks**\n\n"
+    for task in tasks:
+        text += f"🆔 ID: `{task.id}`\n"
+        text += f"📌 Title: {task.title}\n"
+        text += f"📝 Description: {task.description}\n"
+        text += f"💰 Reward: ${task.reward:.2f} USDT\n"
+        text += f"📅 Created: {task.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+        text += f"━━━━━━━━━━━━━━━━━━━━\n"
+
+    await update.message.reply_text(
+        text + get_community_footer(),
+        parse_mode='Markdown'
+    )
+
+async def delete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to delete a task"""
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "❌ Usage: /delete_task <task_id>\n\n"
+            "Example: /delete_task 1"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        task_id = int(context.args[0])
+        session = db.get_session()
+        success, msg = delete_task(task_id, session)
+        session.close()
+
+        if success:
+            await update.message.reply_text(
+                f"✅ Task #{task_id} deleted successfully!"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(
+                f"❌ {msg}"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid task ID. Please enter a valid number."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+
+async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to mark a task as completed for a user"""
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "❌ Usage: /complete_task <user_id> <task_id>\n\n"
+            "Example: /complete_task 123456789 1"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        target_user_id = int(context.args[0])
+        task_id = int(context.args[1])
+
+        session = db.get_session()
+        success, msg = complete_task(target_user_id, task_id, session)
+        session.close()
+
+        if success:
+            await update.message.reply_text(
+                f"✅ Task #{task_id} completed for user {target_user_id}!"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(
+                f"❌ {msg}"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid IDs. Please enter valid numbers."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
 
 # ============================================
 # REFERRAL SYSTEM COMMANDS
@@ -730,12 +933,17 @@ def main():
         application.add_handler(CommandHandler("admin_help", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
 
+        # Admin task commands
+        application.add_handler(CommandHandler("add_task", add_task))
+        application.add_handler(CommandHandler("list_tasks", list_tasks))
+        application.add_handler(CommandHandler("delete_task", delete_task_cmd))
+        application.add_handler(CommandHandler("complete_task", complete_task_cmd))
+
         # Referral system commands
         application.add_handler(CommandHandler("upgrade", upgrade))
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
 
-        # Start deposit scanner in background
         async def start_deposit_scanner():
             while True:
                 try:
@@ -748,7 +956,6 @@ def main():
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
 
-        # Set menu button - NON-BLOCKING
         async def set_menu_button():
             try:
                 await application.bot.set_chat_menu_button(
@@ -773,6 +980,7 @@ def main():
         logger.info("📊 Transaction channel: @PlantUSDTtransactions")
         logger.info("💰 Fee collection system active")
         logger.info("📈 Referral system with tier upgrades active")
+        logger.info("📋 Task management system active")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

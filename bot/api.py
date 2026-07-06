@@ -64,6 +64,8 @@ PROJECT_WALLET = Config.WALLET_ADDRESS
 from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
+from services.task_manager import get_user_tasks, complete_task, claim_task_reward
+
 # ============================================
 # HELPER FUNCTION FOR WEBAPP PATH
 # ============================================
@@ -291,7 +293,7 @@ def get_user():
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         
-        referral_earned = user.referral_earnings_all_time or 0
+        referral_earned = (user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0)
         investment_earnings = user.investment_earnings_all_time or 0
         total_earnings = referral_earned + investment_earnings + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
         
@@ -882,8 +884,8 @@ def claim_welcome_bonus():
 
 @app.route('/api/get_tasks/<int:telegram_id>', methods=['GET'])
 def get_tasks(telegram_id):
-    """Get all tasks for a user"""
-    from services.referral import get_user_tasks
+    """Get all tasks for a user (deprecated - use /api/get_user_tasks)"""
+    from services.referral import get_user_tasks as get_referral_tasks
     
     session = db.get_session()
     try:
@@ -891,7 +893,7 @@ def get_tasks(telegram_id):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        tasks = get_user_tasks(user.id, session)
+        tasks = get_referral_tasks(user.id, session)
         
         return jsonify({
             'success': True,
@@ -900,6 +902,91 @@ def get_tasks(telegram_id):
             'total_count': len(tasks)
         })
     except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+# ============================================
+# TASK MANAGEMENT ENDPOINTS - NEW
+# ============================================
+
+@app.route('/api/get_user_tasks/<int:telegram_id>', methods=['GET'])
+def api_get_user_tasks(telegram_id):
+    """Get all tasks for a user with completion and claim status"""
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        tasks = get_user_tasks(user.id, session)
+        return jsonify({
+            'success': True,
+            'tasks': tasks
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/complete_task', methods=['POST'])
+def api_complete_task():
+    """Complete a task for the user"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    task_id = data.get('task_id')
+    
+    if not telegram_id or not task_id:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        success, msg = complete_task(user.id, task_id, session)
+        
+        if success:
+            clear_user_cache(telegram_id)
+            return jsonify({'success': True, 'message': msg})
+        else:
+            return jsonify({'success': False, 'message': msg})
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/claim_task_reward', methods=['POST'])
+def api_claim_task_reward():
+    """Claim reward for a completed task"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    task_id = data.get('task_id')
+    
+    if not telegram_id or not task_id:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        success, msg = claim_task_reward(user.id, task_id, session)
+        
+        if success:
+            clear_user_cache(telegram_id)
+            return jsonify({
+                'success': True,
+                'message': msg,
+                'new_balance': user.balance
+            })
+        else:
+            return jsonify({'success': False, 'message': msg})
+    except Exception as e:
+        session.rollback()
         return jsonify({'success': False, 'message': str(e)})
     finally:
         session.close()
