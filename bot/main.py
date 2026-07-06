@@ -42,9 +42,6 @@ deposit_scanner = DepositScanner()
 
 db.create_tables()
 
-# ============================================
-# UPDATED: Use secure server instead of Vercel
-# ============================================
 VERCEL_URL = "https://plantusdt.ddns.net"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
@@ -83,7 +80,7 @@ def is_admin(user_id: int) -> bool:
     return user and user.is_admin
 
 # ============================================
-# START COMMAND
+# START COMMAND (FIXED - NO DUPLICATE MESSAGES)
 # ============================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -111,9 +108,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Grow your USDT with returns up to 80% on Polygon network!
 
-💰 INVESTMENT DETAILS:
+💰 **INVESTMENT DETAILS:**
 • 🌿 1 Day: 2% return
-• 🌿 7 Days: 18% return  
+• 🌿 7 Days: 18% return
 • 🌿 30 Days: 80% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
@@ -121,7 +118,7 @@ Grow your USDT with returns up to 80% on Polygon network!
 • 🌱 3 Planting Fields: $100 max each
 • ⛓️ Network: Polygon (MATIC) - Low fees!
 
-👥 REFERRAL BONUS:
+👥 **REFERRAL BONUS:**
 Share your referral link and earn up to 5% from your friends' deposits based on your tier!
 
 📊 Live Transactions: @PlantUSDTtransactions
@@ -136,6 +133,7 @@ Use /app to open the Mini App!"""
         )
         return
 
+    # Existing user - handle referral first
     if context.args and len(context.args) > 0:
         referral_code = context.args[0]
         if existing_user.can_be_referred and existing_user.referred_by is None:
@@ -173,6 +171,7 @@ Use /app to open the Mini App!"""
                         return
                     session.close()
 
+    # Send the main welcome back message (only once!)
     keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
