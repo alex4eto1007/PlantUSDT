@@ -1580,7 +1580,7 @@ async function loadTasks() {
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
-                        progressText = `${currentValue}/${conditionValue}`;
+                        progressText = `${Math.round(currentValue)}/${conditionValue}`;
                         progressPercent = Math.min((currentValue / conditionValue) * 100, 100);
                     } else if (isCompleted) {
                         progressText = `${conditionValue}/${conditionValue}`;
@@ -1748,6 +1748,10 @@ function getTaskCurrentValue(taskId, userStats) {
         43: userStats.total_earnings || 0,
         44: userStats.total_earnings || 0
     };
+    // Round to 3 decimal places to avoid floating point issues
+    if (typeof taskCurrentValues[taskId] === 'number') {
+        return Math.round(taskCurrentValues[taskId] * 1000) / 1000;
+    }
     return taskCurrentValues[taskId] || null;
 }
 

@@ -377,7 +377,7 @@ def get_real_history():
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
         
-        # NEW: Add tasks earnings to history
+        # Add tasks earnings to history
         if user.tasks_earnings and user.tasks_earnings > 0:
             transactions.append({
                 'type': 'tasks_earnings',
@@ -733,7 +733,7 @@ def get_referral_tiers():
         'tiers': REFERRAL_TIERS
     })
 
-@app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
+@app.route('/api/referral_stats_full/<int:telegram_id>', methods(['GET'])
 def get_referral_stats_full(telegram_id):
     """Get full referral stats including tier info"""
     from services.referral import get_referral_stats
@@ -923,7 +923,7 @@ def get_tasks(telegram_id):
         session.close()
 
 # ============================================
-# TASK SYSTEM ENDPOINTS - UPDATED
+# TASK SYSTEM ENDPOINTS
 # ============================================
 
 @app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
