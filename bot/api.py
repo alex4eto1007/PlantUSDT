@@ -926,7 +926,7 @@ def serve_static(filename):
     # Skip API routes
     if filename.startswith('api/'):
         return jsonify({'success': False, 'message': 'Not found'}), 404
-    return send_from_directory(get_webapp_dir(), filename)
+    return send_from_directory("/root/PlantUSDT/webapp", filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
