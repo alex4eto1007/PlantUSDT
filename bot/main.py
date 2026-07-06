@@ -731,10 +731,12 @@ def main():
                     logger.error(f"Error in deposit scanner loop: {e}")
                 await asyncio.sleep(300)
 
+        # Start deposit scanner in background
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
 
+        # Set menu button - NON-BLOCKING, won't crash the bot
         async def set_menu_button():
             try:
                 await application.bot.set_chat_menu_button(
@@ -747,8 +749,9 @@ def main():
                 )
                 logger.info("✅ Menu button set to Mini App")
             except Exception as e:
-                logger.error(f"❌ Error setting menu button: {e}")
+                logger.warning(f"⚠️ Could not set menu button: {e} (non-critical)")
 
+        # Run menu button in background, don't wait for it
         loop.create_task(set_menu_button())
 
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
