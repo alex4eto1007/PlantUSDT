@@ -3,9 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>💳 Deposit - PlantUSDT</title>
     <link rel="stylesheet" href="/css/style.css?v=4">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -40,7 +37,7 @@
         </div>
 
         <div id="walletDisplay" style="margin-bottom:16px;padding:12px;background:rgba(0,255,135,0.05);border:1px solid rgba(0,255,135,0.1);border-radius:8px;">
-            <p style="font-size:12px;color:#8892b0;margin:0;">🔗 <strong>Connected Wallet:</strong> <span id="connectedWalletDisplay" style="color:#00ff87;font-family:monospace;font-size:12px;word-break:break-all;">Not connected</span></p>
+            <p style="font-size:12px;color:#8892b0;margin:0;">🔗 <strong>Connected Wallet:</strong> <span id="connectedWalletDisplay" style="color:#ff6b6b;font-family:monospace;font-size:12px;word-break:break-all;">Loading...</span></p>
             <p style="font-size:11px;color:#ffd93d;margin:4px 0 0 0;">⚠️ Send USDT ONLY from this wallet on Polygon network!</p>
         </div>
 
@@ -74,22 +71,32 @@
             tg.ready();
             tg.expand();
 
+            // Get user ID
             var userId = tg.initDataUnsafe?.user?.id || '0';
+            console.log('📱 User ID:', userId);
+
+            // Load wallet
             fetch('/api/get_wallet?telegram_id=' + userId)
-                .then(function(response) { return response.json(); })
+                .then(function(response) { 
+                    console.log('📡 Wallet API response status:', response.status);
+                    return response.json(); 
+                })
                 .then(function(data) {
+                    console.log('📡 Wallet data:', data);
+                    var displayEl = document.getElementById('connectedWalletDisplay');
                     if (data.success && data.wallet_address) {
-                        document.getElementById('connectedWalletDisplay').textContent = data.wallet_address;
-                        document.getElementById('connectedWalletDisplay').style.color = '#00ff87';
+                        displayEl.textContent = data.wallet_address;
+                        displayEl.style.color = '#00ff87';
                     } else {
-                        document.getElementById('connectedWalletDisplay').textContent = '⚠️ No wallet connected!';
-                        document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
+                        displayEl.textContent = '⚠️ No wallet connected!';
+                        displayEl.style.color = '#ff6b6b';
                     }
                 })
                 .catch(function(error) {
-                    console.error('Error loading wallet:', error);
-                    document.getElementById('connectedWalletDisplay').textContent = '❌ Error loading wallet';
-                    document.getElementById('connectedWalletDisplay').style.color = '#ff6b6b';
+                    console.error('❌ Error loading wallet:', error);
+                    var displayEl = document.getElementById('connectedWalletDisplay');
+                    displayEl.textContent = '❌ Error loading wallet';
+                    displayEl.style.color = '#ff6b6b';
                 });
 
             var amountInput = document.getElementById('depositAmount');
