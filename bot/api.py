@@ -64,7 +64,14 @@ PROJECT_WALLET = Config.WALLET_ADDRESS
 from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
-from services.task_system import get_user_task_progress, check_task_conditions, claim_task_reward, get_task_stats, get_all_tasks
+from services.task_system import (
+    get_user_task_progress,
+    check_task_conditions,
+    claim_task_reward,
+    get_task_stats,
+    get_all_tasks,
+    get_user_stats
+)
 
 # ============================================
 # HELPER FUNCTION FOR WEBAPP PATH
@@ -916,12 +923,12 @@ def get_tasks(telegram_id):
         session.close()
 
 # ============================================
-# TASK SYSTEM ENDPOINTS - NEW
+# TASK SYSTEM ENDPOINTS - UPDATED
 # ============================================
 
 @app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
 def api_get_tasks(telegram_id):
-    """Get all tasks with user progress"""
+    """Get all tasks with user progress and stats"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -935,10 +942,14 @@ def api_get_tasks(telegram_id):
         tasks = get_user_task_progress(user.id, session)
         stats = get_task_stats(user.id, session)
         
+        # Get user stats for progress display
+        user_stats = get_user_stats(user, session)
+        
         return jsonify({
             'success': True,
             'tasks': tasks,
             'stats': stats,
+            'user_stats': user_stats,
             'newly_completed': [t["id"] for t in completed]
         })
     except Exception as e:

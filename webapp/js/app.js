@@ -1570,13 +1570,14 @@ async function loadTasks() {
                         `;
                     }
                     
-                    // Calculate progress for display
+                    // Calculate progress for display using user_stats from API
+                    const userStats = data.user_stats || {};
                     let progressText = '';
                     let progressPercent = 0;
                     
                     // Get the condition value from the task
                     const conditionValue = getTaskConditionValue(task.task_id);
-                    const currentValue = getTaskCurrentValue(task.task_id, data);
+                    const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         progressText = `${currentValue}/${conditionValue}`;
@@ -1621,10 +1622,13 @@ async function loadTasks() {
                     `;
                 }
                 
+                // Show "All tasks completed" message when no tasks left
                 if (totalTasks === 0) {
                     html = `
-                        <div style="text-align:center;padding:20px;color:#495670;font-size:14px;">
-                            🎉 All tasks completed! Great job!
+                        <div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);">
+                            <div style="font-size:48px;margin-bottom:10px;">🎉</div>
+                            <div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div>
+                            <div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all 44 tasks. Great job!</div>
                         </div>
                     `;
                 }
@@ -1697,11 +1701,7 @@ function getTaskConditionValue(taskId) {
 }
 
 // Helper function to get current value for a task
-function getTaskCurrentValue(taskId, data) {
-    // This will be populated from the API response
-    // The API returns user stats in the response
-    const userStats = data.user_stats || {};
-    
+function getTaskCurrentValue(taskId, userStats) {
     const taskCurrentValues = {
         1: userStats.has_invested ? 1 : 0,
         2: userStats.total_invested || 0,
