@@ -42,7 +42,10 @@ deposit_scanner = DepositScanner()
 
 db.create_tables()
 
-VERCEL_URL = "https://plant-usdt.vercel.app?v=6"
+# ============================================
+# UPDATED: Use secure server instead of Vercel
+# ============================================
+VERCEL_URL = "https://plantusdt.ddns.net"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
@@ -254,9 +257,12 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if len(context.args) < 2:
-        msg = "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\nExample: /complete_payout 1 0xabc123..."
-        msg += get_community_footer()
-        await update.message.reply_text(msg)
+        await update.message.reply_text(
+            "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
+            "Example: /complete_payout 1 0xabc123..."
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
         return
 
     try:
@@ -698,7 +704,7 @@ def main():
 
         application = Application.builder().token(Config.BOT_TOKEN).build()
 
-        # User commands (only these show in menu)
+        # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
 
@@ -760,4 +766,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-# v2 - forced reload

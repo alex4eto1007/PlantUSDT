@@ -50,13 +50,19 @@ function safePopupWithCallback(options, callback) {
 // SHOW INTERSTITIAL AD ON BUTTON CLICKS
 // ============================================
 function showInterstitialIfNeeded() {
+    // Check if user has disabled interstitial ads
+    if (window.interstitialAdsDisabled) {
+        console.log("🔇 Interstitial ads disabled by user");
+        return;
+    }
+    
     var now = Date.now();
     if (now - lastAdTime < AD_COOLDOWN) {
         console.log("⏳ Ad cooldown active, skipping...");
         return;
     }
     lastAdTime = now;
-    
+
     if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
         console.log("📢 Showing interstitial ad on button click...");
         setTimeout(function() {
@@ -76,21 +82,23 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     startCountdownTimer();
     loadAdStats();
-    
+    loadActiveReferrals();
+    loadTasks();
+
     document.addEventListener('click', function(e) {
         var target = e.target.closest('button');
         if (!target) return;
-        
+
         if (target.classList.contains('back-btn') || 
             target.classList.contains('no-ad') || 
             target.id === 'watchAdBtn') {
             return;
         }
-        
+
         if (target.type === 'submit' && target.closest('#withdrawForm')) {
             return;
         }
-        
+
         showInterstitialIfNeeded();
     });
 });
@@ -98,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function navigateTo(page) {
     const pages = {
         'dashboard': 'dashboard.html',
-        'deposit': 'deposit_new.html',
+        'deposit': 'deposit.html',
         'withdraw': 'withdraw.html',
         'history': 'history.html',
         'index': 'index.html'
@@ -127,6 +135,17 @@ async function loadUserData() {
             updateReferral(data);
             updateDashboardUI(data);
             await updateReferralStats(userId);
+            
+            // Check if interstitial ads are disabled
+            if (data.interstitial_ads_disabled) {
+                window.interstitialAdsDisabled = true;
+                const disableBtn = document.getElementById('disableAdsBtn');
+                if (disableBtn) {
+                    disableBtn.textContent = '✅ Ads Disabled';
+                    disableBtn.disabled = true;
+                    disableBtn.style.opacity = '0.5';
+                }
+            }
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -137,18 +156,20 @@ function refreshData() {
     showInterstitialIfNeeded();
     var balanceEl = document.getElementById('balance');
     var totalEarningsEl = document.getElementById('totalEarnings');
-    
+
     if (balanceEl) {
         balanceEl.textContent = '⏳ ...';
     }
     if (totalEarningsEl) {
         totalEarningsEl.textContent = '⏳ ...';
     }
-    
+
     setTimeout(function() {
         loadUserData();
         loadSavedWallet();
         loadAdStats();
+        loadActiveReferrals();
+        loadTasks();
     }, 300);
 }
 
@@ -161,7 +182,7 @@ async function updateReferralStats(userId) {
             var referralEarnedEl = document.getElementById('referralEarned');
             var level1CountEl = document.getElementById('level1Count');
             var level1EarningsEl = document.getElementById('level1Earnings');
-            
+
             if (referralCountEl) referralCountEl.textContent = data.total_referrals || 0;
             if (referralEarnedEl) referralEarnedEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
             if (level1CountEl) level1CountEl.textContent = data.level1_count || 0;
@@ -177,22 +198,22 @@ function updateUI(data) {
     if (balanceEl) {
         balanceEl.textContent = '$' + (data.balance || 0).toFixed(3);
     }
-    
+
     var totalEarningsEl = document.getElementById('totalEarnings');
     if (totalEarningsEl) {
         totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
     }
-    
+
     var investmentEarningsEl = document.getElementById('investmentEarnings');
     if (investmentEarningsEl) {
         investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(3);
     }
-    
+
     var referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
     if (referralEarningsDisplayEl) {
         referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(3);
     }
-    
+
     var adEarningsDisplayEl = document.getElementById('adEarningsDisplay');
     if (adEarningsDisplayEl) {
         adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
@@ -299,7 +320,7 @@ function updateFields(data) {
 // ============================================
 async function claimInvestment(fieldNumber) {
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
-    
+
     if (window.claimInProgress) {
         console.log('⏳ Claim already in progress...');
         return;
@@ -328,7 +349,7 @@ async function claimInvestment(fieldNumber) {
         if (buttonId === 'confirm') {
             try {
                 console.log('📤 Sending claim request for Field #' + fieldNumber);
-                
+
                 const response = await fetch(`${API_BASE}/api/claim_investment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -337,17 +358,17 @@ async function claimInvestment(fieldNumber) {
                         field_number: fieldNumber
                     })
                 });
-                
+
                 const data = await response.json();
                 console.log('📥 Claim response:', data);
-                
+
                 if (data.success) {
                     safePopup({
                         title: '✅ Claimed!',
                         message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!\n\n🌱 The field is now available for a new investment.',
                         buttons: [{type: 'ok'}]
                     });
-                    
+
                     setTimeout(function() {
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after claim...");
@@ -356,10 +377,12 @@ async function claimInvestment(fieldNumber) {
                         setTimeout(function() {
                             loadUserData();
                             loadAdStats();
+                            loadActiveReferrals();
+                            loadTasks();
                             window.claimInProgress = false;
                         }, 3000);
                     }, 1000);
-                    
+
                 } else {
                     safePopup({
                         title: '❌ Error',
@@ -390,37 +413,37 @@ function updateFieldTimers() {
     if (document.getElementById('historyList')) {
         return;
     }
-    
+
     var now = new Date();
     var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-    
+
     for (var i = 1; i <= 3; i++) {
         var timerEl = document.getElementById('field' + i + 'Timer');
         var statusEl = document.getElementById('field' + i + 'Status');
         var btnEl = document.getElementById('field' + i + 'Btn');
-        
+
         if (!timerEl || !statusEl || !btnEl) continue;
-        
+
         var fieldData = window.fieldData ? window.fieldData[i] : null;
         if (!fieldData || !fieldData.unlock_date) {
             timerEl.textContent = '⏳ Payout: --:--:-- UTC';
             timerEl.className = 'field-timer';
             continue;
         }
-        
+
         var isLocked = fieldData.is_locked === true;
         var lockPeriod = fieldData.lock_period || 30;
-        
+
         var unlockDateStr = fieldData.unlock_date;
         if (unlockDateStr.endsWith('Z')) {
             unlockDateStr = unlockDateStr.slice(0, -1);
         }
         var unlockDate = new Date(unlockDateStr + 'Z').getTime();
         var timeLeft = unlockDate - utcNow;
-        
+
         var isReady = (isLocked === true) && (timeLeft <= 0);
         fieldData.is_ready = isReady;
-        
+
         if (isReady) {
             timerEl.textContent = '🟢 READY TO CLAIM!';
             timerEl.className = 'field-timer ready';
@@ -428,7 +451,7 @@ function updateFieldTimers() {
             timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
             timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
             timerEl.style.animation = 'pulse-gold 1.5s infinite';
-            
+
             btnEl.textContent = '🌾 Claim Now!';
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
@@ -442,17 +465,17 @@ function updateFieldTimers() {
                     claimInvestment(fieldNum); 
                 };
             })(i);
-            
+
             statusEl.textContent = '✅ Ready to Claim!';
             statusEl.className = 'field-status ready';
             statusEl.style.color = '#ffd93d';
-            
+
         } else if (isLocked === true && timeLeft > 0) {
             var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            
+
             var timeString = '';
             if (days > 0) {
                 timeString = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
@@ -465,7 +488,7 @@ function updateFieldTimers() {
             timerEl.style.borderColor = '';
             timerEl.style.background = '';
             timerEl.style.animation = '';
-            
+
             btnEl.textContent = '🔒 Locked';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
@@ -473,11 +496,11 @@ function updateFieldTimers() {
             btnEl.style.background = '';
             btnEl.style.color = '';
             btnEl.onclick = null;
-            
+
             statusEl.textContent = '🔒 Locked';
             statusEl.className = 'field-status locked';
             statusEl.style.color = '#ff6b6b';
-            
+
         } else if (isLocked === false) {
             timerEl.textContent = '🟢 Available (UTC)';
             timerEl.className = 'field-timer';
@@ -485,7 +508,7 @@ function updateFieldTimers() {
             timerEl.style.borderColor = '';
             timerEl.style.background = '';
             timerEl.style.animation = '';
-            
+
             btnEl.textContent = '🌱 Plant Now';
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
@@ -498,7 +521,7 @@ function updateFieldTimers() {
                     investField(fieldNum); 
                 };
             })(i);
-            
+
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             statusEl.style.color = '#8247E5';
@@ -537,7 +560,7 @@ async function updateReferral(data) {
     var referralLink = document.getElementById('referralLinkText');
     var walletText = document.getElementById('walletText');
     var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
-    
+
     if (referralLink) {
         if (isConnected) {
             var userId = tgUser ? tgUser.id : '0';
@@ -736,16 +759,16 @@ function getLockOptions() {
 async function investFieldWithLock(fieldNumber) {
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
-    
+
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
     if (!amount) return;
-    
+
     const amountNum = parseFloat(amount.replace('$', '').trim());
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
         safePopup({title:'❌ Invalid Amount', message:'Please enter between $5 and $100.', buttons:[{type:'ok'}]});
         return;
     }
-    
+
     const options = getLockOptions();
     let message = '📊 Choose lock period:\n\n';
     options.forEach(opt => {
@@ -754,19 +777,19 @@ async function investFieldWithLock(fieldNumber) {
         message += '• ' + opt.days + ' day' + (opt.days > 1 ? 's' : '') + ': +' + opt.returnPercent + '% → $' + returnAmount.toFixed(2) + ' (+$' + profit.toFixed(2) + ')\n';
     });
     message += '\n\nEnter 1, 7, or 30:';
-    
+
     const lockPeriod = prompt(message);
     if (!lockPeriod) return;
-    
+
     const days = parseInt(lockPeriod);
     if (![1, 7, 30].includes(days)) {
         safePopup({title:'❌ Invalid Option', message:'Please enter 1, 7, or 30.', buttons:[{type:'ok'}]});
         return;
     }
-    
+
     const expectedReturn = calculateReturn(amountNum, days);
     const profit = expectedReturn - amountNum;
-    
+
     safePopupWithCallback({
         title: '📊 Confirm Investment',
         message: 'Field #' + fieldNumber + '\n\n💰 Amount: $' + amountNum.toFixed(2) + '\n⏱️ Lock Period: ' + days + ' day' + (days > 1 ? 's' : '') + '\n📈 Expected Return: $' + expectedReturn.toFixed(2) + '\n✅ Profit: +$' + profit.toFixed(2) + '\n⛓️ Network: Polygon',
@@ -794,17 +817,17 @@ async function investFieldWithLock(fieldNumber) {
                         message:'Invested $' + amountNum.toFixed(2) + ' in Field #' + fieldNumber + ' on Polygon!\n🔒 Locked for ' + days + ' days.\n📈 Expected return: $' + expectedReturn.toFixed(2),
                         buttons:[{type:'ok'}]
                     });
-                    
+
                     if (window.watchRewardedAd) {
                         console.log("📢 Showing rewarded ad after investment...");
                         setTimeout(function() { window.watchRewardedAd(); }, 500);
                     }
-                    
+
                     if (window.showInterstitialAd) {
                         console.log("📢 Showing interstitial ad after investment (NO REWARD)...");
                         setTimeout(function() { window.showInterstitialAd(); }, 1000);
                     }
-                    
+
                     loadUserData();
                 } else {
                     safePopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
@@ -828,16 +851,16 @@ function copyAddress() {
     showInterstitialIfNeeded();
     var addressElement = document.getElementById('addressText');
     var address = addressElement ? addressElement.textContent.trim() : '';
-    
+
     if (!address) {
         var displayElement = document.querySelector('.address');
         if (displayElement) {
             address = displayElement.textContent.trim();
         }
     }
-    
+
     address = address.replace(/\s+/g, '').trim();
-    
+
     if (address && address.startsWith('0x') && address.length === 42) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(address).then(function() {
@@ -941,7 +964,7 @@ async function checkDepositWithAmount() {
     const userId = tgUser?.id || '0';
     const amountInput = document.getElementById('depositAmount');
     const amount = amountInput?.value;
-    
+
     if (!amount || parseFloat(amount) < 5) {
         safePopup({
             title: '⚠️ Invalid Amount',
@@ -950,7 +973,7 @@ async function checkDepositWithAmount() {
         });
         return;
     }
-    
+
     const statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
         statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
@@ -988,33 +1011,33 @@ function filterHistory(type) {
     var historyList = document.getElementById('historyList');
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     var userId = tgUser ? tgUser.id : '0';
-    
+
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
     var url2 = API_BASE + '/api/investments/' + userId;
-    
+
     Promise.all([fetch(url1), fetch(url2)])
         .then(function(responses) { 
             return Promise.all(responses.map(function(r) { return r.json(); })); 
         })
         .then(function(data) {
             var allTransactions = [];
-            
+
             if (data[0].transactions && data[0].transactions.length > 0) {
                 allTransactions = allTransactions.concat(data[0].transactions);
             }
-            
+
             if (data[1].transactions && data[1].transactions.length > 0) {
                 data[1].transactions.forEach(function(tx) {
                     tx.type = 'investment';
                 });
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
-            
+
             if (allTransactions.length === 0) {
                 historyList.innerHTML = '<p class="empty-state">No transactions found on Polygon.</p>';
                 return;
             }
-            
+
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) { 
                     if (type === 'deposits') {
@@ -1033,7 +1056,7 @@ function filterHistory(type) {
                     return tx.type === type; 
                 });
             }
-            
+
             if (allTransactions.length === 0) {
                 var displayType = type;
                 if (type === 'deposits') displayType = 'deposit';
@@ -1043,11 +1066,11 @@ function filterHistory(type) {
                 historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found on Polygon.</p>';
                 return;
             }
-            
+
             allTransactions.sort(function(a, b) { 
                 return new Date(b.date) - new Date(a.date); 
             });
-            
+
             renderHistory(allTransactions);
         })
         .catch(function(error) {
@@ -1075,17 +1098,17 @@ function renderHistory(transactions) {
         if (tx.type === 'ad_earnings') {
             displayText = 'Ad Earnings';
         }
-        
+
         var amountDisplay = '$' + tx.amount.toFixed(3);
         if (tx.type === 'investment' && tx.field) {
             amountDisplay = '$' + tx.amount.toFixed(3) + ' (Field ' + tx.field + ')';
         }
-        
+
         var statusBadge = '';
         if (tx.type === 'withdraw' && tx.status === 'pending') {
             statusBadge = ' ⏳';
         }
-        
+
         html += '<div class="history-item">' +
             '<div class="history-icon">' + icon + '</div>' +
             '<div class="history-details">' +
@@ -1136,17 +1159,17 @@ function setupEventListeners() {
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
                     if (data.success) {
                         safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
-                        
+
                         if (window.watchRewardedAd) {
                             console.log("📢 Showing rewarded ad after withdrawal...");
                             setTimeout(function() { window.watchRewardedAd(); }, 500);
                         }
-                        
+
                         if (window.showInterstitialAd) {
                             console.log("📢 Showing interstitial ad after withdrawal (NO REWARD)...");
                             setTimeout(function() { window.showInterstitialAd(); }, 1000);
                         }
-                        
+
                         if (amountInput) amountInput.value = '';
                     } else {
                         safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
@@ -1200,7 +1223,7 @@ async function watchRewardedAd() {
     try {
         const result = await window.showRewardedAd();
         console.log('📢 Ad result:', result);
-        
+
         if (result.done && !result.error && result.state === 'destroy') {
             const credited = await creditAdReward();
             if (credited) {
@@ -1211,6 +1234,8 @@ async function watchRewardedAd() {
                 });
                 loadUserData();
                 loadAdStats();
+                loadActiveReferrals();
+                loadTasks();
                 return true;
             }
         }
@@ -1236,17 +1261,17 @@ async function loadAdStats() {
     try {
         const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
         const userData = await userResponse.json();
-        
+
         const adEarningsEl = document.getElementById('adEarnings');
         if (adEarningsEl) {
             adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
         }
-        
+
         const adsTodayEl = document.getElementById('adsToday');
         if (adsTodayEl) {
             adsTodayEl.textContent = '♾️ Unlimited';
         }
-        
+
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
@@ -1268,7 +1293,7 @@ async function loadAdStats() {
 async function upgradeReferralTier(tier) {
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
-    
+
     if (!userId || userId === '0') {
         safePopup({
             title: '❌ Error',
@@ -1277,7 +1302,7 @@ async function upgradeReferralTier(tier) {
         });
         return;
     }
-    
+
     safePopupWithCallback({
         title: '📊 Upgrade Referral Tier',
         message: 'Are you sure you want to upgrade to ' + tier.toUpperCase() + ' tier?\n\nThis is a PERMANENT upgrade. No refunds.',
@@ -1296,16 +1321,16 @@ async function upgradeReferralTier(tier) {
                         tier: tier
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     safePopup({
                         title: '✅ Upgrade Successful!',
                         message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(2),
                         buttons: [{type: 'ok'}]
                     });
-                    
+
                     setTimeout(function() {
                         loadUserData();
                     }, 1000);
@@ -1326,6 +1351,196 @@ async function upgradeReferralTier(tier) {
             }
         }
     });
+}
+
+// ============================================
+// NEW FEATURE FUNCTIONS
+// ============================================
+
+async function loadActiveReferrals() {
+    const userId = tgUser ? tgUser.id : '0';
+    try {
+        const response = await fetch(`${API_BASE}/api/get_active_referrals/${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const activeRefsEl = document.getElementById('activeReferralsCount');
+            if (activeRefsEl) {
+                activeRefsEl.textContent = data.active_count + ' / ' + data.total_referrals;
+            }
+            
+            const listEl = document.getElementById('activeReferralList');
+            if (listEl) {
+                if (data.active_list && data.active_list.length > 0) {
+                    let html = '<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals (eligible for 0.03 USDT bonus):</div>';
+                    data.active_list.forEach(ref => {
+                        const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
+                        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
+                            <span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span>
+                            <span style="font-size:11px;color:#00ff87;">✅ ${status}</span>
+                            <span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span>
+                        </div>`;
+                    });
+                    listEl.innerHTML = html;
+                    listEl.style.display = 'block';
+                } else {
+                    listEl.innerHTML = '<p style="color:#495670;font-size:13px;padding:8px 0;">No active referrals yet. Share your link!</p>';
+                    listEl.style.display = 'block';
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading active referrals:', error);
+    }
+}
+
+async function claimWelcomeBonus() {
+    const userId = tgUser ? tgUser.id : '0';
+    
+    safePopupWithCallback({
+        title: '🎁 Welcome Bonus',
+        message: 'Claim 0.1 USDT as a welcome bonus!\n\nRequirement: Invest at least once OR watch 30 ads.',
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'claim', type: 'ok', text: '🎁 Claim'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'claim') {
+            try {
+                const response = await fetch(`${API_BASE}/api/claim_welcome_bonus`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    safePopup({
+                        title: '🎉 Bonus Claimed!',
+                        message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(2),
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadUserData();
+                    loadActiveReferrals();
+                    loadTasks();
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Failed to claim bonus.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error claiming bonus:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
+}
+
+async function disableInterstitialAds() {
+    const userId = tgUser ? tgUser.id : '0';
+    
+    safePopupWithCallback({
+        title: '🔇 Disable Interstitial Ads',
+        message: 'Pay $10 USDT to permanently disable interstitial ads (the ones that pop up on button clicks).\n\nYou will still be able to watch rewarded ads for $0.001 USDT.',
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'confirm', type: 'ok', text: '✅ Pay $10'}
+        ]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(`${API_BASE}/api/disable_interstitial_ads`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    safePopup({
+                        title: '✅ Ads Disabled!',
+                        message: data.message + '\n\nNo more interstitial ads!',
+                        buttons: [{type: 'ok'}]
+                    });
+                    const disableBtn = document.getElementById('disableAdsBtn');
+                    if (disableBtn) {
+                        disableBtn.textContent = '✅ Ads Disabled';
+                        disableBtn.disabled = true;
+                        disableBtn.style.opacity = '0.5';
+                    }
+                    window.interstitialAdsDisabled = true;
+                    loadUserData();
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Failed to disable ads.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } catch (error) {
+                console.error('Error disabling ads:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        }
+    });
+}
+
+async function loadTasks() {
+    const userId = tgUser ? tgUser.id : '0';
+    try {
+        const response = await fetch(`${API_BASE}/api/get_tasks/${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const tasksEl = document.getElementById('tasksList');
+            if (tasksEl) {
+                let html = '';
+                
+                for (const [key, task] of Object.entries(data.tasks)) {
+                    const isCompleted = task.completed;
+                    
+                    const progressBar = task.progress ? 
+                        `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;">
+                            <div style="width:${task.progress}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
+                        </div>` : '';
+                    
+                    html += `
+                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+                            <div style="font-size:20px;">${isCompleted ? '✅' : '⬜'}</div>
+                            <div style="flex:1;">
+                                <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
+                                <div style="font-size:12px;color:#8892b0;">${task.description}</div>
+                                ${progressBar}
+                            </div>
+                            ${isCompleted ? '<span style="font-size:11px;color:#00ff87;font-weight:600;">✅ Done</span>' : '<span style="font-size:11px;color:#495670;">⏳ Pending</span>'}
+                        </div>
+                    `;
+                }
+                
+                tasksEl.innerHTML = html;
+                
+                const progressEl = document.getElementById('taskProgress');
+                if (progressEl) {
+                    const total = data.total_count;
+                    const done = data.completed_count;
+                    progressEl.textContent = `${done}/${total} tasks completed`;
+                    progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+    }
 }
 
 // ============================================
@@ -1350,6 +1565,10 @@ window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
 window.showInterstitialIfNeeded = showInterstitialIfNeeded;
 window.upgradeReferralTier = upgradeReferralTier;
+window.loadActiveReferrals = loadActiveReferrals;
+window.claimWelcomeBonus = claimWelcomeBonus;
+window.disableInterstitialAds = disableInterstitialAds;
+window.loadTasks = loadTasks;
 
 console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Claim function available:', typeof claimInvestment);
@@ -1357,3 +1576,6 @@ console.log('📢 Watch ad function available:', typeof watchRewardedAd);
 console.log('📢 Unlimited ads - $0.001 reward per ad');
 console.log('📢 Interstitial ads on button clicks - NO REWARD');
 console.log('📢 No popups - Only video ads!');
+console.log('📢 Active referrals: 30 ads = active status');
+console.log('📢 Welcome bonus: 0.1 USDT for referred users');
+console.log('📢 Disable interstitial ads: $10');

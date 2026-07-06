@@ -228,7 +228,9 @@ def get_user():
             'investment_earnings': 0,
             'total_earnings': 0,
             'level1_count': 0,
-            'total_ad_earnings': 0
+            'total_ad_earnings': 0,
+            'interstitial_ads_disabled': False,
+            'has_received_welcome_bonus': False
         })
     
     cached = get_cached_user(telegram_id)
@@ -251,7 +253,9 @@ def get_user():
                 'investment_earnings': 0,
                 'total_earnings': 0,
                 'level1_count': 0,
-                'total_ad_earnings': 0
+                'total_ad_earnings': 0,
+                'interstitial_ads_disabled': False,
+                'has_received_welcome_bonus': False
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -292,7 +296,9 @@ def get_user():
             'investment_earnings': investment_earnings,
             'total_earnings': total_earnings,
             'level1_count': level1_count,
-            'total_ad_earnings': user.total_ad_earnings or 0
+            'total_ad_earnings': user.total_ad_earnings or 0,
+            'interstitial_ads_disabled': user.interstitial_ads_disabled or False,
+            'has_received_welcome_bonus': user.has_received_welcome_bonus or False
         }
         
         set_cached_user(telegram_id, response)
@@ -751,6 +757,138 @@ def upgrade_tier():
             return jsonify({'success': False, 'message': msg})
     except Exception as e:
         session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+# ============================================
+# NEW FEATURE ENDPOINTS
+# ============================================
+
+@app.route('/api/disable_interstitial_ads', methods=['POST'])
+def disable_interstitial_ads():
+    """User pays 10 USDT to disable interstitial ads"""
+    from datetime import datetime
+    
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    
+    if not telegram_id:
+        return jsonify({'success': False, 'message': 'Missing telegram_id'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        if user.interstitial_ads_disabled:
+            return jsonify({'success': False, 'message': 'Interstitial ads already disabled'})
+        
+        if user.balance < 10:
+            return jsonify({'success': False, 'message': f'Insufficient balance. Need $10.00 USDT (you have ${user.balance:.2f})'})
+        
+        # Deduct 10 USDT
+        user.balance -= 10
+        user.interstitial_ads_disabled = True
+        user.interstitial_disabled_at = datetime.utcnow()
+        
+        session.commit()
+        clear_user_cache(telegram_id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Interstitial ads disabled! You will no longer see ads on button clicks.',
+            'new_balance': user.balance
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/get_active_referrals/<int:telegram_id>', methods=['GET'])
+def get_active_referrals(telegram_id):
+    """Get count and list of active referrals"""
+    from services.referral import get_active_referral_count, get_active_referral_list, is_referral_active
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        active_count = get_active_referral_count(user.id, session)
+        active_list = get_active_referral_list(user.id, session)
+        
+        # Get total referrals count
+        total_referrals = session.query(User).filter_by(referred_by=user.id).count()
+        
+        return jsonify({
+            'success': True,
+            'active_count': active_count,
+            'total_referrals': total_referrals,
+            'active_list': active_list
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/claim_welcome_bonus', methods=['POST'])
+def claim_welcome_bonus():
+    """Referred user claims 0.1 USDT welcome bonus"""
+    from services.referral import award_welcome_bonus
+    
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    
+    if not telegram_id:
+        return jsonify({'success': False, 'message': 'Missing telegram_id'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        success, msg = award_welcome_bonus(user.id, session)
+        
+        if success:
+            clear_user_cache(telegram_id)
+            return jsonify({
+                'success': True,
+                'message': msg,
+                'new_balance': user.balance
+            })
+        else:
+            return jsonify({'success': False, 'message': msg})
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/get_tasks/<int:telegram_id>', methods=['GET'])
+def get_tasks(telegram_id):
+    """Get all tasks for a user"""
+    from services.referral import get_user_tasks
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        tasks = get_user_tasks(user.id, session)
+        
+        return jsonify({
+            'success': True,
+            'tasks': tasks,
+            'completed_count': sum(1 for task in tasks.values() if task['completed']),
+            'total_count': len(tasks)
+        })
+    except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
     finally:
         session.close()

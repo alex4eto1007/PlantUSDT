@@ -37,13 +37,26 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_deposit_check = Column(DateTime, default=datetime.utcnow)
-    
+
+    # ============================================
+    # REFERRAL SYSTEM FIELDS
+    # ============================================
     referral_tier = Column(String(20), default="free")
     referral_tier_upgraded_at = Column(DateTime, nullable=True)
     referral_upgrade_total_spent = Column(Float, default=0.0)
     active_referral_bonus_earned = Column(Float, default=0.0)
     total_active_referrals = Column(Integer, default=0)
-    
+
+    # ============================================
+    # NEW FEATURE FIELDS
+    # ============================================
+    interstitial_ads_disabled = Column(Boolean, default=False)
+    interstitial_disabled_at = Column(DateTime, nullable=True)
+    has_received_welcome_bonus = Column(Boolean, default=False)
+    welcome_bonus_claimed_at = Column(DateTime, nullable=True)
+    tasks_completed = Column(Integer, default=0)
+    last_task_completed_at = Column(DateTime, nullable=True)
+
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")
@@ -125,38 +138,42 @@ class UncollectedFee(Base):
     user = relationship("User", back_populates="uncollected_fees")
     withdrawal = relationship("Withdrawal", back_populates="uncollected_fee")
 
+# ============================================
+# REFERRAL SYSTEM TABLES
+# ============================================
+
 class ReferralUpgrade(Base):
     __tablename__ = "referral_upgrades"
-    
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     tier = Column(String(20), nullable=False)
     amount_paid = Column(Float, nullable=False)
     tx_hash = Column(String(100), nullable=True)
     upgraded_at = Column(DateTime, default=datetime.utcnow)
-    
+
     user = relationship("User", back_populates="referral_upgrades")
 
 class ActiveReferral(Base):
     __tablename__ = "active_referrals"
-    
+
     id = Column(Integer, primary_key=True)
     referrer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     referred_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     bonus_amount = Column(Float, default=0.03)
     awarded_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String(20), default="pending")
-    
+
     referrer = relationship("User", foreign_keys=[referrer_id], back_populates="active_referrals_given")
     referred_user = relationship("User", foreign_keys=[referred_user_id], back_populates="active_referrals_received")
 
 class PendingDepositCheck(Base):
     __tablename__ = "pending_deposit_checks"
-    
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     amount = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     checked = Column(Boolean, default=False)
-    
+
     user = relationship("User", back_populates="pending_deposit_checks")

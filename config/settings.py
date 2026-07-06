@@ -10,7 +10,7 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///plantusdt.db")
     USDT_CONTRACT = os.getenv("USDT_CONTRACT", "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
     POLYGON_RPC_URL = os.getenv("POLYGON_RPC_URL", "https://polygon-rpc.com")
-    POLYGONSCAN_API_URL = os.getenv("POLYGONSCAN_API_URL", "https://api.polygonscan.com/api")
+    POLYGONSCAN_API_URL = os.getenv("POLYGONSCAN_API_URL", "https://api.etherscan.io/v2/api?chainid=137")
     POLYGON_CHAIN_ID = os.getenv("POLYGON_CHAIN_ID", "137")
     ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")
     WALLET_ADDRESS = os.getenv("WALLET_ADDRESS", "0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76")
@@ -45,8 +45,13 @@ class Config:
         "diamond": {"bonus_percent": 5, "price": 144.00, "emoji": "💎", "discount": "10%"}
     }
     
-    ACTIVE_REFERRAL_BONUS = 0.03  # 0.03 USDT per active referral
-    ADS_FOR_ACTIVE_REFERRAL = 50  # User must watch 50 ads to become active
+    # ============================================
+    # NEW FEATURE SETTINGS
+    # ============================================
+    ACTIVE_REFERRAL_BONUS = float(os.getenv("ACTIVE_REFERRAL_BONUS", 0.03))
+    ADS_FOR_ACTIVE_REFERRAL = int(os.getenv("ADS_FOR_ACTIVE_REFERRAL", 30))  # REDUCED FROM 50
+    WELCOME_BONUS_AMOUNT = float(os.getenv("WELCOME_BONUS_AMOUNT", 0.1))
+    DISABLE_ADS_COST = float(os.getenv("DISABLE_ADS_COST", 10))
 
     @classmethod
     def get_network_info(cls):
