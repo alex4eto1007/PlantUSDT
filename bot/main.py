@@ -80,17 +80,11 @@ def is_admin(user_id: int) -> bool:
     return user and user.is_admin
 
 # ============================================
-# START COMMAND (FIXED - WITH DUPLICATE PREVENTION)
+# START COMMAND (FIXED - NO DUPLICATE PREVENTION)
 # ============================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
-    # Prevent duplicate messages
-    if context.user_data.get('start_processed', False):
-        logger.info(f"⚠️ Start already processed for {user.id}, skipping duplicate")
-        return
-    context.user_data['start_processed'] = True
     
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -179,7 +173,7 @@ Use /app to open the Mini App!"""
                         return
                     session.close()
 
-    # Send the main welcome back message (only once!)
+    # Send the welcome back message
     keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
