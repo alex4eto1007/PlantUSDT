@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>💳 Deposit - PlantUSDT</title>
-    <link rel="stylesheet" href="/css/style.css?v=4">
+    <link rel="stylesheet" href="/css/style.css?v=5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         .network-badge-large { display: inline-flex; align-items: center; gap: 8px; background: rgba(130,71,229,0.15); color: #8247E5; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
@@ -22,13 +25,95 @@
         .deposit-status.success { border: 1px solid rgba(0,255,135,0.3); color: #00ff87; }
         .deposit-status.error { border: 1px solid rgba(255,107,107,0.3); color: #ff6b6b; }
         .deposit-status.pending { border: 1px solid rgba(130,71,229,0.3); color: #8247E5; }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+            color: #fff !important;
+            border: none !important;
+        }
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .info-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .action-btn.secondary {
+            width: 100%;
+            margin-top: 12px;
+            border-color: rgba(0,255,135,0.2);
+            color: #00ff87;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,255,135,0.2);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #8247E5;
+            box-shadow: 0 0 20px rgba(130,71,229,0.1);
+        }
+        .form-group {
+            margin: 16px 0;
+        }
+        .form-group label {
+            font-size: 13px;
+            color: #8892b0;
+            display: block;
+            margin-bottom: 6px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
-            <button class="back-btn" onclick="goBack()" style="font-size: 28px; padding: 8px 16px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
-            <h1 style="color:#00ff87;font-size:20px; margin: 0; flex: 1; text-align: center;">💳 Deposit</h1>
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1 style="color:#6c5ce7;font-size:20px; margin: 0; flex: 1; text-align: center;">💳 Deposit</h1>
             <div style="flex-shrink: 0; width: 44px;"></div>
         </div>
 
@@ -53,33 +138,33 @@
             <div class="contact-support"><p>❓ Didn't receive your deposit after 5 minutes?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>! 👨‍🔧</p></div>
         </div>
 
-        <div class="form-group" style="margin:16px 0;">
-            <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">💰 Deposit Amount (USDT)</label>
-            <input type="number" id="depositAmount" placeholder="Enter exact amount sent" min="5" step="0.01" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+        <div class="form-group">
+            <label>💰 Deposit Amount (USDT)</label>
+            <input type="number" id="depositAmount" placeholder="Enter exact amount sent" min="5" step="0.01">
             <p style="font-size:11px;color:#495670;margin-top:4px;">Enter the exact amount to help us detect your deposit faster.</p>
         </div>
 
         <div id="depositStatus" class="deposit-status" style="display:none;"></div>
 
-        <button class="action-btn primary" onclick="checkDepositWithAmount()" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">🔍 I've Sent USDT</button>
-        <button class="action-btn secondary" onclick="goBack()" style="width:100%;margin-top:12px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">📊 Back to Dashboard</button>
+        <button class="action-btn primary" onclick="checkDepositWithAmount()" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;border:none;color:#fff;">🔍 I've Sent USDT</button>
+        <button class="action-btn secondary" onclick="goBack()">📊 Back to Dashboard</button>
     </div>
 
     <script>
+        const API_BASE = 'https://plantusdt.ddns.net';
+
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
 
-            // Get user ID
             var userId = tg.initDataUnsafe?.user?.id || '0';
             console.log('📱 User ID:', userId);
 
-            // Load wallet
-            fetch('/api/get_wallet?telegram_id=' + userId)
-                .then(function(response) { 
+            fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId)
+                .then(function(response) {
                     console.log('📡 Wallet API response status:', response.status);
-                    return response.json(); 
+                    return response.json();
                 })
                 .then(function(data) {
                     console.log('📡 Wallet data:', data);
@@ -150,7 +235,7 @@
             var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
             var amountInput = document.getElementById('depositAmount');
             var amount = amountInput?.value;
-            
+
             if (!amount || parseFloat(amount) < 5) {
                 window.Telegram.WebApp.showPopup({
                     title: '⚠️ Invalid Amount',
@@ -159,14 +244,14 @@
                 });
                 return;
             }
-            
+
             var statusDiv = document.getElementById('depositStatus');
             if (statusDiv) {
                 statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
                 statusDiv.className = 'deposit-status pending';
                 statusDiv.style.display = 'block';
                 try {
-                    var response = await fetch('/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
+                    var response = await fetch(API_BASE + '/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
                     var data = await response.json();
                     if (data.success) {
                         statusDiv.innerHTML = '✅ ' + data.message;
@@ -194,6 +279,6 @@
         window.checkDepositWithAmount = checkDepositWithAmount;
         window.goBack = goBack;
     </script>
-    <script src="/js/app.js?v=4"></script>
+    <script src="/js/app.js?v=5"></script>
 </body>
 </html>

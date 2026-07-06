@@ -106,8 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function navigateTo(page) {
     const pages = {
         'dashboard': 'dashboard.html',
-        'deposit': 'https://plantusdt.ddns.net/deposit',  // Full URL to server
-        'withdraw': 'https://plantusdt.ddns.net/withdraw.html',  // Full URL to server
+        'deposit': 'https://plantusdt.ddns.net/deposit',
+        'withdraw': 'https://plantusdt.ddns.net/withdraw.html',
         'history': 'history.html',
         'index': 'index.html'
     };

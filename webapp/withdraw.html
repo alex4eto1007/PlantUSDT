@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>🏦 Withdraw - PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         .network-badge-small { display: inline-flex; align-items: center; gap: 6px; background: rgba(130,71,229,0.12); color: #8247E5; padding: 2px 12px; border-radius: 14px; font-size: 11px; font-weight: 500; flex-shrink: 0; }
@@ -16,34 +19,144 @@
         .fee-row .fee-amount { color: #ff6b6b; }
         .fee-row .amount { color: #ffffff; }
         .warning-text { font-size: 12px; color: #ffd93d; margin-top: 8px; padding: 10px; background: rgba(255,193,7,0.08); border-radius: 6px; border: 1px solid rgba(255,193,7,0.15); }
+        .info-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+        .info-card h3 { font-size: 16px; margin-bottom: 8px; color: #ccd6f0; }
+        .info-card p { font-size: 13px; color: #8892b0; line-height: 1.6; }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+            color: #fff !important;
+            border: none !important;
+        }
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+        }
+        .action-btn.secondary {
+            width: 100%;
+            margin-top: 12px;
+            border-color: rgba(0,255,135,0.2);
+            color: #00ff87;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        .form-group {
+            margin: 16px 0;
+        }
+        .form-group label {
+            font-size: 13px;
+            color: #8892b0;
+            display: block;
+            margin-bottom: 6px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,255,135,0.2);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #8247E5;
+            box-shadow: 0 0 20px rgba(130,71,229,0.1);
+        }
+        .set-wallet-btn {
+            margin-top: 4px;
+            padding: 4px 12px;
+            background: rgba(0,255,135,0.1);
+            border: 1px solid rgba(0,255,135,0.2);
+            border-radius: 4px;
+            color: #00ff87;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .set-wallet-btn:hover {
+            background: rgba(0,255,135,0.2);
+        }
+        .withdraw-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            color: #fff;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+        }
+        .withdraw-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+        }
+        .withdraw-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
-            <button class="back-btn" onclick="goBack()" style="font-size: 40px; padding: 10px 20px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
-            <h1 style="color:#00ff87;font-size:20px; margin: 0; flex: 1; text-align: center;">🏦 Withdraw</h1>
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1 style="color:#6c5ce7;font-size:20px; margin: 0; flex: 1; text-align: center;">🏦 Withdraw</h1>
             <span class="network-badge-small"><span class="dot"></span> Polygon</span>
         </div>
 
         <div class="info-card">
             <h3>📋 Withdrawal Instructions</h3>
-            <p style="font-size:13px;color:#8892b0;line-height:1.6;"><strong>Min Amount:</strong> $2 USDT<br><strong>Fee:</strong> 10%<br><strong>Network:</strong> Polygon (MATIC) ⛓️<br><strong>Token:</strong> USDT on Polygon<br><strong>Gas Fees:</strong> Covered by us!</p>
+            <p><strong>Min Amount:</strong> $2 USDT<br><strong>Fee:</strong> 10%<br><strong>Network:</strong> Polygon (MATIC) ⛓️<br><strong>Token:</strong> USDT on Polygon<br><strong>Gas Fees:</strong> Covered by us!</p>
             <div class="warning-text">⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.</div>
             <p style="font-size:12px;color:#8892b0;margin-top:8px;">🔒 Your funds will be sent to your Polygon wallet address.</p>
         </div>
 
         <form id="withdrawForm">
             <div class="form-group">
-                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">💰 Amount (USDT on Polygon)</label>
-                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $2)" min="2" step="0.01" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+                <label>💰 Amount (USDT on Polygon)</label>
+                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $2)" min="2" step="0.01">
             </div>
 
             <div class="form-group">
-                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">📤 Withdraw to (Polygon Wallet)</label>
-                <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,135,0.2);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
-                <button type="button" onclick="setWallet()" style="margin-top:4px;padding:4px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:11px;">📂 Use Connected Wallet</button>
+                <label>📤 Withdraw to (Polygon Wallet)</label>
+                <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)">
+                <button type="button" class="set-wallet-btn" onclick="setWallet()">📂 Use Connected Wallet</button>
                 <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Must be a Polygon network wallet address</p>
             </div>
 
@@ -53,31 +166,32 @@
                 <div class="fee-row total"><span>You will receive on Polygon:</span><span class="net" id="feeNet">$0.00</span></div>
             </div>
 
-            <button type="submit" class="withdraw-btn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">🌱 Request Withdrawal on Polygon</button>
+            <button type="submit" class="withdraw-btn">🌱 Request Withdrawal on Polygon</button>
         </form>
 
-        <button class="action-btn secondary" onclick="goBack()" style="width:100%;margin-top:12px;border-color:rgba(0,255,135,0.2);color:#00ff87;padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);">📊 Back to Dashboard</button>
+        <button class="action-btn secondary" onclick="goBack()">📊 Back to Dashboard</button>
     </div>
 
-    <script src="js/app.js"></script>
     <script>
+        const API_BASE = 'https://plantusdt.ddns.net';
+
         document.addEventListener('DOMContentLoaded', function() {
-            const tg = window.Telegram.WebApp;
+            var tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
 
-            const amountInput = document.getElementById('withdrawAmount');
-            const feeSummary = document.getElementById('feeSummary');
-            const feeAmount = document.getElementById('feeAmount');
-            const feeAmountFee = document.getElementById('feeAmountFee');
-            const feeNet = document.getElementById('feeNet');
+            var amountInput = document.getElementById('withdrawAmount');
+            var feeSummary = document.getElementById('feeSummary');
+            var feeAmount = document.getElementById('feeAmount');
+            var feeAmountFee = document.getElementById('feeAmountFee');
+            var feeNet = document.getElementById('feeNet');
 
             if (amountInput) {
                 amountInput.addEventListener('input', function() {
-                    const amount = parseFloat(this.value) || 0;
+                    var amount = parseFloat(this.value) || 0;
                     if (amount >= 2) {
-                        const fee = amount * 0.10;
-                        const net = amount - fee;
+                        var fee = amount * 0.10;
+                        var net = amount - fee;
                         feeAmount.textContent = '$' + amount.toFixed(2);
                         feeAmountFee.textContent = '$' + fee.toFixed(2);
                         feeNet.textContent = '$' + net.toFixed(2);
@@ -89,22 +203,125 @@
             }
 
             window.setWallet = function() {
-                const userId = tg.initDataUnsafe?.user?.id || '0';
-                fetch(`https://plantusdt.ddns.net/api/get_wallet?telegram_id=${userId}`)
-                    .then(response => response.json())
-                    .then(data => {
+                var userId = tg.initDataUnsafe?.user?.id || '0';
+                fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId)
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
                         if (data.success && data.wallet_address) {
                             document.getElementById('withdrawAddress').value = data.wallet_address;
-                            window.Telegram.WebApp.showPopup({ title: '✅ Wallet Set', message: 'Your connected Polygon wallet address has been set.', buttons: [{type: 'ok'}] });
+                            window.Telegram.WebApp.showPopup({
+                                title: '✅ Wallet Set',
+                                message: 'Your connected Polygon wallet address has been set.',
+                                buttons: [{type: 'ok'}]
+                            });
                         } else {
-                            window.Telegram.WebApp.showPopup({ title: '❌ No Wallet', message: 'Please connect a wallet first in the main app.', buttons: [{type: 'ok'}] });
+                            window.Telegram.WebApp.showPopup({
+                                title: '❌ No Wallet',
+                                message: 'Please connect a wallet first in the main app.',
+                                buttons: [{type: 'ok'}]
+                            });
                         }
                     })
-                    .catch(error => {
-                        window.Telegram.WebApp.showPopup({ title: '❌ Error', message: 'Could not fetch wallet: ' + error.message, buttons: [{type: 'ok'}] });
+                    .catch(function(error) {
+                        console.error('Error loading wallet:', error);
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Error',
+                            message: 'Could not fetch wallet: ' + error.message,
+                            buttons: [{type: 'ok'}]
+                        });
                     });
             };
         });
+
+        function goBack() {
+            window.history.back();
+        }
+
+        // Withdraw form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            var withdrawForm = document.getElementById('withdrawForm');
+            if (withdrawForm) {
+                withdrawForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    var amountInput = document.getElementById('withdrawAmount');
+                    var addressInput = document.getElementById('withdrawAddress');
+                    var amount = amountInput ? amountInput.value : '';
+                    var address = addressInput ? addressInput.value : '';
+
+                    if (!amount || parseFloat(amount) < 2) {
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Error',
+                            message: 'Please enter at least $2 USDT for withdrawal on Polygon.',
+                            buttons: [{type: 'ok'}]
+                        });
+                        return;
+                    }
+                    if (!address || !address.startsWith('0x')) {
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Error',
+                            message: 'Please enter a valid Polygon wallet address.',
+                            buttons: [{type: 'ok'}]
+                        });
+                        return;
+                    }
+
+                    var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
+                    var submitBtn = document.querySelector('.withdraw-btn');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '⏳ Processing...';
+                    }
+
+                    fetch(API_BASE + '/api/withdraw', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            telegram_id: userId,
+                            amount: parseFloat(amount),
+                            address: address
+                        })
+                    })
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = '🌱 Request Withdrawal on Polygon';
+                        }
+                        if (data.success) {
+                            window.Telegram.WebApp.showPopup({
+                                title: '✅ Success!',
+                                message: data.message || 'Withdrawal submitted on Polygon!',
+                                buttons: [{type: 'ok'}]
+                            });
+                            if (amountInput) amountInput.value = '';
+                            if (addressInput) addressInput.value = '';
+                        } else {
+                            window.Telegram.WebApp.showPopup({
+                                title: '❌ Error',
+                                message: data.message || 'Withdrawal failed.',
+                                buttons: [{type: 'ok'}]
+                            });
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = '🌱 Request Withdrawal on Polygon';
+                        }
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Error',
+                            message: 'Network error. Please try again.',
+                            buttons: [{type: 'ok'}]
+                        });
+                    });
+                });
+            }
+        });
+
+        window.goBack = goBack;
+        window.setWallet = setWallet;
     </script>
+    <script src="/js/app.js?v=5"></script>
 </body>
 </html>
