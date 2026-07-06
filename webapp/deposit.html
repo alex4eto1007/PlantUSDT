@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>💳 Deposit - PlantUSDT</title>
+    <link rel="stylesheet" href="/css/style.css?v=6">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .network-badge-large { display: inline-flex; align-items: center; gap: 8px; background: rgba(130,71,229,0.15); color: #8247E5; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+        .network-badge-large .dot { width: 8px; height: 8px; border-radius: 50%; background: #8247E5; display: inline-block; animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .warning-box-critical { background: rgba(255,107,107,0.15); border: 2px solid rgba(255,107,107,0.4); border-radius: 8px; padding: 14px; margin-top: 12px; }
+        .warning-box-critical p { font-size: 12px; color: #ff6b6b; margin: 0; line-height: 1.6; }
+        .deposit-timer-message { margin-top: 10px; padding: 12px; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); border-radius: 8px; }
+        .deposit-timer-message p { font-size: 13px; color: #ffd93d; margin: 0; line-height: 1.6; }
+        .deposit-timer-message .sub-text { font-size: 12px; opacity: 0.8; }
+        .contact-support { margin-top: 12px; padding: 12px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); border-radius: 8px; text-align: center; }
+        .contact-support p { font-size: 13px; color: #00d4ff; margin: 0; line-height: 1.6; }
+        .contact-support a { color: #00d4ff; text-decoration: none; font-weight: 600; }
+        .deposit-status { padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; margin: 12px 0; background: rgba(0,0,0,0.3); }
+        .deposit-status.success { border: 1px solid rgba(0,255,135,0.3); color: #00ff87; }
+        .deposit-status.error { border: 1px solid rgba(255,107,107,0.3); color: #ff6b6b; }
+        .deposit-status.pending { border: 1px solid rgba(130,71,229,0.3); color: #8247E5; }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+            color: #fff !important;
+            border: none !important;
+        }
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .info-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .action-btn.secondary {
+            width: 100%;
+            margin-top: 12px;
+            border-color: rgba(0,255,135,0.2);
+            color: #00ff87;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,255,135,0.2);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #8247E5;
+            box-shadow: 0 0 20px rgba(130,71,229,0.1);
+        }
+        .form-group {
+            margin: 16px 0;
+        }
+        .form-group label {
+            font-size: 13px;
+            color: #8892b0;
+            display: block;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
+            <button class="back-btn" onclick="goBack()">←</button>
+            <h1 style="color:#6c5ce7;font-size:20px; margin: 0; flex: 1; text-align: center;">💳 Deposit</h1>
+            <div style="flex-shrink: 0; width: 44px;"></div>
+        </div>
+
+        <div style="text-align:center;">
+            <div class="network-badge-large"><span class="dot"></span> 🟣 Polygon Network <span style="font-size:11px;opacity:0.7;margin-left:4px;">(Low fees)</span></div>
+        </div>
+
+        <div id="walletDisplay" style="margin-bottom:16px;padding:12px;background:rgba(0,255,135,0.05);border:1px solid rgba(0,255,135,0.1);border-radius:8px;">
+            <p style="font-size:12px;color:#8892b0;margin:0;">🔗 <strong>Connected Wallet:</strong> <span id="connectedWalletDisplay" style="color:#ff6b6b;font-family:monospace;font-size:12px;word-break:break-all;">Loading...</span></p>
+            <p style="font-size:11px;color:#ffd93d;margin:4px 0 0 0;">⚠️ Send USDT ONLY from this wallet on Polygon network!</p>
+        </div>
+
+        <div class="info-card">
+            <p style="font-size:13px;color:#8892b0;line-height:1.6;margin-bottom:8px;"><strong>Network:</strong> Polygon ⛓️ &nbsp;|&nbsp; <strong>Token:</strong> USDT &nbsp;|&nbsp; <strong>Min:</strong> $5</p>
+            <div class="deposit-timer-message"><p>⏳ Deposits may take up to 5 minutes to be detected.<br><span class="sub-text">The scanner runs automatically every 5 minutes.</span></p></div>
+            <div class="deposit-address-box" style="margin-top:12px;">
+                <p style="font-size:12px;color:#8892b0;margin-bottom:4px;">📌 Deposit Address:</p>
+                <div class="address" style="font-size:13px;word-break:break-all;padding:10px;background:rgba(0,0,0,0.4);border-radius:8px;font-family:monospace;color:#00ff87;border:1px solid rgba(0,255,135,0.1);" id="addressText">0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76</div>
+                <button onclick="copyAddress()" style="margin-top:8px;padding:6px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:12px;">📋 Copy Address</button>
+            </div>
+            <div class="warning-box-critical"><p>⚠️ <strong>IMPORTANT:</strong> Send USDT <strong>FROM YOUR CONNECTED WALLET</strong> on Polygon.<br>Sending from a different wallet or network = <strong>PERMANENT LOSS</strong>.</p></div>
+            <div class="contact-support"><p>❓ Didn't receive your deposit after 5 minutes?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>! 👨‍🔧</p></div>
+        </div>
+
+        <div class="form-group">
+            <label>💰 Deposit Amount (USDT)</label>
+            <input type="number" id="depositAmount" placeholder="Enter exact amount sent" min="5" step="0.01">
+            <p style="font-size:11px;color:#495670;margin-top:4px;">Enter the exact amount to help us detect your deposit faster.</p>
+        </div>
+
+        <div id="depositStatus" class="deposit-status" style="display:none;"></div>
+
+        <button class="action-btn primary" onclick="checkDepositWithAmount()" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;border:none;color:#fff;">🔍 I've Sent USDT</button>
+        <button class="action-btn secondary" onclick="goBack()">📊 Back to Dashboard</button>
+    </div>
+
+    <script>
+        // ============================================
+        // FIXED: Use absolute URL for API
+        // ============================================
+        const API_BASE = 'https://plantusdt.ddns.net';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+
+            var userId = tg.initDataUnsafe?.user?.id || '0';
+            console.log('📱 User ID:', userId);
+            console.log('📡 Fetching wallet from:', API_BASE + '/api/get_wallet?telegram_id=' + userId);
+
+            fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId)
+                .then(function(response) {
+                    console.log('📡 Wallet API response status:', response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log('📡 Wallet data:', data);
+                    var displayEl = document.getElementById('connectedWalletDisplay');
+                    if (data.success && data.wallet_address) {
+                        displayEl.textContent = data.wallet_address;
+                        displayEl.style.color = '#00ff87';
+                    } else {
+                        displayEl.textContent = '⚠️ No wallet connected!';
+                        displayEl.style.color = '#ff6b6b';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('❌ Error loading wallet:', error);
+                    var displayEl = document.getElementById('connectedWalletDisplay');
+                    displayEl.textContent = '❌ Error loading wallet';
+                    displayEl.style.color = '#ff6b6b';
+                });
+        });
+
+        function copyAddress() {
+            var address = document.getElementById('addressText').textContent;
+            if (address) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(address).then(function() {
+                        window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                    }).catch(function() {
+                        var textArea = document.createElement('textarea');
+                        textArea.value = address;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                    });
+                } else {
+                    var textArea = document.createElement('textarea');
+                    textArea.value = address;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                }
+            }
+        }
+
+        async function checkDepositWithAmount() {
+            var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
+            var amountInput = document.getElementById('depositAmount');
+            var amount = amountInput?.value;
+
+            if (!amount || parseFloat(amount) < 5) {
+                window.Telegram.WebApp.showPopup({
+                    title: '⚠️ Invalid Amount',
+                    message: 'Please enter at least $5 USDT on Polygon.',
+                    buttons: [{type: 'ok'}]
+                });
+                return;
+            }
+
+            var statusDiv = document.getElementById('depositStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
+                statusDiv.className = 'deposit-status pending';
+                statusDiv.style.display = 'block';
+                try {
+                    var response = await fetch(API_BASE + '/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
+                    var data = await response.json();
+                    if (data.success) {
+                        statusDiv.innerHTML = '✅ ' + data.message;
+                        statusDiv.className = 'deposit-status success';
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        statusDiv.innerHTML = '⏳ ' + data.message;
+                        statusDiv.className = 'deposit-status pending';
+                    }
+                } catch (error) {
+                    console.error('Error checking deposit:', error);
+                    statusDiv.innerHTML = '❌ Error checking deposits on Polygon. Please try again.';
+                    statusDiv.className = 'deposit-status error';
+                }
+            }
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        window.copyAddress = copyAddress;
+        window.checkDepositWithAmount = checkDepositWithAmount;
+        window.goBack = goBack;
+    </script>
+    <script src="/js/app.js?v=5"></script>
+</body>
+</html>
