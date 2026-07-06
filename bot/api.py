@@ -65,6 +65,14 @@ from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
 # ============================================
+# HELPER FUNCTION FOR WEBAPP PATH
+# ============================================
+
+def get_webapp_dir():
+    """Get the absolute path to the webapp directory"""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'webapp')
+
+# ============================================
 # EXISTING ENDPOINTS
 # ============================================
 
@@ -894,24 +902,31 @@ def get_tasks(telegram_id):
         session.close()
 
 # ============================================
-# SERVE DEPOSIT PAGE DIRECTLY (BYPASS CACHE)
+# SERVE STATIC FILES (FIXED PATHS)
 # ============================================
 
 @app.route('/deposit')
 def deposit_page():
-    return send_from_directory('../webapp', 'deposit_new.html')
-
-# ============================================
-# SERVE STATIC FILES (BYPASS NGINX PERMISSIONS)
-# ============================================
+    """Serve the deposit page"""
+    return send_from_directory(get_webapp_dir(), 'deposit_new.html')
 
 @app.route('/js/<path:filename>')
 def serve_js(filename):
-    return send_from_directory('../webapp/js', filename)
+    """Serve JavaScript files"""
+    return send_from_directory(os.path.join(get_webapp_dir(), 'js'), filename)
 
 @app.route('/css/<path:filename>')
 def serve_css(filename):
-    return send_from_directory('../webapp/css', filename)
+    """Serve CSS files"""
+    return send_from_directory(os.path.join(get_webapp_dir(), 'css'), filename)
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    """Serve any other static file from webapp directory"""
+    # Skip API routes
+    if filename.startswith('api/'):
+        return jsonify({'success': False, 'message': 'Not found'}), 404
+    return send_from_directory(get_webapp_dir(), filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)
