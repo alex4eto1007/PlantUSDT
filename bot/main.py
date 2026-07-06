@@ -46,7 +46,7 @@ deposit_scanner = DepositScanner()
 
 db.create_tables()
 
-VERCEL_URL = "https://plant-usdt.vercel.app"
+VERCEL_URL = "https://plantusdt.ddns.net"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
@@ -212,7 +212,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================
-# ADMIN COMMANDS
+# ADMIN COMMANDS - FIXED USAGE MESSAGES
 # ============================================
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -451,6 +451,13 @@ TASK MANAGEMENT:
 /complete_task <user_id> <task_id> - Mark task as completed for a user
 
 Example:
+/pending
+/complete_payout 1 0xabc123...
+/pending_fees
+/collect_fees 0xdef456...
+/test_channel
+/reset_referral 123456789
+
 /add_task Watch 3 Ads | Watch 3 rewarded ads | 0.10
 /list_tasks
 /delete_task 1
