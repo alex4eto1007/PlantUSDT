@@ -1455,8 +1455,8 @@ async function disableInterstitialAds() {
     const userId = tgUser ? tgUser.id : '0';
     
     safePopupWithCallback({
-        title: '🔇 Disable Interstitial Ads',
-        message: 'Pay $10 USDT to permanently disable interstitial ads (the ones that pop up on button clicks).\n\nYou will still be able to watch rewarded ads for $0.001 USDT.',
+        title: '🔇 Disable Ads',
+        message: 'Pay $10 USDT to permanently disable pop-up ads on button clicks.\n\nYou will still be able to watch rewarded ads for $0.001 USDT.',
         buttons: [
             {id: 'cancel', type: 'cancel'},
             {id: 'confirm', type: 'ok', text: '✅ Pay $10'}
@@ -1505,7 +1505,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASK SYSTEM - 44 HARDCODED TASKS
+// TASK SYSTEM - 44 HARDCODED TASKS WITH REAL PROGRESS
 // ============================================
 
 async function loadTasks() {
@@ -1570,9 +1570,25 @@ async function loadTasks() {
                         `;
                     }
                     
+                    // Calculate progress for display
+                    let progressText = '';
+                    let progressPercent = 0;
+                    
+                    // Get the condition value from the task
+                    const conditionValue = getTaskConditionValue(task.task_id);
+                    const currentValue = getTaskCurrentValue(task.task_id, data);
+                    
+                    if (!isCompleted && conditionValue !== null && currentValue !== null) {
+                        progressText = `${currentValue}/${conditionValue}`;
+                        progressPercent = Math.min((currentValue / conditionValue) * 100, 100);
+                    } else if (isCompleted) {
+                        progressText = `${conditionValue}/${conditionValue}`;
+                        progressPercent = 100;
+                    }
+                    
                     const statusBadge = isCompleted ? 
                         '🟡 Claim Now!' : 
-                        '⏳ In Progress';
+                        (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
                     const statusColor = isCompleted ? 
                         '#ffd93d' : 
                         '#495670';
@@ -1589,6 +1605,11 @@ async function loadTasks() {
                                         <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#ffd93d' : '#ccd6f0'};">${task.title}</div>
                                         <div style="font-size:12px;color:#8892b0;">${task.description}</div>
                                         <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
+                                        ${!isCompleted && progressText ? `
+                                            <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;">
+                                                <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
+                                            </div>
+                                        ` : ''}
                                     </div>
                                 </div>
                                 <div style="text-align:right;">
@@ -1622,6 +1643,112 @@ async function loadTasks() {
     } catch (error) {
         console.error('Error loading tasks:', error);
     }
+}
+
+// Helper function to get task condition value
+function getTaskConditionValue(taskId) {
+    const taskConditions = {
+        1: null,   // First Investment - no numeric condition
+        2: 10,     // Invest $10
+        3: 50,     // Invest $50
+        4: 100,    // Invest $100
+        5: 200,    // Invest $200
+        6: 500,    // Invest $500
+        7: 1000,   // Invest $1000
+        8: 1,      // Watch 1 Ad
+        9: 5,      // Watch 5 Ads
+        10: 10,    // Watch 10 Ads
+        11: 25,    // Watch 25 Ads
+        12: 50,    // Watch 50 Ads
+        13: 100,   // Watch 100 Ads
+        14: 250,   // Watch 250 Ads
+        15: 500,   // Watch 500 Ads
+        16: 1000,  // Watch 1000 Ads
+        17: 1,     // Refer 1 Friend
+        18: 3,     // Refer 3 Friends
+        19: 5,     // Refer 5 Friends
+        20: 10,    // Refer 10 Friends
+        21: 25,    // Refer 25 Friends
+        22: 50,    // Refer 50 Friends
+        23: 100,   // Refer 100 Friends
+        24: 250,   // Refer 250 Friends
+        25: 500,   // Refer 500 Friends
+        26: 1000,  // Refer 1000 Friends
+        27: 1,     // 1 Active Referral
+        28: 3,     // 3 Active Referrals
+        29: 5,     // 5 Active Referrals
+        30: 10,    // 10 Active Referrals
+        31: 25,    // 25 Active Referrals
+        32: 50,    // 50 Active Referrals
+        33: 100,   // 100 Active Referrals
+        34: 250,   // 250 Active Referrals
+        35: 500,   // 500 Active Referrals
+        36: 1000,  // 1000 Active Referrals
+        37: 1,     // Earn $1
+        38: 10,    // Earn $10
+        39: 25,    // Earn $25
+        40: 50,    // Earn $50
+        41: 100,   // Earn $100
+        42: 250,   // Earn $250
+        43: 500,   // Earn $500
+        44: 1000   // Earn $1000
+    };
+    return taskConditions[taskId] || null;
+}
+
+// Helper function to get current value for a task
+function getTaskCurrentValue(taskId, data) {
+    // This will be populated from the API response
+    // The API returns user stats in the response
+    const userStats = data.user_stats || {};
+    
+    const taskCurrentValues = {
+        1: userStats.has_invested ? 1 : 0,
+        2: userStats.total_invested || 0,
+        3: userStats.total_invested || 0,
+        4: userStats.total_invested || 0,
+        5: userStats.total_invested || 0,
+        6: userStats.total_invested || 0,
+        7: userStats.total_invested || 0,
+        8: userStats.total_ads_watched || 0,
+        9: userStats.total_ads_watched || 0,
+        10: userStats.total_ads_watched || 0,
+        11: userStats.total_ads_watched || 0,
+        12: userStats.total_ads_watched || 0,
+        13: userStats.total_ads_watched || 0,
+        14: userStats.total_ads_watched || 0,
+        15: userStats.total_ads_watched || 0,
+        16: userStats.total_ads_watched || 0,
+        17: userStats.total_referrals || 0,
+        18: userStats.total_referrals || 0,
+        19: userStats.total_referrals || 0,
+        20: userStats.total_referrals || 0,
+        21: userStats.total_referrals || 0,
+        22: userStats.total_referrals || 0,
+        23: userStats.total_referrals || 0,
+        24: userStats.total_referrals || 0,
+        25: userStats.total_referrals || 0,
+        26: userStats.total_referrals || 0,
+        27: userStats.total_active_referrals || 0,
+        28: userStats.total_active_referrals || 0,
+        29: userStats.total_active_referrals || 0,
+        30: userStats.total_active_referrals || 0,
+        31: userStats.total_active_referrals || 0,
+        32: userStats.total_active_referrals || 0,
+        33: userStats.total_active_referrals || 0,
+        34: userStats.total_active_referrals || 0,
+        35: userStats.total_active_referrals || 0,
+        36: userStats.total_active_referrals || 0,
+        37: userStats.total_earnings || 0,
+        38: userStats.total_earnings || 0,
+        39: userStats.total_earnings || 0,
+        40: userStats.total_earnings || 0,
+        41: userStats.total_earnings || 0,
+        42: userStats.total_earnings || 0,
+        43: userStats.total_earnings || 0,
+        44: userStats.total_earnings || 0
+    };
+    return taskCurrentValues[taskId] || null;
 }
 
 async function claimTaskReward(taskId) {

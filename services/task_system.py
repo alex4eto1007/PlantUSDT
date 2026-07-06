@@ -530,6 +530,26 @@ def get_user_task_progress(user_id: int, session: Session) -> dict:
         logger.error(f"Error getting user task progress: {e}")
         return []
 
+def get_user_stats(user: User, session: Session) -> dict:
+    """Get user stats for task progress display"""
+    from services.referral import is_referral_active, get_active_referral_count
+    
+    total_invested = user.total_invested or 0
+    total_ads_watched = user.total_ads_watched or 0
+    total_referrals = session.query(User).filter_by(referred_by=user.id).count()
+    total_active_referrals = get_active_referral_count(user.id, session)
+    total_earnings = (user.total_earnings_all_time or 0) + (user.referral_earnings_all_time or 0) + (user.total_ad_earnings or 0)
+    has_invested = total_invested > 0
+    
+    return {
+        "has_invested": has_invested,
+        "total_invested": total_invested,
+        "total_ads_watched": total_ads_watched,
+        "total_referrals": total_referrals,
+        "total_active_referrals": total_active_referrals,
+        "total_earnings": total_earnings
+    }
+
 def check_task_conditions(user: User, session: Session) -> list:
     """Check all tasks and auto-complete any that are now completed"""
     from services.referral import is_referral_active, get_active_referral_count
