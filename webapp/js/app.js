@@ -1057,7 +1057,7 @@ function filterHistory(type) {
                     }
                     if (type === 'earnings') {
                         return tx.type === 'earnings' || tx.type === 'earning' || tx.type === 'payout' || 
-                               tx.type === 'referral_earnings' || tx.type === 'ad_earnings';
+                               tx.type === 'referral_earnings' || tx.type === 'ad_earnings' || tx.type === 'tasks_earnings';
                     }
                     if (type === 'investments') {
                         return tx.type === 'investment' || tx.type === 'investments';
@@ -1580,7 +1580,12 @@ async function loadTasks() {
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
-                        progressText = `${Math.round(currentValue)}/${conditionValue}`;
+                        // For earnings tasks (milestones), show with decimals
+                        if (task.category === 'milestones') {
+                            progressText = `${currentValue.toFixed(3)}/${conditionValue}`;
+                        } else {
+                            progressText = `${Math.round(currentValue)}/${conditionValue}`;
+                        }
                         progressPercent = Math.min((currentValue / conditionValue) * 100, 100);
                     } else if (isCompleted) {
                         progressText = `${conditionValue}/${conditionValue}`;
@@ -1748,9 +1753,9 @@ function getTaskCurrentValue(taskId, userStats) {
         43: userStats.total_earnings || 0,
         44: userStats.total_earnings || 0
     };
-    // Round to 3 decimal places to avoid floating point issues
+    // Return the value, for earnings keep decimal places
     if (typeof taskCurrentValues[taskId] === 'number') {
-        return Math.round(taskCurrentValues[taskId] * 1000) / 1000;
+        return taskCurrentValues[taskId];
     }
     return taskCurrentValues[taskId] || null;
 }
