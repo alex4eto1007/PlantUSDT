@@ -64,7 +64,7 @@ PROJECT_WALLET = Config.WALLET_ADDRESS
 from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
-from services.task_manager import get_user_tasks, complete_task, claim_task_reward
+from services.task_system import get_user_task_progress, check_task_conditions, claim_task_reward, get_task_stats, get_all_tasks
 
 # ============================================
 # HELPER FUNCTION FOR WEBAPP PATH
@@ -884,7 +884,7 @@ def claim_welcome_bonus():
 
 @app.route('/api/get_tasks/<int:telegram_id>', methods=['GET'])
 def get_tasks(telegram_id):
-    """Get all tasks for a user (deprecated - use /api/get_user_tasks)"""
+    """Get all tasks for a user (deprecated - use /api/tasks)"""
     from services.referral import get_user_tasks as get_referral_tasks
     
     session = db.get_session()
@@ -907,7 +907,90 @@ def get_tasks(telegram_id):
         session.close()
 
 # ============================================
-# TASK MANAGEMENT ENDPOINTS - NEW
+# TASK SYSTEM ENDPOINTS - NEW
+# ============================================
+
+@app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
+def api_get_tasks(telegram_id):
+    """Get all tasks with user progress"""
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        # Check and auto-complete any tasks
+        completed = check_task_conditions(user, session)
+        
+        # Get all tasks with progress
+        tasks = get_user_task_progress(user.id, session)
+        stats = get_task_stats(user.id, session)
+        
+        return jsonify({
+            'success': True,
+            'tasks': tasks,
+            'stats': stats,
+            'newly_completed': [t["id"] for t in completed]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/claim_task_reward', methods=['POST'])
+def api_claim_task_reward():
+    """Claim reward for a completed task"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    task_id = data.get('task_id')
+    
+    if not telegram_id or not task_id:
+        return jsonify({'success': False, 'message': 'Missing required fields'})
+    
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=int(telegram_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        success, msg = claim_task_reward(user.id, task_id, session)
+        
+        if success:
+            clear_user_cache(telegram_id)
+            return jsonify({
+                'success': True,
+                'message': msg,
+                'new_balance': user.balance
+            })
+        else:
+            return jsonify({'success': False, 'message': msg})
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/task_stats/<int:telegram_id>', methods=['GET'])
+def api_task_stats(telegram_id):
+    """Get task statistics for a user"""
+    session = db.get_session()
+    try:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        stats = get_task_stats(user.id, session)
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session.close()
+
+# ============================================
+# TASK MANAGEMENT ENDPOINTS
 # ============================================
 
 @app.route('/api/get_user_tasks/<int:telegram_id>', methods=['GET'])
@@ -919,7 +1002,7 @@ def api_get_user_tasks(telegram_id):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        tasks = get_user_tasks(user.id, session)
+        tasks = get_user_task_progress(user.id, session)
         return jsonify({
             'success': True,
             'tasks': tasks
@@ -959,8 +1042,8 @@ def api_complete_task():
         session.close()
 
 @app.route('/api/claim_task_reward', methods=['POST'])
-def api_claim_task_reward():
-    """Claim reward for a completed task"""
+def api_claim_task_reward_old():
+    """Claim reward for a completed task (deprecated - use /api/claim_task_reward)"""
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')

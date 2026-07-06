@@ -1505,13 +1505,13 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASKS - UPDATED WITH CLAIM FUNCTION
+// TASK SYSTEM - 44 HARDCODED TASKS
 // ============================================
 
 async function loadTasks() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/get_user_tasks/${userId}`);
+        const response = await fetch(`${API_BASE}/api/tasks/${userId}`);
         const data = await response.json();
         
         if (data.success) {
@@ -1520,14 +1520,54 @@ async function loadTasks() {
                 let html = '';
                 let completedCount = 0;
                 
-                for (const task of data.tasks) {
+                // Show newly completed tasks notification
+                if (data.newly_completed && data.newly_completed.length > 0) {
+                    const taskNames = data.newly_completed.map(id => {
+                        const task = data.tasks.find(t => t.task_id === id);
+                        return task ? task.title : '';
+                    }).filter(Boolean);
+                    
+                    if (taskNames.length > 0) {
+                        safePopup({
+                            title: '🎉 Tasks Completed!',
+                            message: 'You completed:\n• ' + taskNames.join('\n• ') + '\n\nGo to Tasks to claim your rewards!',
+                            buttons: [{type: 'ok'}]
+                        });
+                    }
+                }
+                
+                // Group tasks by category
+                const categories = {
+                    'investments': { icon: '🌱', label: 'Investments' },
+                    'ads': { icon: '📺', label: 'Watch Ads' },
+                    'referrals': { icon: '👤', label: 'Referrals' },
+                    'active_referrals': { icon: '🔥', label: 'Active Referrals' },
+                    'milestones': { icon: '🏆', label: 'Milestones' }
+                };
+                
+                // Sort tasks by category and ID
+                const sortedTasks = data.tasks.sort((a, b) => a.task_id - b.task_id);
+                
+                let currentCategory = '';
+                for (const task of sortedTasks) {
                     const isCompleted = task.completed;
                     const isClaimed = task.claimed;
                     if (isCompleted) completedCount++;
                     
+                    // Category header
+                    if (task.category !== currentCategory) {
+                        currentCategory = task.category;
+                        const catInfo = categories[currentCategory] || { icon: '📌', label: currentCategory };
+                        html += `
+                            <div style="margin-top:16px;margin-bottom:8px;font-size:14px;font-weight:700;color:#8247E5;border-bottom:1px solid rgba(130,71,229,0.2);padding-bottom:4px;">
+                                ${catInfo.icon} ${catInfo.label}
+                            </div>
+                        `;
+                    }
+                    
                     const statusBadge = isCompleted ? 
-                        (isClaimed ? '✅ Claimed' : '🟡 Complete - Claim Reward!') : 
-                        '⏳ Pending';
+                        (isClaimed ? '✅ Claimed' : '🟡 Claim Now!') : 
+                        '⏳ In Progress';
                     const statusColor = isCompleted ? 
                         (isClaimed ? '#00ff87' : '#ffd93d') : 
                         '#495670';
@@ -1536,7 +1576,7 @@ async function loadTasks() {
                         <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="display:flex;align-items:center;gap:10px;flex:1;">
-                                    <div style="font-size:20px;">${isCompleted ? '✅' : '⬜'}</div>
+                                    <div style="font-size:20px;">${task.icon || '📌'}</div>
                                     <div style="flex:1;">
                                         <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
                                         <div style="font-size:12px;color:#8892b0;">${task.description}</div>
@@ -1544,9 +1584,8 @@ async function loadTasks() {
                                     </div>
                                 </div>
                                 <div style="text-align:right;">
-                                    <div style="font-size:12px;color:${statusColor};">${statusBadge}</div>
-                                    ${isCompleted && !isClaimed ? `<button onclick="claimTaskReward(${task.id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
-                                    ${!isCompleted ? `<button onclick="completeUserTask(${task.id})" style="margin-top:4px;padding:4px 10px;background:rgba(0,255,135,0.15);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;font-weight:600;font-size:11px;cursor:pointer;">✅ Complete</button>` : ''}
+                                    <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
+                                    ${isCompleted && !isClaimed ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -1557,65 +1596,16 @@ async function loadTasks() {
                 
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
-                    const total = data.tasks.length;
-                    progressEl.textContent = `${completedCount}/${total} tasks completed`;
-                    progressEl.style.color = completedCount === total ? '#00ff87' : '#ccd6f0';
+                    const total = data.stats.total_tasks || 44;
+                    const done = completedCount;
+                    progressEl.textContent = `${done}/${total} tasks completed`;
+                    progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
                 }
             }
         }
     } catch (error) {
         console.error('Error loading tasks:', error);
     }
-}
-
-async function completeUserTask(taskId) {
-    const userId = tgUser ? tgUser.id : '0';
-    
-    safePopupWithCallback({
-        title: '✅ Complete Task',
-        message: 'Mark this task as complete?',
-        buttons: [
-            {id: 'cancel', type: 'cancel'},
-            {id: 'confirm', type: 'ok', text: '✅ Complete'}
-        ]
-    }, async function(buttonId) {
-        if (buttonId === 'confirm') {
-            try {
-                const response = await fetch(`${API_BASE}/api/complete_task`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: userId,
-                        task_id: taskId
-                    })
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    safePopup({
-                        title: '✅ Done!',
-                        message: data.message,
-                        buttons: [{type: 'ok'}]
-                    });
-                    loadTasks();
-                    loadUserData();
-                } else {
-                    safePopup({
-                        title: '❌ Error',
-                        message: data.message || 'Failed to complete task.',
-                        buttons: [{type: 'ok'}]
-                    });
-                }
-            } catch (error) {
-                console.error('Error completing task:', error);
-                safePopup({
-                    title: '❌ Error',
-                    message: 'Network error. Please try again.',
-                    buttons: [{type: 'ok'}]
-                });
-            }
-        }
-    });
 }
 
 async function claimTaskReward(taskId) {
@@ -1694,7 +1684,6 @@ window.loadActiveReferrals = loadActiveReferrals;
 window.claimWelcomeBonus = claimWelcomeBonus;
 window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
-window.completeUserTask = completeUserTask;
 window.claimTaskReward = claimTaskReward;
 
 console.log('✅ PlantUSDT app loaded successfully!');
@@ -1706,4 +1695,4 @@ console.log('📢 No popups - Only video ads!');
 console.log('📢 Active referrals: 30 ads = active status');
 console.log('📢 Welcome bonus: 0.1 USDT for referred users');
 console.log('📢 Disable interstitial ads: $10');
-console.log('📢 Task management system active');
+console.log('📢 Task management system active with 44 tasks');
