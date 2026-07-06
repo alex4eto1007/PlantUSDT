@@ -370,6 +370,15 @@ def get_real_history():
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
         
+        # NEW: Add tasks earnings to history
+        if user.tasks_earnings and user.tasks_earnings > 0:
+            transactions.append({
+                'type': 'tasks_earnings',
+                'amount': user.tasks_earnings,
+                'status': 'completed',
+                'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
+            })
+        
         withdrawals = session.query(Withdrawal).filter_by(user_id=user.id).all()
         for w in withdrawals:
             transactions.append({

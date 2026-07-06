@@ -1519,6 +1519,7 @@ async function loadTasks() {
             if (tasksEl) {
                 let html = '';
                 let completedCount = 0;
+                let totalTasks = 0;
                 
                 // Show newly completed tasks notification
                 if (data.newly_completed && data.newly_completed.length > 0) {
@@ -1536,6 +1537,10 @@ async function loadTasks() {
                     }
                 }
                 
+                // Filter out claimed tasks (disappear after claiming)
+                const visibleTasks = data.tasks.filter(task => !task.claimed);
+                totalTasks = visibleTasks.length;
+                
                 // Group tasks by category
                 const categories = {
                     'investments': { icon: '🌱', label: 'Investments' },
@@ -1546,13 +1551,13 @@ async function loadTasks() {
                 };
                 
                 // Sort tasks by category and ID
-                const sortedTasks = data.tasks.sort((a, b) => a.task_id - b.task_id);
+                const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
                 
                 let currentCategory = '';
                 for (const task of sortedTasks) {
                     const isCompleted = task.completed;
                     const isClaimed = task.claimed;
-                    if (isCompleted) completedCount++;
+                    if (isCompleted && !isClaimed) completedCount++;
                     
                     // Category header
                     if (task.category !== currentCategory) {
@@ -1566,28 +1571,39 @@ async function loadTasks() {
                     }
                     
                     const statusBadge = isCompleted ? 
-                        (isClaimed ? '✅ Claimed' : '🟡 Claim Now!') : 
+                        '🟡 Claim Now!' : 
                         '⏳ In Progress';
                     const statusColor = isCompleted ? 
-                        (isClaimed ? '#00ff87' : '#ffd93d') : 
+                        '#ffd93d' : 
                         '#495670';
                     
+                    // Format reward display - show 0.00 for rewards below 0.01
+                    const rewardDisplay = task.reward < 0.01 ? '0.00' : task.reward.toFixed(2);
+                    
                     html += `
-                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(255,217,61,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="display:flex;align-items:center;gap:10px;flex:1;">
                                     <div style="font-size:20px;">${task.icon || '📌'}</div>
                                     <div style="flex:1;">
-                                        <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
+                                        <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#ffd93d' : '#ccd6f0'};">${task.title}</div>
                                         <div style="font-size:12px;color:#8892b0;">${task.description}</div>
-                                        <div style="font-size:11px;color:#ffd93d;">💰 ${task.reward} USDT</div>
+                                        <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
                                     </div>
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                    ${isCompleted && !isClaimed ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
                                 </div>
                             </div>
+                        </div>
+                    `;
+                }
+                
+                if (totalTasks === 0) {
+                    html = `
+                        <div style="text-align:center;padding:20px;color:#495670;font-size:14px;">
+                            🎉 All tasks completed! Great job!
                         </div>
                     `;
                 }
@@ -1597,7 +1613,7 @@ async function loadTasks() {
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
                     const total = data.stats.total_tasks || 44;
-                    const done = completedCount;
+                    const done = data.stats.completed_tasks || 0;
                     progressEl.textContent = `${done}/${total} tasks completed`;
                     progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
                 }
@@ -1632,9 +1648,13 @@ async function claimTaskReward(taskId) {
                 const data = await response.json();
                 
                 if (data.success) {
+                    // Format reward - show 0.00 for rewards below 0.01
+                    const reward = parseFloat(data.message.match(/\d+\.?\d*/)?.[0] || '0');
+                    const rewardDisplay = reward < 0.01 ? '0.00' : reward.toFixed(2);
+                    
                     safePopup({
                         title: '🎉 Reward Claimed!',
-                        message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(2),
+                        message: 'Claimed $' + rewardDisplay + ' USDT!\n\nNew balance: $' + data.new_balance.toFixed(2),
                         buttons: [{type: 'ok'}]
                     });
                     loadTasks();
