@@ -1109,7 +1109,7 @@ function renderHistory(transactions) {
             displayText = 'Ad Earnings';
         }
         if (tx.type === 'tasks_earnings') {
-            displayText = '✅ Tasks Earnings';
+            displayText = 'Tasks Earnings';
         }
 
         var amountDisplay = '$' + tx.amount.toFixed(3);
