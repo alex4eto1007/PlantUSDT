@@ -147,48 +147,48 @@
             <h3 style="font-size: 18px; margin-bottom: 4px;">📊 Upgrade Referral Bonus</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">Permanently increase your referral earnings!</p>
             
-            <div class="tier-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 12px;">
-                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 14px 10px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.05);">
-                    <div style="font-size: 28px;">🌱</div>
-                    <div style="font-size: 13px; font-weight: 700; margin-top: 4px; color: #ccd6f0;">Free</div>
-                    <div style="font-size: 14px; color: #00ff87; font-weight: 600;">1%</div>
-                    <div style="font-size: 14px; color: #ffffff; font-weight: 600;">$0</div>
-                    <button style="background: #495670; width: 100%; padding: 8px; font-size: 12px; border: none; border-radius: 6px; color: white; cursor: not-allowed; margin-top: 6px; font-weight: 600;" disabled>Current</button>
+            <div class="tier-grid">
+                <div class="tier-card">
+                    <div class="tier-emoji">🌱</div>
+                    <div class="tier-name">Free</div>
+                    <div class="tier-bonus">1%</div>
+                    <div class="tier-price">$0</div>
+                    <button class="tier-btn free" disabled>Current</button>
                 </div>
                 
-                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 14px 10px; border-radius: 12px; border: 2px solid #cd7f32;">
-                    <div style="font-size: 28px;">🥉</div>
-                    <div style="font-size: 13px; font-weight: 700; margin-top: 4px; color: #ccd6f0;">Bronze</div>
-                    <div style="font-size: 14px; color: #00ff87; font-weight: 600;">2%</div>
-                    <div style="font-size: 14px; color: #ffffff; font-weight: 600;">$40</div>
-                    <button onclick="upgradeReferralTier('bronze')" style="background: #cd7f32; width: 100%; padding: 10px; font-size: 13px; font-weight: 700; border: none; border-radius: 6px; color: white; cursor: pointer; margin-top: 6px;">Upgrade</button>
+                <div class="tier-card" style="border-color: #cd7f32;">
+                    <div class="tier-emoji">🥉</div>
+                    <div class="tier-name">Bronze</div>
+                    <div class="tier-bonus">2%</div>
+                    <div class="tier-price">$40</div>
+                    <button class="tier-btn bronze" onclick="upgradeReferralTier('bronze')">Upgrade</button>
                 </div>
                 
-                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 14px 10px; border-radius: 12px; border: 2px solid #c0c0c0;">
-                    <div style="font-size: 28px;">🥈</div>
-                    <div style="font-size: 13px; font-weight: 700; margin-top: 4px; color: #ccd6f0;">Silver</div>
-                    <div style="font-size: 14px; color: #00ff87; font-weight: 600;">3%</div>
-                    <div style="font-size: 14px; color: #ffffff; font-weight: 600;">$78.40</div>
-                    <div style="font-size: 9px; color: #00ff87; margin-top: 2px;">Save $1.60</div>
-                    <button onclick="upgradeReferralTier('silver')" style="background: #c0c0c0; width: 100%; padding: 10px; font-size: 13px; font-weight: 700; border: none; border-radius: 6px; color: #0a0e17; cursor: pointer; margin-top: 4px;">Upgrade</button>
+                <div class="tier-card" style="border-color: #c0c0c0;">
+                    <div class="tier-emoji">🥈</div>
+                    <div class="tier-name">Silver</div>
+                    <div class="tier-bonus">3%</div>
+                    <div class="tier-price">$78.40</div>
+                    <div class="tier-discount">Save $1.60</div>
+                    <button class="tier-btn silver" onclick="upgradeReferralTier('silver')">Upgrade</button>
                 </div>
                 
-                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 14px 10px; border-radius: 12px; border: 2px solid #ffd700;">
-                    <div style="font-size: 28px;">🥇</div>
-                    <div style="font-size: 13px; font-weight: 700; margin-top: 4px; color: #ccd6f0;">Gold</div>
-                    <div style="font-size: 14px; color: #00ff87; font-weight: 600;">4%</div>
-                    <div style="font-size: 14px; color: #ffffff; font-weight: 600;">$114</div>
-                    <div style="font-size: 9px; color: #00ff87; margin-top: 2px;">Save $6</div>
-                    <button onclick="upgradeReferralTier('gold')" style="background: #ffd700; width: 100%; padding: 10px; font-size: 13px; font-weight: 700; border: none; border-radius: 6px; color: #0a0e17; cursor: pointer; margin-top: 4px;">Upgrade</button>
+                <div class="tier-card" style="border-color: #ffd700;">
+                    <div class="tier-emoji">🥇</div>
+                    <div class="tier-name">Gold</div>
+                    <div class="tier-bonus">4%</div>
+                    <div class="tier-price">$114</div>
+                    <div class="tier-discount">Save $6</div>
+                    <button class="tier-btn gold" onclick="upgradeReferralTier('gold')">Upgrade</button>
                 </div>
                 
-                <div class="tier-card" style="text-align: center; background: rgba(0,0,0,0.3); padding: 14px 10px; border-radius: 12px; border: 2px solid #b9f2ff;">
-                    <div style="font-size: 28px;">💎</div>
-                    <div style="font-size: 13px; font-weight: 700; margin-top: 4px; color: #ccd6f0;">Diamond</div>
-                    <div style="font-size: 14px; color: #00ff87; font-weight: 600;">5%</div>
-                    <div style="font-size: 14px; color: #ffffff; font-weight: 600;">$144</div>
-                    <div style="font-size: 9px; color: #00ff87; margin-top: 2px;">Save $16</div>
-                    <button onclick="upgradeReferralTier('diamond')" style="background: #b9f2ff; width: 100%; padding: 10px; font-size: 13px; font-weight: 700; border: none; border-radius: 6px; color: #0a0e17; cursor: pointer; margin-top: 4px;">Upgrade</button>
+                <div class="tier-card" style="border-color: #b9f2ff;">
+                    <div class="tier-emoji">💎</div>
+                    <div class="tier-name">Diamond</div>
+                    <div class="tier-bonus">5%</div>
+                    <div class="tier-price">$144</div>
+                    <div class="tier-discount">Save $16</div>
+                    <button class="tier-btn diamond" onclick="upgradeReferralTier('diamond')">Upgrade</button>
                 </div>
             </div>
             
@@ -203,7 +203,7 @@
         <!-- ============================================
              TASKS SECTION
              ============================================ -->
-        <div class="tasks-section" style="margin-top:20px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:20px;">
+        <div class="tasks-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <h3 style="margin:0;">✅ Tasks</h3>
                 <span id="taskProgress" style="font-size:13px;color:#8892b0;">0/6 tasks completed</span>
