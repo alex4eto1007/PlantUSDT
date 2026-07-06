@@ -72,7 +72,7 @@ function showInterstitialIfNeeded() {
 }
 
 // ============================================
-// PAGE NAVIGATION
+// PAGE NAVIGATION - FIXED
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function navigateTo(page) {
     const pages = {
         'dashboard': 'dashboard.html',
-        'deposit': 'deposit.html',
+        'deposit': '/deposit',      // FIXED: Use the nginx route
         'withdraw': 'withdraw.html',
         'history': 'history.html',
         'index': 'index.html'
