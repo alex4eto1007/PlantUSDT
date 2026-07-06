@@ -733,7 +733,7 @@ def get_referral_tiers():
         'tiers': REFERRAL_TIERS
     })
 
-@app.route('/api/referral_stats_full/<int:telegram_id>', methods(['GET'])
+@app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
 def get_referral_stats_full(telegram_id):
     """Get full referral stats including tier info"""
     from services.referral import get_referral_stats
