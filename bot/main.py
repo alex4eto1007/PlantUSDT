@@ -42,7 +42,7 @@ deposit_scanner = DepositScanner()
 
 db.create_tables()
 
-VERCEL_URL = "https://plantusdt.ddns.net"
+VERCEL_URL = "https://plantusdt.ddns.net?t=20260706"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
