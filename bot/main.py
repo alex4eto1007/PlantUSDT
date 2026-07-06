@@ -212,7 +212,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================
-# ADMIN COMMANDS - FIXED USAGE MESSAGES
+# ADMIN COMMANDS - ALL USAGE MESSAGES FIXED
 # ============================================
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
