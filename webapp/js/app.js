@@ -72,7 +72,7 @@ function showInterstitialIfNeeded() {
 }
 
 // ============================================
-// PAGE NAVIGATION - FIXED
+// PAGE NAVIGATION - FIXED WITH FULL URLS
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -106,8 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function navigateTo(page) {
     const pages = {
         'dashboard': 'dashboard.html',
-        'deposit': '/deposit',      // FIXED: Use the nginx route
-        'withdraw': 'withdraw.html',
+        'deposit': 'https://plantusdt.ddns.net/deposit',  // Full URL to server
+        'withdraw': 'https://plantusdt.ddns.net/withdraw.html',  // Full URL to server
         'history': 'history.html',
         'index': 'index.html'
     };
