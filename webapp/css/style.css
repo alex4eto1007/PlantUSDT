@@ -19,6 +19,9 @@ body {
     padding-bottom: 40px;
 }
 
+/* ============================================
+   HEADER
+   ============================================ */
 .header {
     display: flex;
     justify-content: space-between;
@@ -60,6 +63,9 @@ body {
     color: #00ff87;
 }
 
+/* ============================================
+   NETWORK BADGE
+   ============================================ */
 .network-badge-container {
     text-align: center;
     margin-bottom: 16px;
@@ -83,9 +89,6 @@ body {
     height: 8px;
     border-radius: 50%;
     display: inline-block;
-}
-
-.network-dot.polygon {
     background: #8247E5;
     animation: pulse-dot 2s infinite;
 }
@@ -95,6 +98,9 @@ body {
     50% { opacity: 0.4; }
 }
 
+/* ============================================
+   EARNINGS
+   ============================================ */
 .earnings-section {
     margin-bottom: 20px;
 }
@@ -139,6 +145,9 @@ body {
     color: #00ff87;
 }
 
+/* ============================================
+   STATS GRID
+   ============================================ */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -178,6 +187,9 @@ body {
     margin-top: 2px;
 }
 
+/* ============================================
+   WALLET
+   ============================================ */
 .wallet-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -245,6 +257,9 @@ body {
     cursor: not-allowed;
 }
 
+/* ============================================
+   FIELDS
+   ============================================ */
 .section-title {
     font-size: 18px;
     font-weight: 700;
@@ -371,6 +386,9 @@ body {
     color: #ccd6f0;
 }
 
+/* ============================================
+   BUTTONS / ACTIONS
+   ============================================ */
 .actions-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -421,6 +439,9 @@ body {
     font-size: 20px;
 }
 
+/* ============================================
+   REFERRAL
+   ============================================ */
 .referral-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -512,6 +533,9 @@ body {
     font-size: 15px;
 }
 
+/* ============================================
+   ADS
+   ============================================ */
 .ad-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(0,255,135,0.15);
@@ -557,6 +581,9 @@ body {
     margin-top: 2px;
 }
 
+/* ============================================
+   TASKS
+   ============================================ */
 .tasks-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -571,71 +598,9 @@ body {
     color: #ccd6f0;
 }
 
-.info-card {
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.info-card h3 {
-    font-size: 16px;
-    margin-bottom: 12px;
-    color: #ccd6f0;
-}
-
-.info-card p {
-    font-size: 13px;
-    color: #8892b0;
-    padding: 4px 0;
-    line-height: 1.6;
-}
-
-.footer {
-    text-align: center;
-    padding: 20px 0;
-    font-size: 12px;
-    color: #495670;
-}
-
-.footer p {
-    margin: 4px 0;
-}
-
-.text-center {
-    text-align: center;
-}
-
-.text-muted {
-    color: #8892b0;
-}
-
-.text-green {
-    color: #00ff87;
-}
-
-.text-purple {
-    color: #8247E5;
-}
-
-.mt-8 {
-    margin-top: 8px;
-}
-
-.mt-16 {
-    margin-top: 16px;
-}
-
-.mb-8 {
-    margin-bottom: 8px;
-}
-
-.mb-16 {
-    margin-bottom: 16px;
-}
-
-/* Tier Grid */
+/* ============================================
+   TIERS
+   ============================================ */
 .tier-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -721,7 +686,33 @@ body {
     cursor: not-allowed;
 }
 
-/* Deposit page */
+/* ============================================
+   INFO / HOW IT WORKS
+   ============================================ */
+.info-card {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.info-card h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: #ccd6f0;
+}
+
+.info-card p {
+    font-size: 13px;
+    color: #8892b0;
+    padding: 4px 0;
+    line-height: 1.6;
+}
+
+/* ============================================
+   DEPOSIT PAGE
+   ============================================ */
 .deposit-address-box {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -766,7 +757,9 @@ body {
     color: #8247E5;
 }
 
-/* Withdraw page */
+/* ============================================
+   WITHDRAW PAGE
+   ============================================ */
 .fee-summary {
     background: rgba(0,0,0,0.3);
     border-radius: 8px;
@@ -803,7 +796,9 @@ body {
     color: #ffffff;
 }
 
-/* History */
+/* ============================================
+   HISTORY PAGE
+   ============================================ */
 .history-filters {
     display: flex;
     gap: 8px;
@@ -829,6 +824,12 @@ body {
     background: rgba(130,71,229,0.1);
     border-color: #8247E5;
     color: #a29bfe;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .history-item {
@@ -887,7 +888,112 @@ body {
     font-size: 14px;
 }
 
-/* Utility */
+/* ============================================
+   DASHBOARD
+   ============================================ */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.dashboard-grid .stat-card {
+    padding: 14px 8px;
+}
+
+.dashboard-grid .stat-value {
+    font-size: 16px;
+}
+
+.dashboard-grid .stat-label {
+    font-size: 9px;
+}
+
+.ad-stat-highlight {
+    border: 1px solid rgba(0,212,255,0.3) !important;
+    background: rgba(0,212,255,0.05) !important;
+}
+
+.ad-stat-highlight .stat-value {
+    color: #00d4ff !important;
+}
+
+.task-stat-highlight {
+    border: 1px solid rgba(0,255,135,0.3) !important;
+    background: rgba(0,255,135,0.05) !important;
+}
+
+.task-stat-highlight .stat-value {
+    color: #00ff87 !important;
+}
+
+/* ============================================
+   TIER DISPLAY
+   ============================================ */
+.tier-display {
+    background: rgba(130,71,229,0.1);
+    border: 1px solid rgba(130,71,229,0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tier-display .tier-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tier-display .tier-info .emoji {
+    font-size: 24px;
+}
+
+.tier-display .tier-info .name {
+    font-weight: 700;
+    font-size: 16px;
+    color: #ccd6f0;
+}
+
+.tier-display .tier-info .bonus {
+    font-size: 14px;
+    color: #00ff87;
+}
+
+.tier-display .upgrade-btn {
+    background: linear-gradient(135deg, #00ff87, #8247E5);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: #0a0e17;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.tier-display .upgrade-btn:hover {
+    transform: scale(1.05);
+}
+
+/* ============================================
+   LOADING & ERRORS
+   ============================================ */
+.loading-text {
+    color: #8892b0;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
+.error-text {
+    color: #ff6b6b;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
 .loading {
     opacity: 0.6;
     pointer-events: none;
@@ -916,7 +1022,9 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Back button */
+/* ============================================
+   BACK BUTTON
+   ============================================ */
 .back-btn {
     font-size: 28px !important;
     padding: 8px 16px !important;
@@ -938,25 +1046,229 @@ body {
     border-color: rgba(130,71,229,0.2) !important;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
+.header h1 {
+    margin: 0 !important;
 }
 
-::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.3);
-}
-
-::-webkit-scrollbar-thumb {
+/* ============================================
+   NETWORK BADGE MINI
+   ============================================ */
+.network-badge-mini {
+    display: inline-block;
     background: rgba(130,71,229,0.2);
-    border-radius: 3px;
+    color: #8247E5;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(130,71,229,0.3);
+/* ============================================
+   NETWORK BADGE LARGE (DEPOSIT PAGE)
+   ============================================ */
+.network-badge-large {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(130,71,229,0.15);
+    color: #8247E5;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
-/* Mobile */
+.network-badge-large .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #8247E5;
+    display: inline-block;
+    animation: pulse-dot 2s infinite;
+}
+
+/* ============================================
+   NETWORK BADGE SMALL (WITHDRAW PAGE)
+   ============================================ */
+.network-badge-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(130,71,229,0.12);
+    color: #8247E5;
+    padding: 2px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.network-badge-small .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #8247E5;
+    display: inline-block;
+}
+
+/* ============================================
+   WARNING BOXES
+   ============================================ */
+.warning-box-critical {
+    background: rgba(255,107,107,0.15);
+    border: 2px solid rgba(255,107,107,0.4);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+}
+
+.warning-box-critical p {
+    font-size: 12px;
+    color: #ff6b6b;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.warning-text {
+    font-size: 12px;
+    color: #ffd93d;
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(255,193,7,0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(255,193,7,0.15);
+}
+
+/* ============================================
+   DEPOSIT TIMER MESSAGE
+   ============================================ */
+.deposit-timer-message {
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(255,193,7,0.1);
+    border: 1px solid rgba(255,193,7,0.2);
+    border-radius: 8px;
+}
+
+.deposit-timer-message p {
+    font-size: 13px;
+    color: #ffd93d;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.deposit-timer-message .sub-text {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* ============================================
+   CONTACT SUPPORT
+   ============================================ */
+.contact-support {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.contact-support p {
+    font-size: 13px;
+    color: #00d4ff;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.contact-support a {
+    color: #00d4ff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* ============================================
+   SET WALLET BUTTON
+   ============================================ */
+.set-wallet-btn {
+    margin-top: 4px;
+    padding: 4px 12px;
+    background: rgba(0,255,135,0.1);
+    border: 1px solid rgba(0,255,135,0.2);
+    border-radius: 4px;
+    color: #00ff87;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.set-wallet-btn:hover {
+    background: rgba(0,255,135,0.2);
+}
+
+/* ============================================
+   FORM INPUTS
+   ============================================ */
+input, textarea, select {
+    background: rgba(0,0,0,0.4) !important;
+    color: #ccd6f0 !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 8px !important;
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    outline: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #8247E5 !important;
+    box-shadow: 0 0 20px rgba(130,71,229,0.05) !important;
+    background: rgba(0,0,0,0.6) !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #495670 !important;
+    opacity: 0.8 !important;
+}
+
+input:disabled, textarea:disabled, select:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background: rgba(0,0,0,0.2) !important;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    color: #8892b0 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    margin-bottom: 6px !important;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.footer {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 12px;
+    color: #495670;
+}
+
+.footer p {
+    margin: 4px 0;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 400px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -978,4 +1290,62 @@ body {
     .tier-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: #8892b0;
+}
+
+.text-green {
+    color: #00ff87;
+}
+
+.text-purple {
+    color: #8247E5;
+}
+
+.mt-8 {
+    margin-top: 8px;
+}
+
+.mt-16 {
+    margin-top: 16px;
+}
+
+.mb-8 {
+    margin-bottom: 8px;
+}
+
+.mb-16 {
+    margin-bottom: 16px;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(130,71,229,0.2);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(130,71,229,0.3);
 }
