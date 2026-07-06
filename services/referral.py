@@ -31,7 +31,7 @@ def is_referral_active(user_id: int, session: Session) -> bool:
     if investments > 0:
         return True
     
-    # Check if user has watched 30+ ads (REDUCED from 50)
+    # Check if user has watched 30+ ads
     user = session.query(User).filter_by(id=user_id).first()
     if user and (user.total_ads_watched or 0) >= 30:
         return True
@@ -219,7 +219,7 @@ def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> f
 
 
 # ============================================
-# NEW FUNCTIONS FOR UPDATED FEATURES
+# WELCOME BONUS - FIXED
 # ============================================
 
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
@@ -228,13 +228,17 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
     if not user:
         return False, "User not found"
     
+    # Check if user was referred
+    if not user.referred_by:
+        return False, "You were not referred by anyone, so you are not eligible for the welcome bonus."
+    
     # Check if already claimed
     if user.has_received_welcome_bonus:
         return False, "Welcome bonus already claimed"
     
     # Check if user is active
     if not is_referral_active(user_id, session):
-        return False, "User must be active (invest once or watch 30 ads)"
+        return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
     
     # Award 0.1 USDT
     user.balance += 0.1
