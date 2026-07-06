@@ -212,7 +212,7 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ============================================
-# ADMIN COMMANDS - FIXED USAGE MESSAGES
+# ADMIN COMMANDS
 # ============================================
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -263,8 +263,14 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "❌ Usage: /complete_payout <withdrawal_id> <tx_hash>\n\n"
-            "Example: /complete_payout 123 0xdef456..."
+            "📋 **Incorrect Usage**\n\n"
+            "Please use:\n"
+            "`/complete_payout <withdrawal_id> <tx_hash>`\n\n"
+            "📌 **Example:**\n"
+            "`/complete_payout 123 0xdef456...`\n\n"
+            "ℹ️ This command completes a pending withdrawal.\n"
+            "The withdrawal_id is the number from `/pending`.\n\n"
+            "🔗 Network: **Polygon**"
             + get_community_footer(),
             parse_mode='Markdown'
         )
