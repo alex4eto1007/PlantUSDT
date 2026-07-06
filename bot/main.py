@@ -80,11 +80,23 @@ def is_admin(user_id: int) -> bool:
     return user and user.is_admin
 
 # ============================================
-# START COMMAND (FIXED - NO DUPLICATE PREVENTION)
+# START COMMAND (FIXED - WITH SMART DUPLICATE PREVENTION)
 # ============================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    # Prevent duplicate messages - smart way
+    if context.user_data.get('start_processed', False):
+        logger.info(f"⚠️ Start already processed for {user.id}, skipping duplicate")
+        return
+    context.user_data['start_processed'] = True
+    
+    # Clear flag after 10 seconds so next /start works
+    async def clear_flag():
+        await asyncio.sleep(10)
+        context.user_data['start_processed'] = False
+    asyncio.create_task(clear_flag())
     
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
@@ -723,6 +735,7 @@ def main():
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
 
+        # Start deposit scanner in background
         async def start_deposit_scanner():
             while True:
                 try:
@@ -731,12 +744,11 @@ def main():
                     logger.error(f"Error in deposit scanner loop: {e}")
                 await asyncio.sleep(300)
 
-        # Start deposit scanner in background
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.create_task(start_deposit_scanner())
 
-        # Set menu button - NON-BLOCKING, won't crash the bot
+        # Set menu button - NON-BLOCKING
         async def set_menu_button():
             try:
                 await application.bot.set_chat_menu_button(
@@ -751,7 +763,6 @@ def main():
             except Exception as e:
                 logger.warning(f"⚠️ Could not set menu button: {e} (non-critical)")
 
-        # Run menu button in background, don't wait for it
         loop.create_task(set_menu_button())
 
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
@@ -767,6 +778,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Error starting bot: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
