@@ -72,7 +72,7 @@ function showInterstitialIfNeeded() {
 }
 
 // ============================================
-// PAGE NAVIGATION - FIXED WITH FULL URLS
+// PAGE NAVIGATION
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     tg.ready();
@@ -218,6 +218,12 @@ function updateUI(data) {
     if (adEarningsDisplayEl) {
         adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
     }
+
+    // NEW: tasks earnings
+    var tasksEarningsDisplayEl = document.getElementById('tasksEarningsDisplay');
+    if (tasksEarningsDisplayEl) {
+        tasksEarningsDisplayEl.textContent = '$' + (data.tasks_earnings || 0).toFixed(3);
+    }
 }
 
 function updateDashboardUI(data) {
@@ -226,12 +232,16 @@ function updateDashboardUI(data) {
     var dashEarned = document.getElementById('dashEarned');
     var dashDeposited = document.getElementById('dashDeposited');
     var dashReferrals = document.getElementById('dashReferrals');
+    var dashAdEarnings = document.getElementById('dashAdEarnings');
+    var dashTasksEarnings = document.getElementById('dashTasksEarnings');
 
     if (dashBalance) dashBalance.textContent = '$' + (data.balance || 0).toFixed(3);
     if (dashInvested) dashInvested.textContent = '$' + (data.total_invested || 0).toFixed(3);
     if (dashEarned) dashEarned.textContent = '$' + (data.total_earnings || 0).toFixed(3);
     if (dashDeposited) dashDeposited.textContent = '$' + (data.total_deposited || 0).toFixed(3);
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
+    if (dashAdEarnings) dashAdEarnings.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
+    if (dashTasksEarnings) dashTasksEarnings.textContent = '$' + (data.tasks_earnings || 0).toFixed(3);
 }
 
 // ============================================

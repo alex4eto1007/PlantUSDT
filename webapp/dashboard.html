@@ -17,20 +17,65 @@
         .dashboard-grid .stat-label { font-size: 9px; }
         .ad-stat-highlight { border: 1px solid rgba(0,212,255,0.3) !important; background: rgba(0,212,255,0.05) !important; }
         .ad-stat-highlight .stat-value { color: #00d4ff !important; }
+        .task-stat-highlight { border: 1px solid rgba(0,255,135,0.3) !important; background: rgba(0,255,135,0.05) !important; }
+        .task-stat-highlight .stat-value { color: #00ff87 !important; }
         .tier-display { background: rgba(130,71,229,0.1); border: 1px solid rgba(130,71,229,0.2); border-radius: 12px; padding: 12px 16px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; }
         .tier-display .tier-info { display: flex; align-items: center; gap: 8px; }
         .tier-display .tier-info .emoji { font-size: 24px; }
         .tier-display .tier-info .name { font-weight: 700; font-size: 16px; color: #ccd6f0; }
         .tier-display .tier-info .bonus { font-size: 14px; color: #00ff87; }
-        .tier-display .upgrade-btn { background: linear-gradient(135deg, #00ff87, #8247E5); border: none; border-radius: 8px; padding: 10px 20px; color: #0a0e17; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .tier-display .upgrade-btn { background: linear-gradient(135deg, #00ff87, #8247E5); border: none; border-radius: 8px; padding: 8px 16px; color: #0a0e17; font-weight: 700; font-size: 13px; cursor: pointer; }
         .tier-display .upgrade-btn:hover { transform: scale(1.05); }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        .action-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 14px 12px;
+            color: #ccd6f0;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 100%;
+        }
+        .action-btn .btn-icon { font-size: 20px; }
+        .action-btn:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-2px);
+        }
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .action-btn.primary {
+            background: linear-gradient(135deg, rgba(0,255,135,0.15), rgba(130,71,229,0.15));
+            border-color: rgba(0,255,135,0.2);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
-            <button class="back-btn" onclick="window.history.back()" style="font-size: 40px; padding: 10px 20px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
+            <button class="back-btn" onclick="window.history.back()" style="font-size: 28px; padding: 8px 16px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
             <h1 style="color:#00ff87;font-size:20px; margin: 0; flex: 1; text-align: center;">📊 Dashboard</h1>
             <span class="network-badge-mini">🟣 Polygon</span>
         </div>
@@ -45,9 +90,9 @@
                 <div class="stat-card"><div class="stat-icon">💳</div><div class="stat-label">Deposited</div><div class="stat-value" id="dashDeposited">$0.000</div></div>
                 <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Referrals</div><div class="stat-value" id="dashReferrals">0</div></div>
                 <div class="stat-card ad-stat-highlight"><div class="stat-icon">📺</div><div class="stat-label">From Ads</div><div class="stat-value" id="dashAdEarnings">$0.000</div></div>
+                <div class="stat-card task-stat-highlight"><div class="stat-icon">✅</div><div class="stat-label">From Tasks</div><div class="stat-value" id="dashTasksEarnings">$0.000</div></div>
             </div>
             
-            <!-- Referral Tier Display -->
             <div class="tier-display" id="tierDisplay">
                 <div class="tier-info">
                     <span class="emoji" id="tierEmoji">🌱</span>
@@ -69,24 +114,33 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        const API_BASE = 'https://plantusdt.ddns.net';
 
-        const user = tg.initDataUnsafe?.user;
-        const userId = user?.id || '0';
+        document.addEventListener('DOMContentLoaded', function() {
+            var tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
 
-        document.getElementById('loadingMessage').textContent = '📡 Fetching data...';
+            var user = tg.initDataUnsafe?.user;
+            var userId = user?.id || '0';
+            console.log('📱 User ID:', userId);
 
-        async function loadDashboard() {
+            document.getElementById('loadingMessage').textContent = '📡 Fetching data...';
+
+            loadDashboard(userId);
+        });
+
+        async function loadDashboard(userId) {
             try {
                 // Load user data
-                const userResponse = await fetch(`https://plantusdt.ddns.net/api/user?telegram_id=${userId}`);
+                const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
                 const userData = await userResponse.json();
+                console.log('📡 User data:', userData);
                 
                 // Load referral stats
-                const statsResponse = await fetch(`https://plantusdt.ddns.net/api/referral_stats_full/${userId}`);
+                const statsResponse = await fetch(API_BASE + '/api/referral_stats_full/' + userId);
                 const statsData = await statsResponse.json();
+                console.log('📡 Stats data:', statsData);
                 
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('dashboardStats').style.display = 'block';
@@ -98,6 +152,7 @@
                     document.getElementById('dashDeposited').textContent = '$' + (userData.total_deposited || 0).toFixed(3);
                     document.getElementById('dashReferrals').textContent = userData.referrals || 0;
                     document.getElementById('dashAdEarnings').textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
+                    document.getElementById('dashTasksEarnings').textContent = '$' + (userData.tasks_earnings || 0).toFixed(3);
                 }
                 
                 if (statsData.success && statsData.stats) {
@@ -107,12 +162,11 @@
                     document.getElementById('tierBonus').textContent = stats.tier_bonus + '% referral bonus';
                 }
             } catch (error) {
+                console.error('❌ Error loading dashboard:', error);
                 document.getElementById('loadingMessage').textContent = '❌ Network error: ' + error.message;
                 document.getElementById('loadingMessage').className = 'error-text';
             }
         }
-
-        loadDashboard();
     </script>
 </body>
 </html>

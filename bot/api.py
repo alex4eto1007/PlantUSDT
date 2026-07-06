@@ -65,6 +65,14 @@ from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
 # ============================================
+# HELPER FUNCTION FOR WEBAPP PATH
+# ============================================
+
+def get_webapp_dir():
+    """Get the absolute path to the webapp directory"""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'webapp')
+
+# ============================================
 # EXISTING ENDPOINTS
 # ============================================
 
@@ -230,7 +238,8 @@ def get_user():
             'level1_count': 0,
             'total_ad_earnings': 0,
             'interstitial_ads_disabled': False,
-            'has_received_welcome_bonus': False
+            'has_received_welcome_bonus': False,
+            'tasks_earnings': 0
         })
     
     cached = get_cached_user(telegram_id)
@@ -255,7 +264,8 @@ def get_user():
                 'level1_count': 0,
                 'total_ad_earnings': 0,
                 'interstitial_ads_disabled': False,
-                'has_received_welcome_bonus': False
+                'has_received_welcome_bonus': False,
+                'tasks_earnings': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -283,7 +293,7 @@ def get_user():
         
         referral_earned = user.referral_earnings_all_time or 0
         investment_earnings = user.investment_earnings_all_time or 0
-        total_earnings = referral_earned + investment_earnings + (user.total_ad_earnings or 0)
+        total_earnings = referral_earned + investment_earnings + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
         
         response = {
             'success': True,
@@ -298,7 +308,8 @@ def get_user():
             'level1_count': level1_count,
             'total_ad_earnings': user.total_ad_earnings or 0,
             'interstitial_ads_disabled': user.interstitial_ads_disabled or False,
-            'has_received_welcome_bonus': user.has_received_welcome_bonus or False
+            'has_received_welcome_bonus': user.has_received_welcome_bonus or False,
+            'tasks_earnings': user.tasks_earnings or 0
         }
         
         set_cached_user(telegram_id, response)
@@ -894,23 +905,23 @@ def get_tasks(telegram_id):
         session.close()
 
 # ============================================
-# SERVE STATIC FILES - FIXED
+# SERVE STATIC FILES
 # ============================================
 
 @app.route('/deposit')
 def deposit_page():
     """Serve the deposit page"""
-    return send_from_directory('/root/PlantUSDT/webapp', 'deposit_new.html')
+    return send_from_directory(get_webapp_dir(), 'deposit_new.html')
 
 @app.route('/js/<path:filename>')
 def serve_js(filename):
     """Serve JavaScript files"""
-    return send_from_directory('/root/PlantUSDT/webapp/js', filename)
+    return send_from_directory(os.path.join(get_webapp_dir(), 'js'), filename)
 
 @app.route('/css/<path:filename>')
 def serve_css(filename):
     """Serve CSS files"""
-    return send_from_directory('/root/PlantUSDT/webapp/css', filename)
+    return send_from_directory(os.path.join(get_webapp_dir(), 'css'), filename)
 
 @app.route('/<path:filename>')
 def serve_static(filename):
@@ -918,7 +929,7 @@ def serve_static(filename):
     # Skip API routes
     if filename.startswith('api/'):
         return jsonify({'success': False, 'message': 'Not found'}), 404
-    return send_from_directory('/root/PlantUSDT/webapp', filename)
+    return send_from_directory(get_webapp_dir(), filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5001)

@@ -56,6 +56,7 @@ class User(Base):
     welcome_bonus_claimed_at = Column(DateTime, nullable=True)
     tasks_completed = Column(Integer, default=0)
     last_task_completed_at = Column(DateTime, nullable=True)
+    tasks_earnings = Column(Float, default=0.0)  # NEW: Track earnings from tasks
 
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
