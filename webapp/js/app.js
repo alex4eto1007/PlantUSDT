@@ -1097,7 +1097,8 @@ function renderHistory(transactions) {
                    tx.type === 'withdraw' ? '📤' : 
                    tx.type === 'investment' ? '🌱' : 
                    tx.type === 'referral_earnings' ? '🎁' : 
-                   tx.type === 'ad_earnings' ? '📺' : '💰';
+                   tx.type === 'ad_earnings' ? '📺' : 
+                   tx.type === 'tasks_earnings' ? '✅' : '💰';
         var status = tx.status || 'completed';
         var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
@@ -1106,6 +1107,9 @@ function renderHistory(transactions) {
         }
         if (tx.type === 'ad_earnings') {
             displayText = 'Ad Earnings';
+        }
+        if (tx.type === 'tasks_earnings') {
+            displayText = '✅ Tasks Earnings';
         }
 
         var amountDisplay = '$' + tx.amount.toFixed(3);
