@@ -867,7 +867,7 @@ def get_active_referrals(telegram_id):
 
 @app.route('/api/claim_welcome_bonus', methods=['POST'])
 def claim_welcome_bonus():
-    """Referred user claims 0.1 USDT welcome bonus (NO REFERRAL REQUIRED)"""
+    """User claims 0.1 USDT welcome bonus (NO REFERRAL REQUIRED)"""
     from services.referral import award_welcome_bonus
     
     data = request.json

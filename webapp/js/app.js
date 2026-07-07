@@ -1509,7 +1509,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASK SYSTEM - 44 HARDCODED TASKS WITH REAL PROGRESS
+// TASK SYSTEM - 45 HARDCODED TASKS WITH REAL PROGRESS
 // ============================================
 
 async function loadTasks() {
@@ -1646,7 +1646,7 @@ async function loadTasks() {
                         <div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);">
                             <div style="font-size:48px;margin-bottom:10px;">🎉</div>
                             <div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div>
-                            <div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all 44 tasks. Great job!</div>
+                            <div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all 45 tasks. Great job!</div>
                         </div>
                     `;
                 }
@@ -1655,7 +1655,7 @@ async function loadTasks() {
                 
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
-                    const total = data.stats.total_tasks || 44;
+                    const total = data.stats.total_tasks || 45;
                     const done = data.stats.completed_tasks || 0;
                     progressEl.textContent = `${done}/${total} tasks completed`;
                     progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
@@ -1667,7 +1667,7 @@ async function loadTasks() {
     }
 }
 
-// Helper function to get task condition value - FIXED for First Investment
+// Helper function to get task condition value - UPDATED for 45 tasks
 function getTaskConditionValue(taskId) {
     const taskConditions = {
         1: 1,      // First Investment - show 0/1
@@ -1713,7 +1713,8 @@ function getTaskConditionValue(taskId) {
         41: 100,
         42: 250,
         43: 500,
-        44: 1000
+        44: 1000,
+        45: null   // Welcome Bonus - no numeric condition
     };
     return taskConditions[taskId] || null;
 }
@@ -1764,7 +1765,8 @@ function getTaskCurrentValue(taskId, userStats) {
         41: userStats.total_earnings || 0,
         42: userStats.total_earnings || 0,
         43: userStats.total_earnings || 0,
-        44: userStats.total_earnings || 0
+        44: userStats.total_earnings || 0,
+        45: userStats.has_received_welcome_bonus ? 1 : 0  // Welcome Bonus - 0/1
     };
     // Return the value, for earnings keep decimal places
     if (typeof taskCurrentValues[taskId] === 'number') {
@@ -1864,4 +1866,4 @@ console.log('📢 No popups - Only video ads!');
 console.log('📢 Active referrals: 30 ads = active status');
 console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
 console.log('📢 Disable interstitial ads: $10');
-console.log('📢 Task management system active with 44 tasks');
+console.log('📢 Task management system active with 45 tasks');

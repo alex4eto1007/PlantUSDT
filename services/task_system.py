@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 db = DatabaseManager()
 
 # ============================================
-# TASK DEFINITIONS - 44 HARDCODED TASKS
+# TASK DEFINITIONS - 45 HARDCODED TASKS
 # ============================================
 
 TASKS = [
@@ -471,6 +471,20 @@ TASKS = [
         "reward": 25.00,
         "condition_type": "total_earnings",
         "condition_value": 1000
+    },
+
+    # ============================================
+    # SECTION 5: WELCOME BONUS (1 task) - NEW
+    # ============================================
+    {
+        "id": 45,
+        "category": "milestones",
+        "icon": "🎁",
+        "title": "Welcome Bonus",
+        "description": "Claim your 0.1 USDT welcome bonus (no referral needed)",
+        "reward": 0.10,
+        "condition_type": "welcome_bonus",
+        "condition_value": None
     }
 ]
 
@@ -539,7 +553,7 @@ def get_user_stats(user: User, session: Session) -> dict:
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
     
-    # FIX: Include tasks_earnings in total_earnings
+    # Include tasks_earnings in total_earnings
     total_earnings = (user.total_earnings_all_time or 0) + (user.referral_earnings_all_time or 0) + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
     has_invested = total_invested > 0
     
@@ -599,6 +613,12 @@ def check_task_conditions(user: User, session: Session) -> list:
         
         elif condition_type == "total_earnings":
             completed = total_earnings >= condition_value
+        
+        elif condition_type == "welcome_bonus":
+            # User must be active and not already claimed
+            if not user.has_received_welcome_bonus:
+                if is_referral_active(user.id, session):
+                    completed = True
         
         if completed:
             # Mark task as completed

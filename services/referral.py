@@ -215,30 +215,34 @@ def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> f
 # ============================================
 
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
-    """Award 0.1 USDT one-time bonus to user when they become active (no referral required)"""
+    """Award 0.1 USDT welcome bonus using task system (no referral required)"""
+    from services.task_system import claim_task_reward
+    
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
         return False, "User not found"
     
     # Check if already claimed
     if user.has_received_welcome_bonus:
-        logger.info(f"⚠️ User {user_id} already claimed welcome bonus (has_received_welcome_bonus=True)")
+        logger.info(f"⚠️ User {user_id} already claimed welcome bonus")
         return False, "Welcome bonus already claimed"
     
     # Check if user is active (invested OR watched 30 ads) - NO REFERRAL REQUIRED
     if not is_referral_active(user_id, session):
         return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
     
-    # Award 0.1 USDT - add to tasks_earnings so it appears in history
-    reward = 0.1
-    user.balance += reward
-    user.tasks_earnings = (user.tasks_earnings or 0) + reward
-    user.has_received_welcome_bonus = True
-    user.welcome_bonus_claimed_at = datetime.utcnow()
+    # Use task system to claim task 45 (Welcome Bonus)
+    success, msg = claim_task_reward(user_id, 45, session)
     
-    session.commit()
-    logger.info(f"✅ Welcome bonus awarded to user {user_id}: +0.1 USDT (tasks_earnings)")
-    return True, "Welcome bonus of 0.1 USDT awarded!"
+    if success:
+        # Mark user as having received the bonus
+        user.has_received_welcome_bonus = True
+        user.welcome_bonus_claimed_at = datetime.utcnow()
+        session.commit()
+        logger.info(f"✅ Welcome bonus claimed by user {user_id} via task 45")
+        return True, "Welcome bonus of 0.1 USDT awarded!"
+    else:
+        return False, msg
 
 def get_active_referral_count(user_id: int, session: Session) -> int:
     """Get count of active referrals (users who qualify for 0.03 USDT bonus)"""
