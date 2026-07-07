@@ -43,11 +43,11 @@ class InvestmentService:
             bonus_percent = get_referral_bonus_percent(referrer.id, session)
             referral_bonus = Decimal(str(investment.amount)) * Decimal(str(bonus_percent / 100))
 
-            referrer.balance = Decimal(str(referrer.balance or 0)) + referral_bonus
-            referrer.total_earned = Decimal(str(referrer.total_earned or 0)) + referral_bonus
-            referrer.referral_earnings_all_time = Decimal(str(referrer.referral_earnings_all_time or 0)) + referral_bonus
-            referrer.referral_deposit_earnings = Decimal(str(referrer.referral_deposit_earnings or 0)) + referral_bonus
-            referrer.total_earnings_all_time = Decimal(str(referrer.total_earnings_all_time or 0)) + referral_bonus
+            referrer.balance = (referrer.balance or Decimal('0')) + referral_bonus
+            referrer.total_earned = (referrer.total_earned or Decimal('0')) + referral_bonus
+            referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + referral_bonus
+            referrer.referral_deposit_earnings = (referrer.referral_deposit_earnings or Decimal('0')) + referral_bonus
+            referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + referral_bonus
 
             session.commit()
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} ({bonus_percent}%) from {user.telegram_id}'s deposit of ${investment.amount} on Polygon")
@@ -136,8 +136,8 @@ class InvestmentService:
             )
             session.add(investment)
 
-            user.balance = Decimal(str(user.balance or 0)) - Decimal(str(amount))
-            user.total_invested = Decimal(str(user.total_invested or 0)) + Decimal(str(amount))
+            user.balance = (user.balance or Decimal('0')) - Decimal(str(amount))
+            user.total_invested = (user.total_invested or Decimal('0')) + Decimal(str(amount))
 
             session.commit()
             logger.info(f"Investment created on Polygon: Field {field_number}, ${amount}, {lock_period} days, returns ${expected_return}")
@@ -180,16 +180,17 @@ class InvestmentService:
                     investment.completed_at = now
                     investment.principal_returned = True
 
-                    user.balance = Decimal(str(user.balance or 0)) + Decimal(str(investment.expected_return))
-                    user.total_earned = Decimal(str(user.total_earned or 0)) + Decimal(str(investment.expected_return))
-                    user.investment_earnings_all_time = Decimal(str(user.investment_earnings_all_time or 0)) + Decimal(str(investment.expected_return))
-                    user.total_earnings_all_time = Decimal(str(user.total_earnings_all_time or 0)) + Decimal(str(investment.expected_return))
+                    amount_to_credit = Decimal(str(investment.expected_return))
+                    user.balance = (user.balance or Decimal('0')) + amount_to_credit
+                    user.total_earned = (user.total_earned or Decimal('0')) + amount_to_credit
+                    user.investment_earnings_all_time = (user.investment_earnings_all_time or Decimal('0')) + amount_to_credit
+                    user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + amount_to_credit
 
-                    profit = investment.expected_return - investment.amount
+                    profit = Decimal(str(investment.expected_return)) - Decimal(str(investment.amount))
                     payout = DailyPayout(
                         user_id=user.id,
                         investment_id=investment.id,
-                        amount=profit,
+                        amount=float(profit),
                         day_number=investment.lock_period,
                         paid_at=now
                     )
@@ -206,7 +207,7 @@ class InvestmentService:
                             user_id=user.telegram_id,
                             field_number=investment.field_number,
                             amount=investment.amount,
-                            profit=profit,
+                            profit=float(profit),
                             lock_period=investment.lock_period
                         )
                     except Exception as e:

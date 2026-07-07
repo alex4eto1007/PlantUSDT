@@ -660,8 +660,8 @@ def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
             return False, "User not found"
         
         reward = Decimal(str(task["reward"]))
-        user.balance = Decimal(str(user.balance or 0)) + reward
-        user.tasks_earnings = Decimal(str(user.tasks_earnings or 0)) + reward
+        user.balance = (user.balance or Decimal('0')) + reward
+        user.tasks_earnings = (user.tasks_earnings or Decimal('0')) + reward
         
         progress.claimed = True
         progress.claimed_at = datetime.utcnow()

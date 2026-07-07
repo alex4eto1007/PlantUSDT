@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from decimal import Decimal
 
 load_dotenv()
 
@@ -34,7 +35,9 @@ class Config:
     NETWORK_SYMBOL = "MATIC"
     EXPLORER_URL = "https://polygonscan.com"
 
-    # Referral Tier Settings
+    # ============================================
+    # REFERRAL TIER SETTINGS
+    # ============================================
     REFERRAL_TIERS = {
         "free": {"bonus_percent": 1, "price": 0, "emoji": "🌱"},
         "bronze": {"bonus_percent": 2, "price": 40.00, "emoji": "🥉"},
@@ -43,7 +46,9 @@ class Config:
         "diamond": {"bonus_percent": 5, "price": 144.00, "emoji": "💎", "discount": "10%"}
     }
     
-    # New Feature Settings
+    # ============================================
+    # NEW FEATURE SETTINGS
+    # ============================================
     ACTIVE_REFERRAL_BONUS = float(os.getenv("ACTIVE_REFERRAL_BONUS", 0.03))
     ADS_FOR_ACTIVE_REFERRAL = int(os.getenv("ADS_FOR_ACTIVE_REFERRAL", 30))
     WELCOME_BONUS_AMOUNT = float(os.getenv("WELCOME_BONUS_AMOUNT", 0.1))

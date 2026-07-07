@@ -6,6 +6,7 @@ import logging
 import random
 import string
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -611,7 +612,7 @@ def check_deposit_with_amount():
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
 # ============================================
-# AD REWARD ENDPOINTS
+# AD REWARD ENDPOINT - FIXED WITH DECIMAL
 # ============================================
 
 @app.route('/api/can_watch_ad', methods=['GET'])
@@ -620,6 +621,8 @@ def can_watch_ad():
 
 @app.route('/api/credit_ad_reward', methods=['POST'])
 def credit_ad_reward():
+    from decimal import Decimal
+    
     data = request.json
     telegram_id = data.get('telegram_id')
     if not telegram_id:
@@ -631,20 +634,22 @@ def credit_ad_reward():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        reward = 0.001
-        user.balance += reward
+        reward = Decimal('0.001')
+        user.balance = (user.balance or Decimal('0')) + reward
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
-        user.total_ad_earnings = (user.total_ad_earnings or 0) + reward
+        user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
+        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
         
         session.commit()
         clear_user_cache(telegram_id)
         return jsonify({
             'success': True,
-            'reward': reward,
-            'balance': user.balance
+            'reward': float(reward),
+            'balance': float(user.balance)
         })
     except Exception as e:
         session.rollback()
+        logger.error(f"Error crediting ad reward: {e}")
         return jsonify({'success': False, 'message': str(e)})
     finally:
         session.close()
@@ -655,6 +660,8 @@ def credit_ad_reward():
 
 @app.route('/api/claim_investment', methods=['POST'])
 def claim_investment():
+    from decimal import Decimal
+    
     data = request.json
     telegram_id = data.get('telegram_id')
     field_number = data.get('field_number')
@@ -682,8 +689,8 @@ def claim_investment():
         if investment.unlock_date > now:
             return jsonify({'success': False, 'message': 'Investment is not yet unlocked'})
         
-        profit = investment.expected_return - investment.amount
-        amount_to_credit = investment.expected_return
+        profit = Decimal(str(investment.expected_return)) - Decimal(str(investment.amount))
+        amount_to_credit = Decimal(str(investment.expected_return))
         
         investment.is_locked = False
         investment.is_active = False
@@ -691,15 +698,15 @@ def claim_investment():
         investment.completed_at = now
         investment.principal_returned = True
         
-        user.balance += amount_to_credit
-        user.total_earned += profit
-        user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + profit
-        user.total_earnings_all_time = (user.total_earnings_all_time or 0) + profit
+        user.balance = (user.balance or Decimal('0')) + amount_to_credit
+        user.total_earned = (user.total_earned or Decimal('0')) + profit
+        user.investment_earnings_all_time = (user.investment_earnings_all_time or Decimal('0')) + profit
+        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + profit
         
         payout = DailyPayout(
             user_id=user.id,
             investment_id=investment.id,
-            amount=profit,
+            amount=float(profit),
             day_number=investment.lock_period,
             paid_at=now
         )
@@ -710,8 +717,8 @@ def claim_investment():
         
         return jsonify({
             'success': True,
-            'amount': amount_to_credit,
-            'profit': profit,
+            'amount': float(amount_to_credit),
+            'profit': float(profit),
             'message': f'Successfully claimed ${amount_to_credit:.2f} USDT from Field #{field_number}'
         })
         
@@ -795,6 +802,7 @@ def upgrade_tier():
 
 @app.route('/api/disable_interstitial_ads', methods=['POST'])
 def disable_interstitial_ads():
+    from decimal import Decimal
     from datetime import datetime
     
     data = request.json
@@ -812,10 +820,11 @@ def disable_interstitial_ads():
         if user.interstitial_ads_disabled:
             return jsonify({'success': False, 'message': 'Interstitial ads already disabled'})
         
-        if user.balance < 10:
+        cost = Decimal('10')
+        if user.balance < cost:
             return jsonify({'success': False, 'message': f'Insufficient balance. Need $10.00 USDT (you have ${user.balance:.2f})'})
         
-        user.balance -= 10
+        user.balance = (user.balance or Decimal('0')) - cost
         user.interstitial_ads_disabled = True
         user.interstitial_disabled_at = datetime.utcnow()
         
@@ -825,7 +834,7 @@ def disable_interstitial_ads():
         return jsonify({
             'success': True,
             'message': 'Interstitial ads disabled! You will no longer see ads on button clicks.',
-            'new_balance': user.balance
+            'new_balance': float(user.balance)
         })
     except Exception as e:
         session.rollback()
@@ -947,6 +956,8 @@ def api_get_tasks(telegram_id):
 
 @app.route('/api/claim_task_reward', methods=['POST'])
 def api_claim_task_reward():
+    from decimal import Decimal
+    
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')
@@ -967,7 +978,7 @@ def api_claim_task_reward():
             return jsonify({
                 'success': True,
                 'message': msg,
-                'new_balance': user.balance
+                'new_balance': float(user.balance)
             })
         else:
             return jsonify({'success': False, 'message': msg})
@@ -1047,6 +1058,8 @@ def api_complete_task():
 
 @app.route('/api/claim_task_reward_old', methods=['POST'])
 def api_claim_task_reward_old():
+    from decimal import Decimal
+    
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')
@@ -1067,7 +1080,7 @@ def api_claim_task_reward_old():
             return jsonify({
                 'success': True,
                 'message': msg,
-                'new_balance': user.balance
+                'new_balance': float(user.balance)
             })
         else:
             return jsonify({'success': False, 'message': msg})

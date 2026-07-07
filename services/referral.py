@@ -70,8 +70,8 @@ def award_active_referral_bonus(referrer_id: int, referred_user_id: int, session
         return False, "User not found"
     
     bonus = Decimal('0.03')
-    referrer.balance = Decimal(str(referrer.balance or 0)) + bonus
-    referrer.active_referral_bonus_earned = Decimal(str(referrer.active_referral_bonus_earned or 0)) + bonus
+    referrer.balance = (referrer.balance or Decimal('0')) + bonus
+    referrer.active_referral_bonus_earned = (referrer.active_referral_bonus_earned or Decimal('0')) + bonus
     referrer.total_active_referrals = (referrer.total_active_referrals or 0) + 1
     
     active_ref = session.query(ActiveReferral).filter(
@@ -114,14 +114,14 @@ def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tupl
     if upgrade_cost <= 0:
         return False, "Invalid upgrade path"
     
-    user_balance = Decimal(str(user.balance or 0))
+    user_balance = user.balance or Decimal('0')
     if user_balance < upgrade_cost:
         return False, f"Insufficient balance. Need ${upgrade_cost:.2f} USDT"
     
     user.balance = user_balance - upgrade_cost
     user.referral_tier = new_tier
     user.referral_tier_upgraded_at = datetime.utcnow()
-    user.referral_upgrade_total_spent = Decimal(str(user.referral_upgrade_total_spent or 0)) + upgrade_cost
+    user.referral_upgrade_total_spent = (user.referral_upgrade_total_spent or Decimal('0')) + upgrade_cost
     
     upgrade = ReferralUpgrade(
         user_id=user_id,
@@ -196,7 +196,6 @@ def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> f
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
     """Award 0.1 USDT welcome bonus using task system (no referral required)"""
     from services.task_system import claim_task_reward
-    from decimal import Decimal
     
     user = session.query(User).filter_by(id=user_id).first()
     if not user:

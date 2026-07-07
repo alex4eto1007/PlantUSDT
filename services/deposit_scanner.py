@@ -83,7 +83,6 @@ class DepositScanner:
                         for tx in transactions:
                             if tx.get('to', '').lower() == self.project_wallet:
                                 amount = int(tx.get('value', '0')) / 10**self.decimals
-                                # FIX: Convert both to float for comparison
                                 if abs(float(amount) - float(expected_amount)) < 0.01:
                                     await self._process_deposit(
                                         user=user,
@@ -123,8 +122,9 @@ class DepositScanner:
                 else:
                     logger.info(f"Deposit {tx_hash} found but not processed, processing now...")
                     existing.processed = True
-                    fresh_user.balance = Decimal(str(fresh_user.balance or 0)) + Decimal(str(amount))
-                    fresh_user.total_deposited = Decimal(str(fresh_user.total_deposited or 0)) + Decimal(str(amount))
+                    deposit_amount = Decimal(str(amount))
+                    fresh_user.balance = (fresh_user.balance or Decimal('0')) + deposit_amount
+                    fresh_user.total_deposited = (fresh_user.total_deposited or Decimal('0')) + deposit_amount
                     session.commit()
                     logger.info(f"✅ Deposit processed on Polygon: {fresh_user.telegram_id} +${amount:.2f} USDT")
                     clear_user_cache(fresh_user.telegram_id)
@@ -143,8 +143,9 @@ class DepositScanner:
             )
             session.add(deposit)
             
-            fresh_user.balance = Decimal(str(fresh_user.balance or 0)) + Decimal(str(amount))
-            fresh_user.total_deposited = Decimal(str(fresh_user.total_deposited or 0)) + Decimal(str(amount))
+            deposit_amount = Decimal(str(amount))
+            fresh_user.balance = (fresh_user.balance or Decimal('0')) + deposit_amount
+            fresh_user.total_deposited = (fresh_user.total_deposited or Decimal('0')) + deposit_amount
             
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {fresh_user.telegram_id} +${amount:.2f} USDT")
@@ -314,7 +315,6 @@ class DepositScanner:
                         for tx in transactions:
                             if tx.get('to', '').lower() == self.project_wallet:
                                 amount = int(tx.get('value', '0')) / 10**self.decimals
-                                # FIX: Convert both to float for comparison
                                 if abs(float(amount) - float(expected_amount)) < 0.01:
                                     existing = session.query(Deposit).filter_by(tx_hash=tx.get('hash')).first()
                                     if not existing:
@@ -332,8 +332,9 @@ class DepositScanner:
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT detected and processed on Polygon!'}
                                     elif not existing.processed:
                                         existing.processed = True
-                                        user.balance = Decimal(str(user.balance or 0)) + Decimal(str(amount))
-                                        user.total_deposited = Decimal(str(user.total_deposited or 0)) + Decimal(str(amount))
+                                        deposit_amount = Decimal(str(amount))
+                                        user.balance = (user.balance or Decimal('0')) + deposit_amount
+                                        user.total_deposited = (user.total_deposited or Decimal('0')) + deposit_amount
                                         session.commit()
                                         clear_user_cache(user.telegram_id)
                                         await self._send_notifications(user, amount, tx.get('hash'), bot)
