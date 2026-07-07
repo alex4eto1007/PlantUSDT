@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from config.settings import Config
-from database.models import Base, User, Investment, Deposit, DailyPayout, Withdrawal, UncollectedFee, ReferralUpgrade, ActiveReferral
+from database.models import Base, User, Investment, Deposit, DailyPayout, Withdrawal, UncollectedFee, ReferralUpgrade, ActiveReferral, PendingDepositCheck
 import logging
 from datetime import datetime
 

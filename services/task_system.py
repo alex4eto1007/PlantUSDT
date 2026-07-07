@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from database.models import User, UserTaskProgress
 from database.db_manager import DatabaseManager
@@ -485,7 +486,7 @@ TASKS = [
         "reward": 0.10,
         "condition_type": "welcome_bonus",
         "condition_value": None,
-        "hidden": True  # This hides it from the task list
+        "hidden": True
     }
 ]
 
@@ -509,13 +510,11 @@ def get_task_by_id(task_id: int):
 def get_user_task_progress(user_id: int, session: Session, include_hidden=False):
     """Get all tasks with user progress"""
     try:
-        # Get existing progress records
         progress_records = session.query(UserTaskProgress).filter_by(user_id=user_id).all()
         progress_map = {p.task_id: p for p in progress_records}
         
         result = []
         for task in TASKS:
-            # Skip hidden tasks unless include_hidden is True
             if task.get("hidden", False) and not include_hidden:
                 continue
                 
@@ -552,7 +551,6 @@ def get_user_task_progress(user_id: int, session: Session, include_hidden=False)
         return []
 
 def get_user_stats(user: User, session: Session) -> dict:
-    """Get user stats for task progress display - INCLUDES tasks_earnings"""
     from services.referral import is_referral_active, get_active_referral_count
     
     total_invested = user.total_invested or 0
@@ -560,7 +558,6 @@ def get_user_stats(user: User, session: Session) -> dict:
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
     
-    # Include tasks_earnings in total_earnings
     total_earnings = (user.total_earnings_all_time or 0) + (user.referral_earnings_all_time or 0) + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
     has_invested = total_invested > 0
     
@@ -574,23 +571,18 @@ def get_user_stats(user: User, session: Session) -> dict:
     }
 
 def check_task_conditions(user: User, session: Session) -> list:
-    """Check all tasks and auto-complete any that are now completed"""
     from services.referral import is_referral_active, get_active_referral_count
     
     completed_tasks = []
     
-    # Get user stats
     total_invested = user.total_invested or 0
     total_ads_watched = user.total_ads_watched or 0
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
     total_earnings = (user.total_earnings_all_time or 0) + (user.referral_earnings_all_time or 0) + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
-    
-    # Check if user has ever invested (for first_investment)
     has_invested = total_invested > 0
     
     for task in TASKS:
-        # Skip if already completed
         progress = session.query(UserTaskProgress).filter_by(
             user_id=user.id,
             task_id=task["id"]
@@ -605,30 +597,22 @@ def check_task_conditions(user: User, session: Session) -> list:
         
         if condition_type == "first_investment":
             completed = has_invested
-        
         elif condition_type == "total_invested":
             completed = total_invested >= condition_value
-        
         elif condition_type == "total_ads_watched":
             completed = total_ads_watched >= condition_value
-        
         elif condition_type == "total_referrals":
             completed = total_referrals >= condition_value
-        
         elif condition_type == "total_active_referrals":
             completed = total_active_referrals >= condition_value
-        
         elif condition_type == "total_earnings":
             completed = total_earnings >= condition_value
-        
         elif condition_type == "welcome_bonus":
-            # User must be active and not already claimed
             if not user.has_received_welcome_bonus:
                 if is_referral_active(user.id, session):
                     completed = True
         
         if completed:
-            # Mark task as completed
             if not progress:
                 progress = UserTaskProgress(
                     user_id=user.id,
@@ -650,7 +634,8 @@ def check_task_conditions(user: User, session: Session) -> list:
     return completed_tasks
 
 def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
-    """Claim reward for a completed task"""
+    from decimal import Decimal
+    
     try:
         task = get_task_by_id(task_id)
         if not task:
@@ -674,10 +659,9 @@ def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
         if not user:
             return False, "User not found"
         
-        # Award reward
-        reward = task["reward"]
-        user.balance += reward
-        user.tasks_earnings = (user.tasks_earnings or 0) + reward
+        reward = Decimal(str(task["reward"]))
+        user.balance = Decimal(str(user.balance or 0)) + reward
+        user.tasks_earnings = Decimal(str(user.tasks_earnings or 0)) + reward
         
         progress.claimed = True
         progress.claimed_at = datetime.utcnow()
@@ -691,29 +675,26 @@ def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
         return False, str(e)
 
 def get_task_stats(user_id: int, session: Session) -> dict:
-    """Get task statistics for a user"""
     try:
         progress_records = session.query(UserTaskProgress).filter_by(user_id=user_id).all()
-        # Only count visible tasks (exclude hidden ones)
         visible_task_ids = [task["id"] for task in TASKS if not task.get("hidden", False)]
         total_tasks = len(visible_task_ids)
         
         completed_tasks = sum(1 for p in progress_records if p.completed and p.task_id in visible_task_ids)
         claimed_tasks = sum(1 for p in progress_records if p.claimed and p.task_id in visible_task_ids)
         
-        # Calculate total rewards claimed
-        total_claimed_amount = 0
+        total_claimed_amount = Decimal('0')
         for p in progress_records:
             if p.claimed:
                 task = get_task_by_id(p.task_id)
                 if task:
-                    total_claimed_amount += task["reward"]
+                    total_claimed_amount += Decimal(str(task["reward"]))
         
         return {
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
             "claimed_tasks": claimed_tasks,
-            "total_claimed_amount": total_claimed_amount,
+            "total_claimed_amount": float(total_claimed_amount),
             "progress_percentage": (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
         }
     except Exception as e:

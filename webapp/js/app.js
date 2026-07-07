@@ -50,7 +50,6 @@ function safePopupWithCallback(options, callback) {
 // SHOW INTERSTITIAL AD ON BUTTON CLICKS
 // ============================================
 function showInterstitialIfNeeded() {
-    // Check if user has disabled interstitial ads
     if (window.interstitialAdsDisabled) {
         console.log("🔇 Interstitial ads disabled by user");
         return;
@@ -137,7 +136,6 @@ async function loadUserData() {
             await updateReferralStats(userId);
             await updateWelcomeBonusButton(data);
             
-            // Check if interstitial ads are disabled
             if (data.interstitial_ads_disabled) {
                 window.interstitialAdsDisabled = true;
                 const disableBtn = document.getElementById('disableAdsBtn');
@@ -1536,7 +1534,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASK SYSTEM - 45 HARDCODED TASKS (Task 45 Hidden)
+// TASK SYSTEM - 44 VISIBLE TASKS (Task 45 Hidden)
 // ============================================
 
 async function loadTasks() {
@@ -1552,7 +1550,6 @@ async function loadTasks() {
                 let completedCount = 0;
                 let totalTasks = 0;
                 
-                // Show newly completed tasks notification
                 if (data.newly_completed && data.newly_completed.length > 0) {
                     const taskNames = data.newly_completed.map(id => {
                         const task = data.tasks.find(t => t.task_id === id);
@@ -1568,11 +1565,9 @@ async function loadTasks() {
                     }
                 }
                 
-                // Filter out claimed tasks (disappear after claiming)
                 const visibleTasks = data.tasks.filter(task => !task.claimed);
                 totalTasks = visibleTasks.length;
                 
-                // Group tasks by category
                 const categories = {
                     'investments': { icon: '🌱', label: 'Investments' },
                     'ads': { icon: '📺', label: 'Watch Ads' },
@@ -1581,7 +1576,6 @@ async function loadTasks() {
                     'milestones': { icon: '🏆', label: 'Milestones' }
                 };
                 
-                // Sort tasks by category and ID
                 const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
                 
                 let currentCategory = '';
@@ -1590,7 +1584,6 @@ async function loadTasks() {
                     const isClaimed = task.claimed;
                     if (isCompleted && !isClaimed) completedCount++;
                     
-                    // Category header
                     if (task.category !== currentCategory) {
                         currentCategory = task.category;
                         const catInfo = categories[currentCategory] || { icon: '📌', label: currentCategory };
@@ -1601,16 +1594,13 @@ async function loadTasks() {
                         `;
                     }
                     
-                    // Calculate progress for display using user_stats from API
                     const userStats = data.user_stats || {};
                     let progressText = '';
                     let progressPercent = 0;
                     
-                    // Get the condition value from the task
                     const conditionValue = getTaskConditionValue(task.task_id);
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     
-                    // Handle progress display
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
                             progressText = `${currentValue.toFixed(3)}/${conditionValue}`;
@@ -1636,7 +1626,7 @@ async function loadTasks() {
                         '#ffd93d' : 
                         '#495670';
                     
-                    const rewardDisplay = task.reward < 0.01 ? '0.00' : task.reward.toFixed(2);
+                    const rewardDisplay = task.reward < 0.01 ? '0.00' : task.reward.toFixed(3);
                     
                     html += `
                         <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(255,217,61,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
@@ -1663,7 +1653,6 @@ async function loadTasks() {
                     `;
                 }
                 
-                // Show "All tasks completed" message when no tasks left
                 if (totalTasks === 0) {
                     html = `
                         <div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);">
@@ -1690,58 +1679,17 @@ async function loadTasks() {
     }
 }
 
-// Helper function to get task condition value
 function getTaskConditionValue(taskId) {
     const taskConditions = {
-        1: 1,
-        2: 10,
-        3: 50,
-        4: 100,
-        5: 200,
-        6: 500,
-        7: 1000,
-        8: 1,
-        9: 5,
-        10: 10,
-        11: 25,
-        12: 50,
-        13: 100,
-        14: 250,
-        15: 500,
-        16: 1000,
-        17: 1,
-        18: 3,
-        19: 5,
-        20: 10,
-        21: 25,
-        22: 50,
-        23: 100,
-        24: 250,
-        25: 500,
-        26: 1000,
-        27: 1,
-        28: 3,
-        29: 5,
-        30: 10,
-        31: 25,
-        32: 50,
-        33: 100,
-        34: 250,
-        35: 500,
-        36: 1000,
-        37: 1,
-        38: 10,
-        39: 25,
-        40: 50,
-        41: 100,
-        42: 250,
-        43: 500,
-        44: 1000
+        1: 1, 2: 10, 3: 50, 4: 100, 5: 200, 6: 500, 7: 1000,
+        8: 1, 9: 5, 10: 10, 11: 25, 12: 50, 13: 100, 14: 250, 15: 500, 16: 1000,
+        17: 1, 18: 3, 19: 5, 20: 10, 21: 25, 22: 50, 23: 100, 24: 250, 25: 500, 26: 1000,
+        27: 1, 28: 3, 29: 5, 30: 10, 31: 25, 32: 50, 33: 100, 34: 250, 35: 500, 36: 1000,
+        37: 1, 38: 10, 39: 25, 40: 50, 41: 100, 42: 250, 43: 500, 44: 1000
     };
     return taskConditions[taskId] || null;
 }
 
-// Helper function to get current value for a task
 function getTaskCurrentValue(taskId, userStats) {
     const taskCurrentValues = {
         1: userStats.has_invested ? 1 : 0,
@@ -1820,7 +1768,7 @@ async function claimTaskReward(taskId) {
                 
                 if (data.success) {
                     const reward = parseFloat(data.message.match(/\d+\.?\d*/)?.[0] || '0');
-                    const rewardDisplay = reward < 0.01 ? '0.00' : reward.toFixed(2);
+                    const rewardDisplay = reward < 0.01 ? '0.00' : reward.toFixed(3);
                     
                     safePopup({
                         title: '🎉 Reward Claimed!',
@@ -1877,12 +1825,6 @@ window.loadTasks = loadTasks;
 window.claimTaskReward = claimTaskReward;
 
 console.log('✅ PlantUSDT app loaded successfully!');
-console.log('📢 Claim function available:', typeof claimInvestment);
-console.log('📢 Watch ad function available:', typeof watchRewardedAd);
-console.log('📢 Unlimited ads - $0.001 reward per ad');
-console.log('📢 Interstitial ads on button clicks - NO REWARD');
-console.log('📢 No popups - Only video ads!');
-console.log('📢 Active referrals: 30 ads = active status');
 console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
-console.log('📢 Disable interstitial ads: $10');
 console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
+console.log('📢 All amounts displayed with 3 decimal places');

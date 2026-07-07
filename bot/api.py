@@ -285,41 +285,40 @@ def get_user():
             if inv.is_active or not inv.is_completed:
                 fields.append({
                     'field_number': inv.field_number,
-                    'amount': inv.amount,
-                    'total_return': inv.expected_return,
-                    'paid_out': inv.paid_out or 0,
+                    'amount': float(inv.amount),
+                    'total_return': float(inv.expected_return),
+                    'paid_out': float(inv.paid_out or 0),
                     'start_date': inv.start_date.isoformat(),
                     'is_active': inv.is_active,
                     'next_payout_date': None,
                     'lock_period': inv.lock_period,
                     'unlock_date': inv.unlock_date.isoformat() if inv.unlock_date else None,
                     'is_locked': inv.is_locked,
-                    'expected_return': inv.expected_return
+                    'expected_return': float(inv.expected_return)
                 })
         
         level1_refs = session.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         
-        referral_earned = (user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0)
-        investment_earnings = user.investment_earnings_all_time or 0
-        # Include tasks_earnings in total_earnings
-        total_earnings = referral_earned + investment_earnings + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
+        referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
+        investment_earnings = float(user.investment_earnings_all_time or 0)
+        total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
         
         response = {
             'success': True,
-            'balance': user.balance,
-            'total_invested': user.total_invested or 0,
-            'total_deposited': user.total_deposited or 0,
+            'balance': round(float(user.balance or 0), 3),
+            'total_invested': round(float(user.total_invested or 0), 3),
+            'total_deposited': round(float(user.total_deposited or 0), 3),
             'fields': fields,
             'referrals': level1_count,
-            'referral_earned': referral_earned,
-            'investment_earnings': investment_earnings,
-            'total_earnings': total_earnings,
+            'referral_earned': round(referral_earned, 3),
+            'investment_earnings': round(investment_earnings, 3),
+            'total_earnings': round(total_earnings, 3),
             'level1_count': level1_count,
-            'total_ad_earnings': user.total_ad_earnings or 0,
+            'total_ad_earnings': round(float(user.total_ad_earnings or 0), 3),
             'interstitial_ads_disabled': user.interstitial_ads_disabled or False,
             'has_received_welcome_bonus': user.has_received_welcome_bonus or False,
-            'tasks_earnings': user.tasks_earnings or 0
+            'tasks_earnings': round(float(user.tasks_earnings or 0), 3)
         }
         
         set_cached_user(telegram_id, response)
@@ -347,7 +346,7 @@ def get_real_history():
         for d in deposits:
             transactions.append({
                 'type': 'deposit',
-                'amount': d.amount,
+                'amount': round(float(d.amount), 3),
                 'status': 'completed',
                 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
             })
@@ -356,7 +355,7 @@ def get_real_history():
         for p in payouts:
             transactions.append({
                 'type': 'earnings',
-                'amount': p.amount,
+                'amount': round(float(p.amount), 3),
                 'status': 'completed',
                 'date': p.paid_at.strftime('%Y-%m-%d %H:%M')
             })
@@ -365,7 +364,7 @@ def get_real_history():
         if referral_earnings > 0:
             transactions.append({
                 'type': 'referral_earnings',
-                'amount': referral_earnings,
+                'amount': round(float(referral_earnings), 3),
                 'status': 'completed',
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
@@ -373,16 +372,15 @@ def get_real_history():
         if user.total_ad_earnings and user.total_ad_earnings > 0:
             transactions.append({
                 'type': 'ad_earnings',
-                'amount': user.total_ad_earnings,
+                'amount': round(float(user.total_ad_earnings), 3),
                 'status': 'completed',
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
         
-        # Add tasks earnings to history (includes welcome bonus)
         if user.tasks_earnings and user.tasks_earnings > 0:
             transactions.append({
                 'type': 'tasks_earnings',
-                'amount': user.tasks_earnings,
+                'amount': round(float(user.tasks_earnings), 3),
                 'status': 'completed',
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
@@ -391,7 +389,7 @@ def get_real_history():
         for w in withdrawals:
             transactions.append({
                 'type': 'withdraw',
-                'amount': w.amount,
+                'amount': round(float(w.amount), 3),
                 'status': w.status,
                 'date': w.created_at.strftime('%Y-%m-%d %H:%M')
             })
@@ -415,12 +413,12 @@ def get_investments(telegram_id):
         for inv in investments:
             transactions.append({
                 'type': 'investment',
-                'amount': inv.amount,
+                'amount': round(float(inv.amount), 3),
                 'status': 'active' if inv.is_active else 'completed',
                 'date': inv.start_date.strftime('%Y-%m-%d %H:%M'),
                 'field': inv.field_number,
-                'paid_out': inv.paid_out,
-                'total_return': inv.expected_return
+                'paid_out': round(float(inv.paid_out or 0), 3),
+                'total_return': round(float(inv.expected_return), 3)
             })
         
         return jsonify({'transactions': transactions})
@@ -727,7 +725,6 @@ def claim_investment():
 
 @app.route('/api/referral_tiers', methods=['GET'])
 def get_referral_tiers():
-    """Get all referral tiers with pricing"""
     from services.referral import REFERRAL_TIERS
     return jsonify({
         'success': True,
@@ -736,7 +733,6 @@ def get_referral_tiers():
 
 @app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
 def get_referral_stats_full(telegram_id):
-    """Get full referral stats including tier info"""
     from services.referral import get_referral_stats
     
     session = db.get_session()
@@ -757,7 +753,6 @@ def get_referral_stats_full(telegram_id):
 
 @app.route('/api/upgrade_tier', methods=['POST'])
 def upgrade_tier():
-    """Upgrade user's referral tier"""
     from services.referral import upgrade_referral_tier
     
     data = request.json
@@ -797,7 +792,6 @@ def upgrade_tier():
 
 @app.route('/api/disable_interstitial_ads', methods=['POST'])
 def disable_interstitial_ads():
-    """User pays 10 USDT to disable interstitial ads"""
     from datetime import datetime
     
     data = request.json
@@ -818,7 +812,6 @@ def disable_interstitial_ads():
         if user.balance < 10:
             return jsonify({'success': False, 'message': f'Insufficient balance. Need $10.00 USDT (you have ${user.balance:.2f})'})
         
-        # Deduct 10 USDT
         user.balance -= 10
         user.interstitial_ads_disabled = True
         user.interstitial_disabled_at = datetime.utcnow()
@@ -839,7 +832,6 @@ def disable_interstitial_ads():
 
 @app.route('/api/get_active_referrals/<int:telegram_id>', methods=['GET'])
 def get_active_referrals(telegram_id):
-    """Get count and list of active referrals"""
     from services.referral import get_active_referral_count, get_active_referral_list, is_referral_active
     
     session = db.get_session()
@@ -851,7 +843,6 @@ def get_active_referrals(telegram_id):
         active_count = get_active_referral_count(user.id, session)
         active_list = get_active_referral_list(user.id, session)
         
-        # Get total referrals count
         total_referrals = session.query(User).filter_by(referred_by=user.id).count()
         
         return jsonify({
@@ -867,7 +858,6 @@ def get_active_referrals(telegram_id):
 
 @app.route('/api/claim_welcome_bonus', methods=['POST'])
 def claim_welcome_bonus():
-    """User claims 0.1 USDT welcome bonus (NO REFERRAL REQUIRED)"""
     from services.referral import award_welcome_bonus
     
     data = request.json
@@ -901,7 +891,6 @@ def claim_welcome_bonus():
 
 @app.route('/api/get_tasks/<int:telegram_id>', methods=['GET'])
 def get_tasks(telegram_id):
-    """Get all tasks for a user (deprecated - use /api/tasks)"""
     from services.referral import get_user_tasks as get_referral_tasks
     
     session = db.get_session()
@@ -929,21 +918,16 @@ def get_tasks(telegram_id):
 
 @app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
 def api_get_tasks(telegram_id):
-    """Get all tasks with user progress and stats (Task 45 hidden from display)"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        # Check and auto-complete any tasks
         completed = check_task_conditions(user, session)
         
-        # Get all tasks with progress (exclude hidden tasks from display)
         tasks = get_user_task_progress(user.id, session, include_hidden=False)
         stats = get_task_stats(user.id, session)
-        
-        # Get user stats for progress display
         user_stats = get_user_stats(user, session)
         
         return jsonify({
@@ -960,7 +944,6 @@ def api_get_tasks(telegram_id):
 
 @app.route('/api/claim_task_reward', methods=['POST'])
 def api_claim_task_reward():
-    """Claim reward for a completed task"""
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')
@@ -993,7 +976,6 @@ def api_claim_task_reward():
 
 @app.route('/api/task_stats/<int:telegram_id>', methods=['GET'])
 def api_task_stats(telegram_id):
-    """Get task statistics for a user"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -1016,7 +998,6 @@ def api_task_stats(telegram_id):
 
 @app.route('/api/get_user_tasks/<int:telegram_id>', methods=['GET'])
 def api_get_user_tasks(telegram_id):
-    """Get all tasks for a user with completion and claim status"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -1035,7 +1016,6 @@ def api_get_user_tasks(telegram_id):
 
 @app.route('/api/complete_task', methods=['POST'])
 def api_complete_task():
-    """Complete a task for the user"""
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')
@@ -1064,7 +1044,6 @@ def api_complete_task():
 
 @app.route('/api/claim_task_reward_old', methods=['POST'])
 def api_claim_task_reward_old():
-    """Claim reward for a completed task (deprecated)"""
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')
@@ -1101,23 +1080,18 @@ def api_claim_task_reward_old():
 
 @app.route('/deposit')
 def deposit_page():
-    """Serve the deposit page"""
     return send_from_directory(get_webapp_dir(), 'deposit_new.html')
 
 @app.route('/js/<path:filename>')
 def serve_js(filename):
-    """Serve JavaScript files"""
     return send_from_directory(os.path.join(get_webapp_dir(), 'js'), filename)
 
 @app.route('/css/<path:filename>')
 def serve_css(filename):
-    """Serve CSS files"""
     return send_from_directory(os.path.join(get_webapp_dir(), 'css'), filename)
 
 @app.route('/<path:filename>')
 def serve_static(filename):
-    """Serve any other static file from webapp directory"""
-    # Skip API routes
     if filename.startswith('api/'):
         return jsonify({'success': False, 'message': 'Not found'}), 404
     return send_from_directory(get_webapp_dir(), filename)
