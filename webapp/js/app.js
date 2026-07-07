@@ -1809,6 +1809,11 @@ function getTaskCurrentValue(taskId, userStats) {
 async function claimTaskReward(taskId) {
     const userId = tgUser ? tgUser.id : '0';
     
+    if (window.claimingInProgress) {
+        console.log('⏳ Claim already in progress...');
+        return;
+    }
+    
     safePopupWithCallback({
         title: '💰 Claim Reward',
         message: 'Claim your reward for completing this task?',
@@ -1818,6 +1823,7 @@ async function claimTaskReward(taskId) {
         ]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
+            window.claimingInProgress = true;
             try {
                 const response = await fetch(`${API_BASE}/api/claim_task_reward`, {
                     method: 'POST',
@@ -1827,7 +1833,22 @@ async function claimTaskReward(taskId) {
                         task_id: taskId
                     })
                 });
+                
                 const data = await response.json();
+                console.log('📡 Claim response:', data);
+                
+                // Handle "Task not found" as already claimed
+                if (data.success === false && data.message === "Task not found") {
+                    safePopup({
+                        title: '✅ Already Claimed!',
+                        message: 'This task was already claimed.',
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadTasks();
+                    loadUserData();
+                    window.claimingInProgress = false;
+                    return;
+                }
                 
                 if (data.success) {
                     const reward = parseFloat(data.message.match(/\d+\.?\d*/)?.[0] || '0');
@@ -1848,12 +1869,16 @@ async function claimTaskReward(taskId) {
                     });
                 }
             } catch (error) {
-                console.error('Error claiming reward:', error);
+                console.error('❌ Error claiming reward:', error);
                 safePopup({
-                    title: '❌ Error',
-                    message: 'Network error. Please try again.',
+                    title: 'ℹ️ Check Your Balance',
+                    message: 'Please refresh the app to see if your reward was credited.',
                     buttons: [{type: 'ok'}]
                 });
+                loadTasks();
+                loadUserData();
+            } finally {
+                window.claimingInProgress = false;
             }
         }
     });
