@@ -59,7 +59,7 @@ class DepositScanner:
                 user = session.query(User).filter_by(id=pending_check.user_id).first()
                 if user:
                     try:
-                        await self._check_user_deposit_with_amount(user, pending_check.amount, bot)
+                        await self._check_user_deposit_with_amount(user, float(pending_check.amount), bot)
                         pending_check.checked = True
                         session.commit()
                     except Exception as e:
@@ -83,7 +83,8 @@ class DepositScanner:
                         for tx in transactions:
                             if tx.get('to', '').lower() == self.project_wallet:
                                 amount = int(tx.get('value', '0')) / 10**self.decimals
-                                if abs(amount - expected_amount) < 0.01:
+                                # FIX: Convert both to float for comparison
+                                if abs(float(amount) - float(expected_amount)) < 0.01:
                                     await self._process_deposit(
                                         user=user,
                                         amount=amount,
@@ -294,7 +295,7 @@ class DepositScanner:
                 processed=True
             ).order_by(Deposit.id.desc()).first()
             
-            if existing_deposit and abs(existing_deposit.amount - expected_amount) < 0.01:
+            if existing_deposit and abs(float(existing_deposit.amount) - float(expected_amount)) < 0.01:
                 time_diff = (datetime.utcnow() - existing_deposit.confirmed_at).total_seconds() / 60
                 if time_diff < 60:
                     pending.checked = True
@@ -313,7 +314,8 @@ class DepositScanner:
                         for tx in transactions:
                             if tx.get('to', '').lower() == self.project_wallet:
                                 amount = int(tx.get('value', '0')) / 10**self.decimals
-                                if abs(amount - expected_amount) < 0.01:
+                                # FIX: Convert both to float for comparison
+                                if abs(float(amount) - float(expected_amount)) < 0.01:
                                     existing = session.query(Deposit).filter_by(tx_hash=tx.get('hash')).first()
                                     if not existing:
                                         await self._process_deposit(
