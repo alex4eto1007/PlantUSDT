@@ -88,7 +88,7 @@ TASKS = [
     },
 
     # ============================================
-    # SECTION 2: ADS (9 tasks)
+    # SECTION 2: ADS (9 tasks) - UPDATED REWARDS
     # ============================================
     {
         "id": 8,
@@ -96,7 +96,7 @@ TASKS = [
         "icon": "📺",
         "title": "Watch 1 Ad",
         "description": "Watch your first rewarded ad",
-        "reward": 0.002,
+        "reward": 0.01,
         "condition_type": "total_ads_watched",
         "condition_value": 1
     },
@@ -106,7 +106,7 @@ TASKS = [
         "icon": "📺",
         "title": "Watch 5 Ads",
         "description": "Watch 5 ads total",
-        "reward": 0.004,
+        "reward": 0.02,
         "condition_type": "total_ads_watched",
         "condition_value": 5
     },
@@ -116,7 +116,7 @@ TASKS = [
         "icon": "📺",
         "title": "Watch 10 Ads",
         "description": "Watch 10 ads total",
-        "reward": 0.01,
+        "reward": 0.03,
         "condition_type": "total_ads_watched",
         "condition_value": 10
     },
@@ -126,7 +126,7 @@ TASKS = [
         "icon": "📺",
         "title": "Watch 25 Ads",
         "description": "Watch 25 ads total",
-        "reward": 0.025,
+        "reward": 0.04,
         "condition_type": "total_ads_watched",
         "condition_value": 25
     },

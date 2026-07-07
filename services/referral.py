@@ -19,7 +19,6 @@ TIER_ORDER = ["free", "bronze", "silver", "gold", "diamond"]
 
 db = DatabaseManager()
 
-
 def is_referral_active(user_id: int, session: Session) -> bool:
     """Check if a user qualifies as an active referral (30 ads OR 1 investment)"""
     # Check if user has completed at least one investment
@@ -37,7 +36,6 @@ def is_referral_active(user_id: int, session: Session) -> bool:
         return True
     
     return False
-
 
 def check_and_award_active_referrals(user_id: int, session: Session):
     """Check if any active referrals should be awarded"""
@@ -57,7 +55,6 @@ def check_and_award_active_referrals(user_id: int, session: Session):
     # Award all pending bonuses
     for referral in pending:
         award_active_referral_bonus(referral.referrer_id, referral.referred_user_id, session)
-
 
 def award_active_referral_bonus(referrer_id: int, referred_user_id: int, session: Session):
     """Award 0.03 USDT bonus for active referral"""
@@ -98,7 +95,6 @@ def award_active_referral_bonus(referrer_id: int, referred_user_id: int, session
     logger.info(f"✅ Active referral bonus awarded: {referrer.telegram_id} +0.03 USDT from {referred.telegram_id}")
     
     return True, f"Awarded 0.03 USDT active referral bonus!"
-
 
 def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tuple:
     """Upgrade user's referral tier"""
@@ -152,7 +148,6 @@ def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tupl
     
     return True, f"✅ Upgraded to {REFERRAL_TIERS[new_tier]['emoji']} {new_tier.title()} tier! Bonus: {REFERRAL_TIERS[new_tier]['bonus_percent']}%"
 
-
 def get_referral_stats(user_id: int, session: Session) -> dict:
     """Get referral statistics for a user"""
     user = session.query(User).filter_by(id=user_id).first()
@@ -201,7 +196,6 @@ def get_referral_stats(user_id: int, session: Session) -> dict:
         "next_tier_bonus": REFERRAL_TIERS[next_tier]["bonus_percent"] if next_tier else None
     }
 
-
 def get_referral_bonus_percent(user_id: int, session: Session) -> int:
     """Get the referral bonus percentage for a user based on their tier"""
     user = session.query(User).filter_by(id=user_id).first()
@@ -211,44 +205,39 @@ def get_referral_bonus_percent(user_id: int, session: Session) -> int:
     tier = user.referral_tier or "free"
     return REFERRAL_TIERS[tier]["bonus_percent"]
 
-
 def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> float:
     """Calculate referral bonus based on user's tier"""
     bonus_percent = get_referral_bonus_percent(user_id, session)
     return amount * (bonus_percent / 100)
 
-
 # ============================================
-# WELCOME BONUS - FIXED
+# WELCOME BONUS - NO REFERRAL REQUIRED
 # ============================================
 
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
-    """Award 0.1 USDT one-time bonus to referred user when they become active"""
+    """Award 0.1 USDT one-time bonus to user when they become active (no referral required)"""
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
         return False, "User not found"
-    
-    # Check if user was referred
-    if not user.referred_by:
-        return False, "You were not referred by anyone, so you are not eligible for the welcome bonus."
     
     # Check if already claimed
     if user.has_received_welcome_bonus:
         return False, "Welcome bonus already claimed"
     
-    # Check if user is active
+    # Check if user is active (invested OR watched 30 ads) - NO REFERRAL REQUIRED
     if not is_referral_active(user_id, session):
         return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
     
-    # Award 0.1 USDT
-    user.balance += 0.1
+    # Award 0.1 USDT - add to tasks_earnings so it appears in history
+    reward = 0.1
+    user.balance += reward
+    user.tasks_earnings = (user.tasks_earnings or 0) + reward
     user.has_received_welcome_bonus = True
     user.welcome_bonus_claimed_at = datetime.utcnow()
     
     session.commit()
-    logger.info(f"✅ Welcome bonus awarded to user {user_id}: +0.1 USDT")
+    logger.info(f"✅ Welcome bonus awarded to user {user_id}: +0.1 USDT (tasks_earnings)")
     return True, "Welcome bonus of 0.1 USDT awarded!"
-
 
 def get_active_referral_count(user_id: int, session: Session) -> int:
     """Get count of active referrals (users who qualify for 0.03 USDT bonus)"""
@@ -258,7 +247,6 @@ def get_active_referral_count(user_id: int, session: Session) -> int:
         if is_referral_active(ref.id, session):
             active_count += 1
     return active_count
-
 
 def get_active_referral_list(user_id: int, session: Session) -> list:
     """Get list of active referrals with details"""
@@ -278,7 +266,6 @@ def get_active_referral_list(user_id: int, session: Session) -> list:
                 'is_active': True
             })
     return active_list
-
 
 def get_user_tasks(user_id: int, session: Session) -> dict:
     """Get all tasks for a user with completion status"""

@@ -1412,7 +1412,7 @@ async function claimWelcomeBonus() {
     
     safePopupWithCallback({
         title: '🎁 Welcome Bonus',
-        message: 'Claim 0.1 USDT as a welcome bonus!\n\nRequirement: Invest at least once OR watch 30 ads.',
+        message: 'Claim 0.1 USDT as a welcome bonus!\n\nRequirement: Invest at least once OR watch 30 ads.\n\nNo referral needed! 🎉',
         buttons: [
             {id: 'cancel', type: 'cancel'},
             {id: 'claim', type: 'ok', text: '🎁 Claim'}
@@ -1712,7 +1712,7 @@ function getTaskConditionValue(taskId) {
 // Helper function to get current value for a task
 function getTaskCurrentValue(taskId, userStats) {
     const taskCurrentValues = {
-        1: userStats.has_invested ? 1 : 0,
+        1: userStats.has_invested ? 1 : 0,  // First Investment - shows 0/1 or 1/1
         2: userStats.total_invested || 0,
         3: userStats.total_invested || 0,
         4: userStats.total_invested || 0,
@@ -1853,6 +1853,6 @@ console.log('📢 Unlimited ads - $0.001 reward per ad');
 console.log('📢 Interstitial ads on button clicks - NO REWARD');
 console.log('📢 No popups - Only video ads!');
 console.log('📢 Active referrals: 30 ads = active status');
-console.log('📢 Welcome bonus: 0.1 USDT for referred users');
+console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
 console.log('📢 Disable interstitial ads: $10');
 console.log('📢 Task management system active with 44 tasks');

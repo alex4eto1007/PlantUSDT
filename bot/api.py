@@ -302,6 +302,7 @@ def get_user():
         
         referral_earned = (user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0)
         investment_earnings = user.investment_earnings_all_time or 0
+        # Include tasks_earnings in total_earnings
         total_earnings = referral_earned + investment_earnings + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
         
         response = {
@@ -377,7 +378,7 @@ def get_real_history():
                 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
             })
         
-        # Add tasks earnings to history
+        # Add tasks earnings to history (includes welcome bonus)
         if user.tasks_earnings and user.tasks_earnings > 0:
             transactions.append({
                 'type': 'tasks_earnings',
@@ -866,7 +867,7 @@ def get_active_referrals(telegram_id):
 
 @app.route('/api/claim_welcome_bonus', methods=['POST'])
 def claim_welcome_bonus():
-    """Referred user claims 0.1 USDT welcome bonus"""
+    """Referred user claims 0.1 USDT welcome bonus (NO REFERRAL REQUIRED)"""
     from services.referral import award_welcome_bonus
     
     data = request.json
@@ -1061,9 +1062,9 @@ def api_complete_task():
     finally:
         session.close()
 
-@app.route('/api/claim_task_reward', methods=['POST'])
+@app.route('/api/claim_task_reward_old', methods=['POST'])
 def api_claim_task_reward_old():
-    """Claim reward for a completed task (deprecated - use /api/claim_task_reward)"""
+    """Claim reward for a completed task (deprecated)"""
     data = request.json
     telegram_id = data.get('telegram_id')
     task_id = data.get('task_id')
