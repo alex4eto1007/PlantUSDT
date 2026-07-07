@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from telegram import Bot
 from config.settings import Config
 
@@ -10,9 +11,10 @@ class NotificationService:
     
     async def send_deposit_notification(self, user_id: int, amount: float, tx_hash: str):
         try:
+            amount_decimal = Decimal(str(amount))
             message = (
                 f"💰 **Deposit Received on Polygon!**\n\n"
-                f"Amount: **${amount:.2f} USDT**\n"
+                f"Amount: **${amount_decimal:.2f} USDT**\n"
                 f"Network: **Polygon** ⛓️\n"
                 f"TX: `{tx_hash[:10]}...{tx_hash[-8:]}`\n\n"
                 f"Your balance has been updated! 🌱\n"
@@ -29,12 +31,14 @@ class NotificationService:
     
     async def send_unlock_notification(self, user_id: int, field_number: int, amount: float, profit: float, lock_period: int):
         try:
-            total_return = amount + profit
+            amount_decimal = Decimal(str(amount))
+            profit_decimal = Decimal(str(profit))
+            total_return = amount_decimal + profit_decimal
             message = (
                 f"🎉 **Field #{field_number} Unlocked!**\n\n"
                 f"Your {lock_period}-day investment is complete!\n"
-                f"💰 Amount invested: **${amount:.2f}**\n"
-                f"📈 Profit earned: **+${profit:.2f}**\n"
+                f"💰 Amount invested: **${amount_decimal:.2f}**\n"
+                f"📈 Profit earned: **+${profit_decimal:.2f}**\n"
                 f"💵 Total received: **${total_return:.2f}**\n"
                 f"⛓️ Network: **Polygon**\n\n"
                 f"Your funds are now in your balance! 🌱"
@@ -50,6 +54,7 @@ class NotificationService:
     
     async def send_referral_notification(self, referrer_id: int, amount: float, referred_user):
         try:
+            amount_decimal = Decimal(str(amount))
             if referred_user:
                 if hasattr(referred_user, 'username') and referred_user.username:
                     name = f"@{referred_user.username}"
@@ -63,7 +68,7 @@ class NotificationService:
             message = (
                 f"🎁 **Referral Bonus Earned!**\n\n"
                 f"Your referral **{name}** made a deposit on Polygon!\n"
-                f"You earned **${amount:.2f} USDT**\n"
+                f"You earned **${amount_decimal:.2f} USDT**\n"
                 f"💰 This has been added to your balance!\n"
                 f"⛓️ Network: **Polygon**\n\n"
                 f"Keep sharing your referral link to earn more! 👥"

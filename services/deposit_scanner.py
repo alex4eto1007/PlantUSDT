@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 from datetime import datetime, timedelta
+from decimal import Decimal
 from database.db_manager import DatabaseManager
 from database.models import User, Deposit, PendingDepositCheck
 from config.settings import Config
@@ -121,8 +122,8 @@ class DepositScanner:
                 else:
                     logger.info(f"Deposit {tx_hash} found but not processed, processing now...")
                     existing.processed = True
-                    fresh_user.balance += amount
-                    fresh_user.total_deposited += amount
+                    fresh_user.balance = Decimal(str(fresh_user.balance or 0)) + Decimal(str(amount))
+                    fresh_user.total_deposited = Decimal(str(fresh_user.total_deposited or 0)) + Decimal(str(amount))
                     session.commit()
                     logger.info(f"✅ Deposit processed on Polygon: {fresh_user.telegram_id} +${amount:.2f} USDT")
                     clear_user_cache(fresh_user.telegram_id)
@@ -141,8 +142,8 @@ class DepositScanner:
             )
             session.add(deposit)
             
-            fresh_user.balance += amount
-            fresh_user.total_deposited += amount
+            fresh_user.balance = Decimal(str(fresh_user.balance or 0)) + Decimal(str(amount))
+            fresh_user.total_deposited = Decimal(str(fresh_user.total_deposited or 0)) + Decimal(str(amount))
             
             session.commit()
             logger.info(f"✅ Deposit processed on Polygon: {fresh_user.telegram_id} +${amount:.2f} USDT")
@@ -189,6 +190,7 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error sending deposit notification: {e}")
         
+        # Send to transaction channel
         try:
             channel_message = (
                 f"💰 **New Deposit!**\n"
@@ -328,8 +330,8 @@ class DepositScanner:
                                         return {'success': True, 'message': f'Deposit of ${amount:.2f} USDT detected and processed on Polygon!'}
                                     elif not existing.processed:
                                         existing.processed = True
-                                        user.balance += amount
-                                        user.total_deposited += amount
+                                        user.balance = Decimal(str(user.balance or 0)) + Decimal(str(amount))
+                                        user.total_deposited = Decimal(str(user.total_deposited or 0)) + Decimal(str(amount))
                                         session.commit()
                                         clear_user_cache(user.telegram_id)
                                         await self._send_notifications(user, amount, tx.get('hash'), bot)

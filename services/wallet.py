@@ -1,4 +1,5 @@
 from web3 import Web3
+from decimal import Decimal
 from config.settings import Config
 import logging
 
@@ -39,7 +40,7 @@ class WalletService:
                 'data': data
             })
             balance = int(result.hex(), 16) / 10**self.usdt_decimals
-            return balance
+            return float(Decimal(str(balance)).quantize(Decimal('0.000001')))
         except Exception as e:
             logger.error(f"Error getting USDT balance: {e}")
             return 0
@@ -47,7 +48,8 @@ class WalletService:
     def get_native_balance(self, wallet_address):
         try:
             balance = self.w3.eth.get_balance(wallet_address)
-            return self.w3.from_wei(balance, 'ether')
+            native_balance = self.w3.from_wei(balance, 'ether')
+            return float(Decimal(str(native_balance)).quantize(Decimal('0.000001')))
         except Exception as e:
             logger.error(f"Error getting native balance: {e}")
             return 0

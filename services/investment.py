@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 from database.db_manager import DatabaseManager
 from database.models import Investment, User, DailyPayout
 from config.settings import Config
@@ -40,13 +41,13 @@ class InvestmentService:
 
             # Get referrer's tier bonus
             bonus_percent = get_referral_bonus_percent(referrer.id, session)
-            referral_bonus = investment.amount * (bonus_percent / 100)
+            referral_bonus = Decimal(str(investment.amount)) * Decimal(str(bonus_percent / 100))
 
-            referrer.balance += referral_bonus
-            referrer.total_earned += referral_bonus
-            referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or 0) + referral_bonus
-            referrer.referral_deposit_earnings = (referrer.referral_deposit_earnings or 0) + referral_bonus
-            referrer.total_earnings_all_time = (referrer.total_earnings_all_time or 0) + referral_bonus
+            referrer.balance = Decimal(str(referrer.balance or 0)) + referral_bonus
+            referrer.total_earned = Decimal(str(referrer.total_earned or 0)) + referral_bonus
+            referrer.referral_earnings_all_time = Decimal(str(referrer.referral_earnings_all_time or 0)) + referral_bonus
+            referrer.referral_deposit_earnings = Decimal(str(referrer.referral_deposit_earnings or 0)) + referral_bonus
+            referrer.total_earnings_all_time = Decimal(str(referrer.total_earnings_all_time or 0)) + referral_bonus
 
             session.commit()
             logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} ({bonus_percent}%) from {user.telegram_id}'s deposit of ${investment.amount} on Polygon")
@@ -92,7 +93,7 @@ class InvestmentService:
             except Exception as e:
                 logger.error(f"❌ Error sending notification: {e}")
 
-            return referral_bonus
+            return float(referral_bonus)
 
         except Exception as e:
             logger.error(f"Error processing referral earnings: {e}")
@@ -135,8 +136,8 @@ class InvestmentService:
             )
             session.add(investment)
 
-            user.balance -= amount
-            user.total_invested += amount
+            user.balance = Decimal(str(user.balance or 0)) - Decimal(str(amount))
+            user.total_invested = Decimal(str(user.total_invested or 0)) + Decimal(str(amount))
 
             session.commit()
             logger.info(f"Investment created on Polygon: Field {field_number}, ${amount}, {lock_period} days, returns ${expected_return}")
@@ -179,10 +180,10 @@ class InvestmentService:
                     investment.completed_at = now
                     investment.principal_returned = True
 
-                    user.balance += investment.expected_return
-                    user.total_earned += investment.expected_return
-                    user.investment_earnings_all_time = (user.investment_earnings_all_time or 0) + investment.expected_return
-                    user.total_earnings_all_time = (user.total_earnings_all_time or 0) + investment.expected_return
+                    user.balance = Decimal(str(user.balance or 0)) + Decimal(str(investment.expected_return))
+                    user.total_earned = Decimal(str(user.total_earned or 0)) + Decimal(str(investment.expected_return))
+                    user.investment_earnings_all_time = Decimal(str(user.investment_earnings_all_time or 0)) + Decimal(str(investment.expected_return))
+                    user.total_earnings_all_time = Decimal(str(user.total_earnings_all_time or 0)) + Decimal(str(investment.expected_return))
 
                     profit = investment.expected_return - investment.amount
                     payout = DailyPayout(
@@ -264,9 +265,9 @@ class InvestmentService:
                 result.append({
                     'id': inv.id,
                     'field_number': inv.field_number,
-                    'amount': inv.amount,
+                    'amount': float(inv.amount),
                     'lock_period': inv.lock_period,
-                    'expected_return': inv.expected_return,
+                    'expected_return': float(inv.expected_return),
                     'unlock_date': inv.unlock_date.isoformat() if inv.unlock_date else None,
                     'start_date': inv.start_date.isoformat(),
                     'is_active': inv.is_active,

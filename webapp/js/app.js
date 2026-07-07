@@ -247,7 +247,10 @@ function updateDashboardUI(data) {
 // ============================================
 function updateWelcomeBonusButton(data) {
     const btn = document.getElementById('claimWelcomeBtn');
-    if (!btn) return;
+    if (!btn) {
+        console.log('⚠️ claimWelcomeBtn not found in DOM');
+        return;
+    }
     
     if (data.has_received_welcome_bonus) {
         btn.textContent = '✅ Claimed (0.1 USDT)';
@@ -257,6 +260,7 @@ function updateWelcomeBonusButton(data) {
         btn.style.background = 'rgba(0,255,135,0.1)';
         btn.style.border = '1px solid rgba(0,255,135,0.2)';
         btn.style.color = '#00ff87';
+        console.log('✅ Welcome bonus button updated to Claimed');
     } else {
         btn.textContent = '🎁 Claim Welcome Bonus (0.1 USDT)';
         btn.disabled = false;
@@ -265,6 +269,7 @@ function updateWelcomeBonusButton(data) {
         btn.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
         btn.style.border = 'none';
         btn.style.color = '#0a0e17';
+        console.log('✅ Welcome bonus button updated to Available');
     }
 }
 

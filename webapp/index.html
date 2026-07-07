@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=25">
+    <link rel="stylesheet" href="css/style.css?v=24">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 </head>
@@ -109,9 +109,7 @@
             <button class="action-btn" onclick="navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">📊</span> Dashboard</button>
         </div>
 
-        <!-- ============================================
-             REFERRAL SECTION
-             ============================================ -->
+        <!-- Referral Section -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
             <p>Earn up to 5% of your referrals' deposits based on your tier!</p>
@@ -136,14 +134,12 @@
                 <div class="referral-detail-row" style="color:#00d4ff;"><span>🎉 Welcome Bonus:</span><strong style="color:#00d4ff;">0.1 USDT</strong></div>
             </div>
             
-            <button class="action-btn primary" onclick="claimWelcomeBonus()" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;color:#0a0e17;font-weight:700;cursor:pointer;">
+            <button id="claimWelcomeBtn" onclick="claimWelcomeBonus()" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;color:#0a0e17;font-weight:700;cursor:pointer;">
                 🎁 Claim Welcome Bonus (0.1 USDT)
             </button>
         </div>
 
-        <!-- ============================================
-             REFERRAL UPGRADE SECTION
-             ============================================ -->
+        <!-- Referral Upgrade Section -->
         <div class="referral-upgrade-section" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
             <h3 style="font-size: 18px; margin-bottom: 4px;">📊 Upgrade Referral Bonus</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">Permanently increase your referral earnings!</p>
@@ -201,9 +197,7 @@
             <div id="upgradeResult" style="margin-top: 10px; display: none; padding: 10px; border-radius: 6px;"></div>
         </div>
 
-        <!-- ============================================
-             TASKS SECTION - 44 HARDCODED TASKS
-             ============================================ -->
+        <!-- Tasks Section -->
         <div class="tasks-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <h3 style="margin:0;">✅ Tasks</h3>
@@ -212,9 +206,7 @@
             <div id="tasksList"></div>
         </div>
 
-        <!-- ============================================
-             ADS SECTION - UPDATED
-             ============================================ -->
+        <!-- Ads Section -->
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
             <p style="font-size:13px;color:#8892b0;margin-bottom:12px;">
@@ -324,6 +316,6 @@
         console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=24"></script>
+    <script src="js/app.js?v=35"></script>
 </body>
 </html>

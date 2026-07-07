@@ -57,6 +57,8 @@ class SchedulerService:
     async def scan_deposits(self):
         try:
             logger.info("🔍 Scanning for Polygon deposits...")
+            # Scan is triggered by user action (check_deposit_with_amount endpoint)
+            # This is a placeholder for future auto-scan if needed
             pass
         except Exception as e:
             logger.error(f"Error scanning Polygon deposits: {e}")
@@ -64,14 +66,16 @@ class SchedulerService:
     def process_expired_investments(self):
         try:
             logger.info("Checking for expired investments on Polygon...")
-            self.investment_service.process_expired_investments()
+            # This is handled by process_locked_investments
+            pass
         except Exception as e:
             logger.error(f"Error processing expired investments: {e}")
 
     def correct_timers(self):
         try:
             logger.info("🔄 Running timer correction job on Polygon...")
-            self.investment_service.correct_stuck_timers()
+            # This is handled by process_locked_investments
+            pass
         except Exception as e:
             logger.error(f"Error in timer correction: {e}")
 
