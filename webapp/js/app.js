@@ -1543,12 +1543,15 @@ async function disableInterstitialAds() {
 // ============================================
 
 async function loadTasks() {
+    console.log('🔄 Loading tasks...');
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(`${API_BASE}/api/tasks/${userId}`);
         const data = await response.json();
+        console.log('📊 Tasks API response:', data);
         
         if (data.success) {
+            console.log('✅ Tasks loaded:', data.tasks.length, 'tasks found');
             const tasksEl = document.getElementById('tasksList');
             if (tasksEl) {
                 let html = '';
@@ -1571,6 +1574,7 @@ async function loadTasks() {
                 }
                 
                 const visibleTasks = data.tasks.filter(task => !task.claimed);
+                console.log('📊 Visible tasks (not claimed):', visibleTasks.length);
                 totalTasks = visibleTasks.length;
                 
                 const categories = {
@@ -1608,15 +1612,16 @@ async function loadTasks() {
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
-                            progressText = `${currentValue.toFixed(3)}/${conditionValue}`;
+                            // Ensure currentValue is a number before calling toFixed
+                            progressText = `${Number(currentValue).toFixed(3)}/${conditionValue}`;
                         } else {
-                            progressText = `${Math.round(currentValue)}/${conditionValue}`;
+                            progressText = `${Math.round(Number(currentValue))}/${conditionValue}`;
                         }
-                        progressPercent = Math.min((currentValue / conditionValue) * 100, 100);
+                        progressPercent = Math.min((Number(currentValue) / conditionValue) * 100, 100);
                     } else if (!isCompleted && conditionValue === null && currentValue !== null) {
                         const maxVal = 1;
-                        progressText = `${Math.round(currentValue)}/${maxVal}`;
-                        progressPercent = Math.min((currentValue / maxVal) * 100, 100);
+                        progressText = `${Math.round(Number(currentValue))}/${maxVal}`;
+                        progressPercent = Math.min((Number(currentValue) / maxVal) * 100, 100);
                     } else if (isCompleted) {
                         const displayMax = conditionValue || 1;
                         const displayCurrent = conditionValue || 1;
@@ -1631,7 +1636,7 @@ async function loadTasks() {
                         '#ffd93d' : 
                         '#495670';
                     
-                    const rewardDisplay = task.reward < 0.01 ? '0.00' : task.reward.toFixed(3);
+                    const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(3);
                     
                     html += `
                         <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(255,217,61,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
@@ -1669,6 +1674,7 @@ async function loadTasks() {
                 }
                 
                 tasksEl.innerHTML = html;
+                console.log('✅ Tasks rendered successfully');
                 
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
@@ -1680,7 +1686,7 @@ async function loadTasks() {
             }
         }
     } catch (error) {
-        console.error('Error loading tasks:', error);
+        console.error('❌ Error loading tasks:', error);
     }
 }
 
@@ -1698,54 +1704,54 @@ function getTaskConditionValue(taskId) {
 function getTaskCurrentValue(taskId, userStats) {
     const taskCurrentValues = {
         1: userStats.has_invested ? 1 : 0,
-        2: userStats.total_invested || 0,
-        3: userStats.total_invested || 0,
-        4: userStats.total_invested || 0,
-        5: userStats.total_invested || 0,
-        6: userStats.total_invested || 0,
-        7: userStats.total_invested || 0,
-        8: userStats.total_ads_watched || 0,
-        9: userStats.total_ads_watched || 0,
-        10: userStats.total_ads_watched || 0,
-        11: userStats.total_ads_watched || 0,
-        12: userStats.total_ads_watched || 0,
-        13: userStats.total_ads_watched || 0,
-        14: userStats.total_ads_watched || 0,
-        15: userStats.total_ads_watched || 0,
-        16: userStats.total_ads_watched || 0,
-        17: userStats.total_referrals || 0,
-        18: userStats.total_referrals || 0,
-        19: userStats.total_referrals || 0,
-        20: userStats.total_referrals || 0,
-        21: userStats.total_referrals || 0,
-        22: userStats.total_referrals || 0,
-        23: userStats.total_referrals || 0,
-        24: userStats.total_referrals || 0,
-        25: userStats.total_referrals || 0,
-        26: userStats.total_referrals || 0,
-        27: userStats.total_active_referrals || 0,
-        28: userStats.total_active_referrals || 0,
-        29: userStats.total_active_referrals || 0,
-        30: userStats.total_active_referrals || 0,
-        31: userStats.total_active_referrals || 0,
-        32: userStats.total_active_referrals || 0,
-        33: userStats.total_active_referrals || 0,
-        34: userStats.total_active_referrals || 0,
-        35: userStats.total_active_referrals || 0,
-        36: userStats.total_active_referrals || 0,
-        37: userStats.total_earnings || 0,
-        38: userStats.total_earnings || 0,
-        39: userStats.total_earnings || 0,
-        40: userStats.total_earnings || 0,
-        41: userStats.total_earnings || 0,
-        42: userStats.total_earnings || 0,
-        43: userStats.total_earnings || 0,
-        44: userStats.total_earnings || 0
+        2: Number(userStats.total_invested) || 0,
+        3: Number(userStats.total_invested) || 0,
+        4: Number(userStats.total_invested) || 0,
+        5: Number(userStats.total_invested) || 0,
+        6: Number(userStats.total_invested) || 0,
+        7: Number(userStats.total_invested) || 0,
+        8: Number(userStats.total_ads_watched) || 0,
+        9: Number(userStats.total_ads_watched) || 0,
+        10: Number(userStats.total_ads_watched) || 0,
+        11: Number(userStats.total_ads_watched) || 0,
+        12: Number(userStats.total_ads_watched) || 0,
+        13: Number(userStats.total_ads_watched) || 0,
+        14: Number(userStats.total_ads_watched) || 0,
+        15: Number(userStats.total_ads_watched) || 0,
+        16: Number(userStats.total_ads_watched) || 0,
+        17: Number(userStats.total_referrals) || 0,
+        18: Number(userStats.total_referrals) || 0,
+        19: Number(userStats.total_referrals) || 0,
+        20: Number(userStats.total_referrals) || 0,
+        21: Number(userStats.total_referrals) || 0,
+        22: Number(userStats.total_referrals) || 0,
+        23: Number(userStats.total_referrals) || 0,
+        24: Number(userStats.total_referrals) || 0,
+        25: Number(userStats.total_referrals) || 0,
+        26: Number(userStats.total_referrals) || 0,
+        27: Number(userStats.total_active_referrals) || 0,
+        28: Number(userStats.total_active_referrals) || 0,
+        29: Number(userStats.total_active_referrals) || 0,
+        30: Number(userStats.total_active_referrals) || 0,
+        31: Number(userStats.total_active_referrals) || 0,
+        32: Number(userStats.total_active_referrals) || 0,
+        33: Number(userStats.total_active_referrals) || 0,
+        34: Number(userStats.total_active_referrals) || 0,
+        35: Number(userStats.total_active_referrals) || 0,
+        36: Number(userStats.total_active_referrals) || 0,
+        37: Number(userStats.total_earnings) || 0,
+        38: Number(userStats.total_earnings) || 0,
+        39: Number(userStats.total_earnings) || 0,
+        40: Number(userStats.total_earnings) || 0,
+        41: Number(userStats.total_earnings) || 0,
+        42: Number(userStats.total_earnings) || 0,
+        43: Number(userStats.total_earnings) || 0,
+        44: Number(userStats.total_earnings) || 0
     };
-    if (typeof taskCurrentValues[taskId] === 'number') {
-        return taskCurrentValues[taskId];
-    }
-    return taskCurrentValues[taskId] || null;
+    
+    // Convert to number and return
+    const value = taskCurrentValues[taskId];
+    return typeof value === 'number' ? value : 0;
 }
 
 async function claimTaskReward(taskId) {

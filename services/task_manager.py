@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from database.models import User, Task, UserTask
 from database.db_manager import DatabaseManager
@@ -14,7 +15,7 @@ def create_task(title: str, description: str, reward: float, admin_id: int, sess
         task = Task(
             title=title,
             description=description,
-            reward=reward,
+            reward=Decimal(str(reward)),
             created_by=admin_id,
             created_at=datetime.utcnow(),
             is_active=True
@@ -40,7 +41,6 @@ def get_all_tasks(session: Session) -> list:
 def get_user_tasks(user_id: int, session: Session) -> list:
     """Get all tasks for a user with completion status"""
     try:
-        # Get all active tasks
         tasks = session.query(Task).filter_by(is_active=True).all()
         result = []
         for task in tasks:
@@ -57,7 +57,7 @@ def get_user_tasks(user_id: int, session: Session) -> list:
                 'id': task.id,
                 'title': task.title,
                 'description': task.description,
-                'reward': task.reward,
+                'reward': float(task.reward),
                 'completed': completed,
                 'claimed': claimed,
                 'completed_at': completed_at.isoformat() if completed_at else None
@@ -124,17 +124,18 @@ def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
         if not user:
             return False, "User not found"
 
-        # Award reward
-        user.balance += task.reward
-        user.tasks_earnings = (user.tasks_earnings or 0) + task.reward
+        # Award reward as Decimal for exact precision
+        reward = Decimal(str(task.reward))
+        user.balance = Decimal(str(user.balance or 0)) + reward
+        user.tasks_earnings = Decimal(str(user.tasks_earnings or 0)) + reward
         user.tasks_completed = (user.tasks_completed or 0) + 1
 
         user_task.claimed = True
         user_task.claimed_at = datetime.utcnow()
 
         session.commit()
-        logger.info(f"✅ Task {task_id} reward claimed by user {user_id}: +${task.reward}")
-        return True, f"Claimed ${task.reward:.2f} reward!"
+        logger.info(f"✅ Task {task_id} reward claimed by user {user_id}: +${reward}")
+        return True, f"Claimed ${reward:.2f} reward!"
     except Exception as e:
         session.rollback()
         logger.error(f"Error claiming task reward: {e}")
