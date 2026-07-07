@@ -222,6 +222,7 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
     
     # Check if already claimed
     if user.has_received_welcome_bonus:
+        logger.info(f"⚠️ User {user_id} already claimed welcome bonus (has_received_welcome_bonus=True)")
         return False, "Welcome bonus already claimed"
     
     # Check if user is active (invested OR watched 30 ads) - NO REFERRAL REQUIRED

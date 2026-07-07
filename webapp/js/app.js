@@ -1583,16 +1583,25 @@ async function loadTasks() {
                     const conditionValue = getTaskConditionValue(task.task_id);
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     
+                    // Handle progress display - FIXED for First Investment
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
-                        // For earnings tasks (milestones), show with decimals
+                        // Normal tasks with numeric conditions
                         if (task.category === 'milestones') {
                             progressText = `${currentValue.toFixed(3)}/${conditionValue}`;
                         } else {
                             progressText = `${Math.round(currentValue)}/${conditionValue}`;
                         }
                         progressPercent = Math.min((currentValue / conditionValue) * 100, 100);
+                    } else if (!isCompleted && conditionValue === null && currentValue !== null) {
+                        // Tasks with null condition_value (like First Investment) - show 0/1
+                        const maxVal = 1;
+                        progressText = `${Math.round(currentValue)}/${maxVal}`;
+                        progressPercent = Math.min((currentValue / maxVal) * 100, 100);
                     } else if (isCompleted) {
-                        progressText = `${conditionValue}/${conditionValue}`;
+                        // Completed tasks - show full progress
+                        const displayMax = conditionValue || 1;
+                        const displayCurrent = conditionValue || 1;
+                        progressText = `${displayCurrent}/${displayMax}`;
                         progressPercent = 100;
                     }
                     
@@ -1658,53 +1667,53 @@ async function loadTasks() {
     }
 }
 
-// Helper function to get task condition value
+// Helper function to get task condition value - FIXED for First Investment
 function getTaskConditionValue(taskId) {
     const taskConditions = {
-        1: null,   // First Investment - no numeric condition
-        2: 10,     // Invest $10
-        3: 50,     // Invest $50
-        4: 100,    // Invest $100
-        5: 200,    // Invest $200
-        6: 500,    // Invest $500
-        7: 1000,   // Invest $1000
-        8: 1,      // Watch 1 Ad
-        9: 5,      // Watch 5 Ads
-        10: 10,    // Watch 10 Ads
-        11: 25,    // Watch 25 Ads
-        12: 50,    // Watch 50 Ads
-        13: 100,   // Watch 100 Ads
-        14: 250,   // Watch 250 Ads
-        15: 500,   // Watch 500 Ads
-        16: 1000,  // Watch 1000 Ads
-        17: 1,     // Refer 1 Friend
-        18: 3,     // Refer 3 Friends
-        19: 5,     // Refer 5 Friends
-        20: 10,    // Refer 10 Friends
-        21: 25,    // Refer 25 Friends
-        22: 50,    // Refer 50 Friends
-        23: 100,   // Refer 100 Friends
-        24: 250,   // Refer 250 Friends
-        25: 500,   // Refer 500 Friends
-        26: 1000,  // Refer 1000 Friends
-        27: 1,     // 1 Active Referral
-        28: 3,     // 3 Active Referrals
-        29: 5,     // 5 Active Referrals
-        30: 10,    // 10 Active Referrals
-        31: 25,    // 25 Active Referrals
-        32: 50,    // 50 Active Referrals
-        33: 100,   // 100 Active Referrals
-        34: 250,   // 250 Active Referrals
-        35: 500,   // 500 Active Referrals
-        36: 1000,  // 1000 Active Referrals
-        37: 1,     // Earn $1
-        38: 10,    // Earn $10
-        39: 25,    // Earn $25
-        40: 50,    // Earn $50
-        41: 100,   // Earn $100
-        42: 250,   // Earn $250
-        43: 500,   // Earn $500
-        44: 1000   // Earn $1000
+        1: 1,      // First Investment - show 0/1
+        2: 10,
+        3: 50,
+        4: 100,
+        5: 200,
+        6: 500,
+        7: 1000,
+        8: 1,
+        9: 5,
+        10: 10,
+        11: 25,
+        12: 50,
+        13: 100,
+        14: 250,
+        15: 500,
+        16: 1000,
+        17: 1,
+        18: 3,
+        19: 5,
+        20: 10,
+        21: 25,
+        22: 50,
+        23: 100,
+        24: 250,
+        25: 500,
+        26: 1000,
+        27: 1,
+        28: 3,
+        29: 5,
+        30: 10,
+        31: 25,
+        32: 50,
+        33: 100,
+        34: 250,
+        35: 500,
+        36: 1000,
+        37: 1,
+        38: 10,
+        39: 25,
+        40: 50,
+        41: 100,
+        42: 250,
+        43: 500,
+        44: 1000
     };
     return taskConditions[taskId] || null;
 }
