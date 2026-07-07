@@ -135,6 +135,7 @@ async function loadUserData() {
             updateDashboardUI(data);
             await updateReferralStats(userId);
             await updateWelcomeBonusButton(data);
+            updateTierButtons(data);
             
             if (data.interstitial_ads_disabled) {
                 window.interstitialAdsDisabled = true;
@@ -271,6 +272,59 @@ function updateWelcomeBonusButton(data) {
         btn.style.color = '#0a0e17';
         console.log('✅ Welcome bonus button updated to Available');
     }
+}
+
+// ============================================
+// REFERRAL TIER DISPLAY
+// ============================================
+
+function updateTierButtons(data) {
+    const userTier = data.referral_tier || 'free';
+    console.log('📊 User tier:', userTier);
+    
+    const tierCards = document.querySelectorAll('.tier-card');
+    tierCards.forEach(card => {
+        const btn = card.querySelector('.tier-btn');
+        if (!btn) return;
+        
+        const nameEl = card.querySelector('.tier-name');
+        if (!nameEl) return;
+        
+        const tierName = nameEl.textContent.toLowerCase();
+        
+        if (tierName === userTier) {
+            btn.textContent = 'Current';
+            btn.disabled = true;
+            btn.className = 'tier-btn current';
+            btn.style.background = '#495670';
+            btn.style.color = 'white';
+            btn.style.cursor = 'default';
+            btn.onclick = null;
+        } else {
+            // Only enable upgrade if tier is above current
+            const tierOrder = ['free', 'bronze', 'silver', 'gold', 'diamond'];
+            const userIndex = tierOrder.indexOf(userTier);
+            const cardIndex = tierOrder.indexOf(tierName);
+            
+            if (cardIndex > userIndex) {
+                btn.textContent = 'Upgrade';
+                btn.disabled = false;
+                btn.className = 'tier-btn';
+                btn.style.background = '';
+                btn.style.color = '';
+                btn.style.cursor = 'pointer';
+                // Preserve onclick
+            } else {
+                btn.textContent = 'Locked';
+                btn.disabled = true;
+                btn.className = 'tier-btn locked';
+                btn.style.background = '#2a2a2a';
+                btn.style.color = '#555';
+                btn.style.cursor = 'default';
+                btn.onclick = null;
+            }
+        }
+    });
 }
 
 // ============================================
@@ -1612,7 +1666,6 @@ async function loadTasks() {
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
-                            // Ensure currentValue is a number before calling toFixed
                             progressText = `${Number(currentValue).toFixed(3)}/${conditionValue}`;
                         } else {
                             progressText = `${Math.round(Number(currentValue))}/${conditionValue}`;
@@ -1749,7 +1802,6 @@ function getTaskCurrentValue(taskId, userStats) {
         44: Number(userStats.total_earnings) || 0
     };
     
-    // Convert to number and return
     const value = taskCurrentValues[taskId];
     return typeof value === 'number' ? value : 0;
 }

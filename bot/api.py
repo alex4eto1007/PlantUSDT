@@ -248,7 +248,8 @@ def get_user():
             'total_ad_earnings': 0,
             'interstitial_ads_disabled': False,
             'has_received_welcome_bonus': False,
-            'tasks_earnings': 0
+            'tasks_earnings': 0,
+            'referral_tier': 'free'
         })
     
     cached = get_cached_user(telegram_id)
@@ -274,7 +275,8 @@ def get_user():
                 'total_ad_earnings': 0,
                 'interstitial_ads_disabled': False,
                 'has_received_welcome_bonus': False,
-                'tasks_earnings': 0
+                'tasks_earnings': 0,
+                'referral_tier': 'free'
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -318,7 +320,8 @@ def get_user():
             'total_ad_earnings': round(float(user.total_ad_earnings or 0), 3),
             'interstitial_ads_disabled': user.interstitial_ads_disabled or False,
             'has_received_welcome_bonus': user.has_received_welcome_bonus or False,
-            'tasks_earnings': round(float(user.tasks_earnings or 0), 3)
+            'tasks_earnings': round(float(user.tasks_earnings or 0), 3),
+            'referral_tier': user.referral_tier or 'free'
         }
         
         set_cached_user(telegram_id, response)
