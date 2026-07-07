@@ -474,17 +474,18 @@ TASKS = [
     },
 
     # ============================================
-    # SECTION 5: WELCOME BONUS (1 task) - NEW
+    # SECTION 5: WELCOME BONUS (1 task) - HIDDEN FROM TASK LIST
     # ============================================
     {
         "id": 45,
-        "category": "milestones",
+        "category": "hidden",
         "icon": "🎁",
         "title": "Welcome Bonus",
         "description": "Claim your 0.1 USDT welcome bonus (no referral needed)",
         "reward": 0.10,
         "condition_type": "welcome_bonus",
-        "condition_value": None
+        "condition_value": None,
+        "hidden": True  # This hides it from the task list
     }
 ]
 
@@ -492,9 +493,11 @@ TASKS = [
 # TASK FUNCTIONS
 # ============================================
 
-def get_all_tasks():
+def get_all_tasks(include_hidden=False):
     """Get all task definitions"""
-    return TASKS
+    if include_hidden:
+        return TASKS
+    return [task for task in TASKS if not task.get("hidden", False)]
 
 def get_task_by_id(task_id: int):
     """Get a task by its ID"""
@@ -503,7 +506,7 @@ def get_task_by_id(task_id: int):
             return task
     return None
 
-def get_user_task_progress(user_id: int, session: Session) -> dict:
+def get_user_task_progress(user_id: int, session: Session, include_hidden=False):
     """Get all tasks with user progress"""
     try:
         # Get existing progress records
@@ -512,6 +515,10 @@ def get_user_task_progress(user_id: int, session: Session) -> dict:
         
         result = []
         for task in TASKS:
+            # Skip hidden tasks unless include_hidden is True
+            if task.get("hidden", False) and not include_hidden:
+                continue
+                
             progress = progress_map.get(task["id"])
             if progress:
                 result.append({
@@ -687,9 +694,12 @@ def get_task_stats(user_id: int, session: Session) -> dict:
     """Get task statistics for a user"""
     try:
         progress_records = session.query(UserTaskProgress).filter_by(user_id=user_id).all()
-        total_tasks = len(TASKS)
-        completed_tasks = sum(1 for p in progress_records if p.completed)
-        claimed_tasks = sum(1 for p in progress_records if p.claimed)
+        # Only count visible tasks (exclude hidden ones)
+        visible_task_ids = [task["id"] for task in TASKS if not task.get("hidden", False)]
+        total_tasks = len(visible_task_ids)
+        
+        completed_tasks = sum(1 for p in progress_records if p.completed and p.task_id in visible_task_ids)
+        claimed_tasks = sum(1 for p in progress_records if p.claimed and p.task_id in visible_task_ids)
         
         # Calculate total rewards claimed
         total_claimed_amount = 0
@@ -708,8 +718,9 @@ def get_task_stats(user_id: int, session: Session) -> dict:
         }
     except Exception as e:
         logger.error(f"Error getting task stats: {e}")
+        visible_task_ids = [task["id"] for task in TASKS if not task.get("hidden", False)]
         return {
-            "total_tasks": len(TASKS),
+            "total_tasks": len(visible_task_ids),
             "completed_tasks": 0,
             "claimed_tasks": 0,
             "total_claimed_amount": 0,

@@ -929,7 +929,7 @@ def get_tasks(telegram_id):
 
 @app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
 def api_get_tasks(telegram_id):
-    """Get all tasks with user progress and stats"""
+    """Get all tasks with user progress and stats (Task 45 hidden from display)"""
     session = db.get_session()
     try:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -939,8 +939,8 @@ def api_get_tasks(telegram_id):
         # Check and auto-complete any tasks
         completed = check_task_conditions(user, session)
         
-        # Get all tasks with progress
-        tasks = get_user_task_progress(user.id, session)
+        # Get all tasks with progress (exclude hidden tasks from display)
+        tasks = get_user_task_progress(user.id, session, include_hidden=False)
         stats = get_task_stats(user.id, session)
         
         # Get user stats for progress display
@@ -1023,7 +1023,7 @@ def api_get_user_tasks(telegram_id):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'})
         
-        tasks = get_user_task_progress(user.id, session)
+        tasks = get_user_task_progress(user.id, session, include_hidden=False)
         return jsonify({
             'success': True,
             'tasks': tasks

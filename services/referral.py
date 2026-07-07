@@ -211,7 +211,7 @@ def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> f
     return amount * (bonus_percent / 100)
 
 # ============================================
-# WELCOME BONUS - NO REFERRAL REQUIRED
+# WELCOME BONUS - NO REFERRAL REQUIRED (Task 45)
 # ============================================
 
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
