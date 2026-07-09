@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="/css/style.css?v=5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* styles same as before, omitted for brevity */
         .network-badge-large { display: inline-flex; align-items: center; gap: 8px; background: rgba(130,71,229,0.15); color: #8247E5; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
         .network-badge-large .dot { width: 8px; height: 8px; border-radius: 50%; background: #8247E5; display: inline-block; animation: pulse-dot 2s infinite; }
         @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
@@ -26,17 +25,90 @@
         .deposit-status.success { border: 1px solid rgba(0,255,135,0.3); color: #00ff87; }
         .deposit-status.error { border: 1px solid rgba(255,107,107,0.3); color: #ff6b6b; }
         .deposit-status.pending { border: 1px solid rgba(130,71,229,0.3); color: #8247E5; }
-        .action-btn.primary { background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important; color: #fff !important; border: none !important; }
-        .action-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3); }
-        .container { max-width: 480px; margin: 0 auto; padding: 16px; padding-bottom: 40px; }
-        .back-btn { font-size: 28px !important; padding: 8px 16px !important; cursor: pointer !important; background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 8px !important; color: #ccd6f0 !important; line-height: 1 !important; min-width: 44px !important; min-height: 44px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-        .info-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
-        .action-btn.secondary { width: 100%; margin-top: 12px; border-color: rgba(0,255,135,0.2); color: #00ff87; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; background: transparent; border: 1px solid rgba(255,255,255,0.08); }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e17; color: #ccd6f0; min-height: 100vh; padding: 0; margin: 0; }
-        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,135,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none; box-sizing: border-box; }
-        input:focus { border-color: #8247E5; box-shadow: 0 0 20px rgba(130,71,229,0.1); }
-        .form-group { margin: 16px 0; }
-        .form-group label { font-size: 13px; color: #8892b0; display: block; margin-bottom: 6px; }
+        .deposit-amount-confirm { margin: 12px 0; padding: 12px; background: rgba(0,255,135,0.05); border: 1px solid rgba(0,255,135,0.1); border-radius: 8px; display: none; }
+        .deposit-amount-confirm .amount-display { font-size: 24px; font-weight: 700; color: #00ff87; }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+            color: #fff !important;
+            border: none !important;
+        }
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .info-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .action-btn.secondary {
+            width: 100%;
+            margin-top: 12px;
+            border-color: rgba(0,255,135,0.2);
+            color: #00ff87;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,255,135,0.2);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #8247E5;
+            box-shadow: 0 0 20px rgba(130,71,229,0.1);
+        }
+        .form-group {
+            margin: 16px 0;
+        }
+        .form-group label {
+            font-size: 13px;
+            color: #8892b0;
+            display: block;
+            margin-bottom: 6px;
+        }
     </style>
 </head>
 <body>
@@ -70,8 +142,14 @@
 
         <div class="form-group">
             <label>💰 Deposit Amount (USDT)</label>
-            <input type="number" id="depositAmount" placeholder="Enter exact amount sent" min="5" step="0.01">
+            <input type="number" id="depositAmount" placeholder="Enter exact amount sent" min="5" step="0.01" oninput="showAmountConfirmation()">
             <p style="font-size:11px;color:#495670;margin-top:4px;">Enter the exact amount to help us detect your deposit faster.</p>
+        </div>
+
+        <div class="deposit-amount-confirm" id="amountConfirm">
+            <p style="margin:0;font-size:13px;color:#8892b0;">You are depositing:</p>
+            <div class="amount-display" id="amountDisplay">$0.00</div>
+            <p style="margin:4px 0 0 0;font-size:11px;color:#ffd93d;">✅ Amount confirmed. Click below to verify your deposit.</p>
         </div>
 
         <div id="depositStatus" class="deposit-status" style="display:none;"></div>
@@ -81,7 +159,22 @@
     </div>
 
     <script>
-        // API_BASE is declared in app.js - do not redeclare
+        // API_BASE is declared in app.js - use window.API_BASE
+        // Do NOT redeclare const API_BASE here
+
+        function showAmountConfirmation() {
+            var amountInput = document.getElementById('depositAmount');
+            var amount = parseFloat(amountInput?.value) || 0;
+            var confirmDiv = document.getElementById('amountConfirm');
+            var amountDisplay = document.getElementById('amountDisplay');
+
+            if (amount >= 5) {
+                amountDisplay.textContent = '$' + amount.toFixed(2) + ' USDT';
+                confirmDiv.style.display = 'block';
+            } else {
+                confirmDiv.style.display = 'none';
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
@@ -114,6 +207,9 @@
                     displayEl.textContent = '❌ Error loading wallet';
                     displayEl.style.color = '#ff6b6b';
                 });
+
+            // Show confirmation if amount is already entered
+            showAmountConfirmation();
         });
 
         function copyAddress() {
@@ -157,6 +253,23 @@
                 return;
             }
 
+            // Show confirmation before checking
+            var confirmMsg = 'You are about to verify a deposit of $' + parseFloat(amount).toFixed(2) + ' USDT on Polygon.\n\nMake sure you have sent the exact amount to the address above.';
+            window.Telegram.WebApp.showPopup({
+                title: '🔍 Verify Deposit',
+                message: confirmMsg,
+                buttons: [
+                    {id: 'cancel', type: 'cancel'},
+                    {id: 'confirm', type: 'ok', text: '✅ Yes, Check Now'}
+                ]
+            }, function(buttonId) {
+                if (buttonId === 'confirm') {
+                    doDepositCheck(userId, amount);
+                }
+            });
+        }
+
+        async function doDepositCheck(userId, amount) {
             var statusDiv = document.getElementById('depositStatus');
             if (statusDiv) {
                 statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
@@ -190,6 +303,7 @@
         window.copyAddress = copyAddress;
         window.checkDepositWithAmount = checkDepositWithAmount;
         window.goBack = goBack;
+        window.showAmountConfirmation = showAmountConfirmation;
     </script>
     <script src="/js/app.js?v=37"></script>
 </body>
