@@ -17,6 +17,7 @@
         .history-type.investment { color: #a29bfe; }
         .history-type.referral_earnings { color: #6c5ce7; }
         .history-type.ad_earnings { color: #00d4ff; }
+        .history-type.tasks_earnings { color: #00ff87; }
         .history-date { font-size: 11px; color: rgba(255,255,255,0.4); }
         .history-amount { font-size: 16px; font-weight: 700; }
         .history-amount.positive { color: #00ff87; }
@@ -27,16 +28,57 @@
         .history-status.failed { background: rgba(255,107,107,0.1); color: #ff6b6b; }
         .empty-state { text-align: center; padding: 40px 20px; color: #495670; font-size: 14px; }
         .history-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .filter-btn { padding: 10px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.3); color: #8892b0; font-size: 13px; cursor: pointer; }
+        .filter-btn { padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.3); color: #8892b0; font-size: 13px; cursor: pointer; }
         .filter-btn:hover { border-color: rgba(130,71,229,0.2); }
         .filter-btn.active { background: rgba(130,71,229,0.1); border-color: #8247E5; color: #a29bfe; }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .action-btn.secondary {
+            width: 100%;
+            margin-top: 16px;
+            border-color: rgba(0,255,135,0.2);
+            color: #00ff87;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
-            <button class="back-btn" onclick="goBack()" style="font-size: 40px; padding: 10px 20px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
+            <button class="back-btn" onclick="goBack()">←</button>
             <h1 style="margin: 0; flex: 1; text-align: center; font-size: 20px; color: #ccd6f0;">📜 Transaction History</h1>
             <span class="network-tag" style="font-size:11px;color:#8247E5;background:rgba(130,71,229,0.1);padding:2px 10px;border-radius:12px; flex-shrink: 0;">Polygon</span>
         </div>
@@ -56,15 +98,38 @@
         </button>
     </div>
 
-    <script src="js/app.js"></script>
     <script>
+        const API_BASE = 'https://plantusdt.ddns.net';
+
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
-            // Load history on page load
             filterHistory('all');
         });
+
+        function goBack() {
+            window.history.back();
+        }
+
+        function navigateTo(page) {
+            const pages = {
+                'dashboard': 'dashboard.html',
+                'deposit': 'deposit.html',
+                'withdraw': 'withdraw.html',
+                'history': 'history.html',
+                'index': 'index.html'
+            };
+            if (pages[page]) {
+                window.location.href = pages[page];
+            }
+        }
+
+        window.goBack = goBack;
+        window.navigateTo = navigateTo;
+        window.filterHistory = filterHistory;
+        window.API_BASE = API_BASE;
     </script>
+    <script src="js/app.js?v=37"></script>
 </body>
 </html>

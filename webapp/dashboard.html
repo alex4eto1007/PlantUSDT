@@ -70,12 +70,27 @@
             background: linear-gradient(135deg, rgba(0,255,135,0.15), rgba(130,71,229,0.15));
             border-color: rgba(0,255,135,0.2);
         }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
-            <button class="back-btn" onclick="window.history.back()" style="font-size: 28px; padding: 8px 16px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ccd6f0; line-height: 1; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">←</button>
+            <button class="back-btn" onclick="goBack()">←</button>
             <h1 style="color:#00ff87;font-size:20px; margin: 0; flex: 1; text-align: center;">📊 Dashboard</h1>
             <span class="network-badge-mini">🟣 Polygon</span>
         </div>
@@ -130,14 +145,16 @@
             loadDashboard(userId);
         });
 
+        function goBack() {
+            window.history.back();
+        }
+
         async function loadDashboard(userId) {
             try {
-                // Load user data
                 const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
                 const userData = await userResponse.json();
                 console.log('📡 User data:', userData);
                 
-                // Load referral stats
                 const statsResponse = await fetch(API_BASE + '/api/referral_stats_full/' + userId);
                 const statsData = await statsResponse.json();
                 console.log('📡 Stats data:', statsData);
@@ -146,13 +163,13 @@
                 document.getElementById('dashboardStats').style.display = 'block';
                 
                 if (userData.success) {
-                    document.getElementById('dashBalance').textContent = '$' + (userData.balance || 0).toFixed(3);
-                    document.getElementById('dashInvested').textContent = '$' + (userData.total_invested || 0).toFixed(3);
-                    document.getElementById('dashEarned').textContent = '$' + (userData.total_earnings || 0).toFixed(3);
-                    document.getElementById('dashDeposited').textContent = '$' + (userData.total_deposited || 0).toFixed(3);
+                    document.getElementById('dashBalance').textContent = '$' + Number(userData.balance || 0).toFixed(3);
+                    document.getElementById('dashInvested').textContent = '$' + Number(userData.total_invested || 0).toFixed(3);
+                    document.getElementById('dashEarned').textContent = '$' + Number(userData.total_earnings || 0).toFixed(3);
+                    document.getElementById('dashDeposited').textContent = '$' + Number(userData.total_deposited || 0).toFixed(3);
                     document.getElementById('dashReferrals').textContent = userData.referrals || 0;
-                    document.getElementById('dashAdEarnings').textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
-                    document.getElementById('dashTasksEarnings').textContent = '$' + (userData.tasks_earnings || 0).toFixed(3);
+                    document.getElementById('dashAdEarnings').textContent = '$' + Number(userData.total_ad_earnings || 0).toFixed(3);
+                    document.getElementById('dashTasksEarnings').textContent = '$' + Number(userData.tasks_earnings || 0).toFixed(3);
                 }
                 
                 if (statsData.success && statsData.stats) {
@@ -167,6 +184,11 @@
                 document.getElementById('loadingMessage').className = 'error-text';
             }
         }
+
+        window.goBack = goBack;
+        window.loadDashboard = loadDashboard;
+        window.API_BASE = API_BASE;
     </script>
+    <script src="js/app.js?v=37"></script>
 </body>
 </html>
