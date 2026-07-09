@@ -99,7 +99,8 @@
     </div>
 
     <script>
-        const API_BASE = 'https://plantusdt.ddns.net';
+        // API_BASE is declared in app.js - use it via window.API_BASE
+        // Do NOT redeclare const API_BASE here
 
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
@@ -125,10 +126,10 @@
             }
         }
 
+        // These are exposed globally from app.js
         window.goBack = goBack;
         window.navigateTo = navigateTo;
-        window.filterHistory = filterHistory;
-        window.API_BASE = API_BASE;
+        // filterHistory is already global from app.js
     </script>
     <script src="js/app.js?v=37"></script>
 </body>
