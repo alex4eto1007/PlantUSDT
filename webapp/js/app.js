@@ -1097,11 +1097,9 @@ async function checkDepositWithAmount() {
 // HISTORY FUNCTIONS
 // ============================================
 function filterHistory(type) {
-    // Fix: Get active button safely without relying on event
     var activeButton = null;
     var buttons = document.querySelectorAll('.filter-btn');
     
-    // Find the button that matches the type
     for (var i = 0; i < buttons.length; i++) {
         var btnText = buttons[i].textContent.toLowerCase();
         if (btnText === type || btnText.includes(type)) {
@@ -1110,12 +1108,10 @@ function filterHistory(type) {
         }
     }
     
-    // If still no match, use the first button as fallback
     if (!activeButton && buttons.length > 0) {
         activeButton = buttons[0];
     }
     
-    // Update button states
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active');
     }
