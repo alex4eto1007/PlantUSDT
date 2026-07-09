@@ -173,7 +173,8 @@
     </div>
 
     <script>
-        // API_BASE is already declared in app.js - do not redeclare here
+        // API_BASE is declared in app.js - use window.API_BASE
+        // Do NOT redeclare const API_BASE here
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;

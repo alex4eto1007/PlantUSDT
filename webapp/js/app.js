@@ -1,9 +1,11 @@
 // PlantUSDT Mini App - JavaScript (Polygon Network)
 
+const API_BASE = 'https://plantusdt.ddns.net';
+window.API_BASE = API_BASE;
+
 let tg = window.Telegram.WebApp;
 let tgUser = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
-const API_BASE = 'https://plantusdt.ddns.net';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
@@ -252,7 +254,7 @@ function updateDashboardUI(data) {
 function updateWelcomeBonusButton(data) {
     const btn = document.getElementById('claimWelcomeBtn');
     if (!btn) {
-        console.log('⚠️ claimWelcomeBtn not found in DOM');
+        // Only log if on main page (optional)
         return;
     }
     
@@ -264,7 +266,6 @@ function updateWelcomeBonusButton(data) {
         btn.style.background = 'rgba(0,255,135,0.1)';
         btn.style.border = '1px solid rgba(0,255,135,0.2)';
         btn.style.color = '#00ff87';
-        console.log('✅ Welcome bonus button updated to Claimed');
     } else {
         btn.textContent = '🎁 Claim Welcome Bonus (0.1 USDT)';
         btn.disabled = false;
@@ -273,7 +274,6 @@ function updateWelcomeBonusButton(data) {
         btn.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
         btn.style.border = 'none';
         btn.style.color = '#0a0e17';
-        console.log('✅ Welcome bonus button updated to Available');
     }
 }
 
