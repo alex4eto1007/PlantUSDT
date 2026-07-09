@@ -89,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function() {
         var target = e.target.closest('button');
         if (!target) return;
 
-        // Skip interstitial ads for these buttons
         if (target.classList.contains('back-btn') || 
             target.classList.contains('no-ad') || 
             target.id === 'watchAdBtn') {
@@ -131,7 +130,6 @@ async function loadUserData() {
         const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
         const data = await response.json();
         if (data.success) {
-            // Set interstitial ads disabled flag
             interstitialAdsDisabled = data.interstitial_ads_disabled || false;
             console.log('📢 interstitial_ads_disabled:', interstitialAdsDisabled);
             
@@ -1099,13 +1097,25 @@ async function checkDepositWithAmount() {
 // HISTORY FUNCTIONS
 // ============================================
 function filterHistory(type) {
-    // Fix: Check if event exists
+    // Fix: Get active button safely without relying on event
     var activeButton = null;
-    if (window.event && window.event.target) {
-        activeButton = window.event.target;
+    var buttons = document.querySelectorAll('.filter-btn');
+    
+    // Find the button that matches the type
+    for (var i = 0; i < buttons.length; i++) {
+        var btnText = buttons[i].textContent.toLowerCase();
+        if (btnText === type || btnText.includes(type)) {
+            activeButton = buttons[i];
+            break;
+        }
     }
     
-    var buttons = document.querySelectorAll('.filter-btn');
+    // If still no match, use the first button as fallback
+    if (!activeButton && buttons.length > 0) {
+        activeButton = buttons[0];
+    }
+    
+    // Update button states
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active');
     }
