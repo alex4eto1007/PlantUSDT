@@ -254,7 +254,6 @@ function updateDashboardUI(data) {
 function updateWelcomeBonusButton(data) {
     const btn = document.getElementById('claimWelcomeBtn');
     if (!btn) {
-        // Only log if on main page (optional)
         return;
     }
     
@@ -678,6 +677,98 @@ async function updateReferral(data) {
 }
 
 // ============================================
+// FIXED: COPY REFERRAL FUNCTION
+// ============================================
+async function copyReferral() {
+    showInterstitialIfNeeded();
+    
+    var userId = tgUser ? tgUser.id : '0';
+    var referralLinkEl = document.getElementById('referralLinkText');
+    var referralLink = referralLinkEl ? referralLinkEl.textContent.trim() : '';
+    
+    // If the link shows "Loading..." or error, fetch it
+    if (!referralLink || referralLink.includes('Loading') || referralLink.includes('Error') || referralLink.includes('⚠️')) {
+        try {
+            var response = await fetch(API_BASE + '/api/get_referral_code?telegram_id=' + userId + '&t=' + Date.now());
+            var data = await response.json();
+            if (data.success && data.referral_code) {
+                referralLink = 'https://t.me/PlantUSDT_bot?start=' + data.referral_code;
+                if (referralLinkEl) {
+                    referralLinkEl.textContent = referralLink;
+                }
+            } else {
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Could not get referral link. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+                return;
+            }
+        } catch (error) {
+            console.error('Error getting referral code:', error);
+            safePopup({
+                title: '❌ Error',
+                message: 'Network error. Please try again.',
+                buttons: [{type: 'ok'}]
+            });
+            return;
+        }
+    }
+    
+    // Check if it's the placeholder text (wallet not connected)
+    if (referralLink.includes('Save wallet') || referralLink.includes('wallet not connected')) {
+        safePopup({
+            title: '⚠️ Wallet Required',
+            message: 'Please save your Polygon wallet address first to get your referral link!',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+
+    // Verify the link is valid
+    if (!referralLink.startsWith('https://t.me/PlantUSDT_bot?start=')) {
+        safePopup({
+            title: '❌ Error',
+            message: 'Invalid referral link. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+        return;
+    }
+
+    // Copy to clipboard
+    try {
+        await navigator.clipboard.writeText(referralLink);
+        safePopup({
+            title: '✅ Copied!',
+            message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
+            buttons: [{type: 'ok'}]
+        });
+    } catch (clipError) {
+        // Fallback for older browsers
+        var textArea = document.createElement('textarea');
+        textArea.value = referralLink;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            safePopup({
+                title: '✅ Copied!',
+                message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
+                buttons: [{type: 'ok'}]
+            });
+        } catch (fallbackError) {
+            // Last resort: show the link
+            safePopup({
+                title: '📋 Your Referral Link',
+                message: referralLink,
+                buttons: [{type: 'ok'}]
+            });
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
+// ============================================
 // WALLET FUNCTIONS
 // ============================================
 async function saveWallet() {
@@ -995,38 +1086,6 @@ function copyAddress() {
             message: 'Invalid address. Please try again.',
             buttons: [{type: 'ok'}]
         });
-    }
-}
-
-async function copyReferral() {
-    showInterstitialIfNeeded();
-    var walletText = document.getElementById('walletText');
-    var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
-    if (!isConnected) {
-        safePopup({
-            title: '⚠️ Wallet Required',
-            message: 'You must save your Polygon wallet address first to get your referral link!',
-            buttons: [{type: 'ok'}]
-        });
-        return;
-    }
-    var userId = tgUser ? tgUser.id : '0';
-    try {
-        var response = await fetch(API_BASE + '/api/get_referral_code?telegram_id=' + userId + '&t=' + Date.now());
-        var data = await response.json();
-        if (data.success && data.referral_code) {
-            var link = 'https://t.me/PlantUSDT_bot?start=' + data.referral_code;
-            navigator.clipboard.writeText(link).then(function() {
-                safePopup({title: '✅ Copied!', message: 'Referral link copied!', buttons: [{type: 'ok'}]});
-            }).catch(function() {
-                safePopup({title: '📋 Referral Link', message: link, buttons: [{type: 'ok'}]});
-            });
-        } else {
-            safePopup({title: '❌ Error', message: 'Could not get referral code.', buttons: [{type: 'ok'}]});
-        }
-    } catch (error) {
-        console.error('Error getting referral code:', error);
-        safePopup({title: '❌ Error', message: 'Failed to get referral link.', buttons: [{type: 'ok'}]});
     }
 }
 
