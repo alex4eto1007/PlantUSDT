@@ -156,7 +156,7 @@
             <div class="form-group">
                 <label>📤 Withdraw to (Polygon Wallet)</label>
                 <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)">
-                <button type="button" class="set-wallet-btn" onclick="setWallet()">📂 Use Connected Wallet</button>
+                <button type="button" class="set-wallet-btn" id="setWalletBtn">📂 Use Connected Wallet</button>
                 <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Must be a Polygon network wallet address</p>
             </div>
 
@@ -176,6 +176,7 @@
         // API_BASE is declared in app.js - use window.API_BASE
         // Do NOT redeclare const API_BASE here
 
+        // Wait for DOM and app.js to load
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
             tg.ready();
@@ -203,37 +204,50 @@
                 });
             }
 
-            window.setWallet = function() {
-                var userId = tg.initDataUnsafe?.user?.id || '0';
-                console.log('📱 User ID:', userId);
-                fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + userId)
-                    .then(function(response) { return response.json(); })
-                    .then(function(data) {
-                        if (data.success && data.wallet_address) {
-                            document.getElementById('withdrawAddress').value = data.wallet_address;
-                            window.Telegram.WebApp.showPopup({
-                                title: '✅ Wallet Set',
-                                message: 'Your connected Polygon wallet address has been set.',
-                                buttons: [{type: 'ok'}]
+            // Set Wallet button with proper initialization
+            var setWalletBtn = document.getElementById('setWalletBtn');
+            if (setWalletBtn) {
+                setWalletBtn.addEventListener('click', function() {
+                    // Check if setWallet is available
+                    if (typeof window.setWallet === 'function') {
+                        window.setWallet();
+                    } else {
+                        // Fallback if app.js not loaded yet
+                        console.warn('⚠️ setWallet not loaded, using fallback');
+                        var userId = tg.initDataUnsafe?.user?.id || '0';
+                        fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + userId)
+                            .then(function(response) { return response.json(); })
+                            .then(function(data) {
+                                if (data.success && data.wallet_address) {
+                                    document.getElementById('withdrawAddress').value = data.wallet_address;
+                                    window.Telegram.WebApp.showPopup({
+                                        title: '✅ Wallet Set',
+                                        message: 'Your connected Polygon wallet address has been set.',
+                                        buttons: [{type: 'ok'}]
+                                    });
+                                } else {
+                                    window.Telegram.WebApp.showPopup({
+                                        title: '❌ No Wallet',
+                                        message: 'Please connect a wallet first in the main app.',
+                                        buttons: [{type: 'ok'}]
+                                    });
+                                }
+                            })
+                            .catch(function(error) {
+                                console.error('Error loading wallet:', error);
+                                window.Telegram.WebApp.showPopup({
+                                    title: '❌ Error',
+                                    message: 'Could not fetch wallet: ' + error.message,
+                                    buttons: [{type: 'ok'}]
+                                });
                             });
-                        } else {
-                            window.Telegram.WebApp.showPopup({
-                                title: '❌ No Wallet',
-                                message: 'Please connect a wallet first in the main app.',
-                                buttons: [{type: 'ok'}]
-                            });
-                        }
-                    })
-                    .catch(function(error) {
-                        console.error('Error loading wallet:', error);
-                        window.Telegram.WebApp.showPopup({
-                            title: '❌ Error',
-                            message: 'Could not fetch wallet: ' + error.message,
-                            buttons: [{type: 'ok'}]
-                        });
-                    });
-            };
+                    }
+                });
+            }
         });
+
+        // Original setWallet function exposed from app.js (will be used if available)
+        // If app.js loads after DOMContentLoaded, the fallback above will work
 
         function goBack() {
             window.history.back();
@@ -321,7 +335,8 @@
         });
 
         window.goBack = goBack;
-        window.setWallet = setWallet;
+        // setWallet is already exposed from app.js
+        // If it's not loaded, the fallback above will handle it
     </script>
     <script src="/js/app.js?v=37"></script>
 </body>
