@@ -9,6 +9,7 @@ const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
 let lastAdTime = 0;
 const AD_COOLDOWN = 5000;
+let interstitialAdsDisabled = false;
 
 // ============================================
 // SAFE POPUP – Works on both Web & Mobile
@@ -50,7 +51,7 @@ function safePopupWithCallback(options, callback) {
 // SHOW INTERSTITIAL AD ON BUTTON CLICKS
 // ============================================
 function showInterstitialIfNeeded() {
-    if (window.interstitialAdsDisabled) {
+    if (interstitialAdsDisabled) {
         console.log("🔇 Interstitial ads disabled by user");
         return;
     }
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var target = e.target.closest('button');
         if (!target) return;
 
+        // Skip interstitial ads for these buttons
         if (target.classList.contains('back-btn') || 
             target.classList.contains('no-ad') || 
             target.id === 'watchAdBtn') {
@@ -129,6 +131,10 @@ async function loadUserData() {
         const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
         const data = await response.json();
         if (data.success) {
+            // Set interstitial ads disabled flag
+            interstitialAdsDisabled = data.interstitial_ads_disabled || false;
+            console.log('📢 interstitial_ads_disabled:', interstitialAdsDisabled);
+            
             updateUI(data);
             updateFields(data);
             updateReferral(data);
@@ -138,7 +144,6 @@ async function loadUserData() {
             updateTierButtons(data);
             
             if (data.interstitial_ads_disabled) {
-                window.interstitialAdsDisabled = true;
                 const disableBtn = document.getElementById('disableAdsBtn');
                 if (disableBtn) {
                     disableBtn.textContent = '✅ Ads Disabled';
@@ -184,9 +189,9 @@ async function updateReferralStats(userId) {
             var level1EarningsEl = document.getElementById('level1Earnings');
 
             if (referralCountEl) referralCountEl.textContent = data.total_referrals || 0;
-            if (referralEarnedEl) referralEarnedEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
+            if (referralEarnedEl) referralEarnedEl.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
             if (level1CountEl) level1CountEl.textContent = data.level1_count || 0;
-            if (level1EarningsEl) level1EarningsEl.textContent = '$' + (data.level1_earnings || 0).toFixed(3);
+            if (level1EarningsEl) level1EarningsEl.textContent = '$' + Number(data.level1_earnings || 0).toFixed(3);
         }
     } catch (error) {
         console.error('Error loading referral stats:', error);
@@ -196,32 +201,32 @@ async function updateReferralStats(userId) {
 function updateUI(data) {
     var balanceEl = document.getElementById('balance');
     if (balanceEl) {
-        balanceEl.textContent = '$' + (data.balance || 0).toFixed(3);
+        balanceEl.textContent = '$' + Number(data.balance || 0).toFixed(3);
     }
 
     var totalEarningsEl = document.getElementById('totalEarnings');
     if (totalEarningsEl) {
-        totalEarningsEl.textContent = '$' + (data.total_earnings || 0).toFixed(3);
+        totalEarningsEl.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
     }
 
     var investmentEarningsEl = document.getElementById('investmentEarnings');
     if (investmentEarningsEl) {
-        investmentEarningsEl.textContent = '$' + (data.investment_earnings || 0).toFixed(3);
+        investmentEarningsEl.textContent = '$' + Number(data.investment_earnings || 0).toFixed(3);
     }
 
     var referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
     if (referralEarningsDisplayEl) {
-        referralEarningsDisplayEl.textContent = '$' + (data.referral_earned || 0).toFixed(3);
+        referralEarningsDisplayEl.textContent = '$' + Number(data.referral_earned || 0).toFixed(3);
     }
 
     var adEarningsDisplayEl = document.getElementById('adEarningsDisplay');
     if (adEarningsDisplayEl) {
-        adEarningsDisplayEl.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
+        adEarningsDisplayEl.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
     }
 
     var tasksEarningsDisplayEl = document.getElementById('tasksEarningsDisplay');
     if (tasksEarningsDisplayEl) {
-        tasksEarningsDisplayEl.textContent = '$' + (data.tasks_earnings || 0).toFixed(3);
+        tasksEarningsDisplayEl.textContent = '$' + Number(data.tasks_earnings || 0).toFixed(3);
     }
 }
 
@@ -234,13 +239,13 @@ function updateDashboardUI(data) {
     var dashAdEarnings = document.getElementById('dashAdEarnings');
     var dashTasksEarnings = document.getElementById('dashTasksEarnings');
 
-    if (dashBalance) dashBalance.textContent = '$' + (data.balance || 0).toFixed(3);
-    if (dashInvested) dashInvested.textContent = '$' + (data.total_invested || 0).toFixed(3);
-    if (dashEarned) dashEarned.textContent = '$' + (data.total_earnings || 0).toFixed(3);
-    if (dashDeposited) dashDeposited.textContent = '$' + (data.total_deposited || 0).toFixed(3);
+    if (dashBalance) dashBalance.textContent = '$' + Number(data.balance || 0).toFixed(3);
+    if (dashInvested) dashInvested.textContent = '$' + Number(data.total_invested || 0).toFixed(3);
+    if (dashEarned) dashEarned.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
+    if (dashDeposited) dashDeposited.textContent = '$' + Number(data.total_deposited || 0).toFixed(3);
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
-    if (dashAdEarnings) dashAdEarnings.textContent = '$' + (data.total_ad_earnings || 0).toFixed(3);
-    if (dashTasksEarnings) dashTasksEarnings.textContent = '$' + (data.tasks_earnings || 0).toFixed(3);
+    if (dashAdEarnings) dashAdEarnings.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
+    if (dashTasksEarnings) dashTasksEarnings.textContent = '$' + Number(data.tasks_earnings || 0).toFixed(3);
 }
 
 // ============================================
@@ -301,7 +306,6 @@ function updateTierButtons(data) {
             btn.style.cursor = 'default';
             btn.onclick = null;
         } else {
-            // Only enable upgrade if tier is above current
             const tierOrder = ['free', 'bronze', 'silver', 'gold', 'diamond'];
             const userIndex = tierOrder.indexOf(userTier);
             const cardIndex = tierOrder.indexOf(tierName);
@@ -313,7 +317,6 @@ function updateTierButtons(data) {
                 btn.style.background = '';
                 btn.style.color = '';
                 btn.style.cursor = 'pointer';
-                // Preserve onclick
             } else {
                 btn.textContent = 'Locked';
                 btn.disabled = true;
@@ -1096,12 +1099,23 @@ async function checkDepositWithAmount() {
 // HISTORY FUNCTIONS
 // ============================================
 function filterHistory(type) {
+    // Fix: Check if event exists
+    var activeButton = null;
+    if (window.event && window.event.target) {
+        activeButton = window.event.target;
+    }
+    
     var buttons = document.querySelectorAll('.filter-btn');
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active');
     }
-    event.target.classList.add('active');
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+    
     var historyList = document.getElementById('historyList');
+    if (!historyList) return;
+    
     historyList.innerHTML = '<p class="empty-state">Loading...</p>';
     var userId = tgUser ? tgUser.id : '0';
 
@@ -1174,6 +1188,8 @@ function filterHistory(type) {
 
 function renderHistory(transactions) {
     var historyList = document.getElementById('historyList');
+    if (!historyList) return;
+    
     var html = '';
     for (var i = 0; i < transactions.length; i++) {
         var tx = transactions[i];
@@ -1361,7 +1377,7 @@ async function loadAdStats() {
 
         const adEarningsEl = document.getElementById('adEarnings');
         if (adEarningsEl) {
-            adEarningsEl.textContent = '$' + (userData.total_ad_earnings || 0).toFixed(3);
+            adEarningsEl.textContent = '$' + Number(userData.total_ad_earnings || 0).toFixed(3);
         }
 
         const adsTodayEl = document.getElementById('adsToday');
@@ -1571,7 +1587,7 @@ async function disableInterstitialAds() {
                         disableBtn.disabled = true;
                         disableBtn.style.opacity = '0.5';
                     }
-                    window.interstitialAdsDisabled = true;
+                    interstitialAdsDisabled = true;
                     loadUserData();
                 } else {
                     safePopup({
@@ -1916,3 +1932,4 @@ console.log('✅ PlantUSDT app loaded successfully!');
 console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
 console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
 console.log('📢 All amounts displayed with 3 decimal places');
+console.log('🔇 Interstitial ads disabled:', interstitialAdsDisabled);
