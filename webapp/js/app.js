@@ -1625,10 +1625,10 @@ async function disableInterstitialAds() {
     
     safePopupWithCallback({
         title: '🔇 Disable Ads',
-        message: 'Pay $10 USDT to permanently disable pop-up ads on button clicks.\n\nYou will still be able to watch rewarded ads for $0.001 USDT.',
+        message: 'Pay $4 USDT to reduce pop-up ads on button clicks.\n\n⚠️ Note: This may not disable all ads but will disable most of them.\n\nYou will still be able to watch rewarded ads for $0.001 USDT.',
         buttons: [
             {id: 'cancel', type: 'cancel'},
-            {id: 'confirm', type: 'ok', text: '✅ Pay $10'}
+            {id: 'confirm', type: 'ok', text: '✅ Pay $4'}
         ]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
@@ -1642,8 +1642,8 @@ async function disableInterstitialAds() {
                 
                 if (data.success) {
                     safePopup({
-                        title: '✅ Ads Disabled!',
-                        message: data.message + '\n\nNo more interstitial ads!',
+                        title: '✅ Ads Reduced!',
+                        message: data.message + '\n\nMost interstitial ads disabled!',
                         buttons: [{type: 'ok'}]
                     });
                     const disableBtn = document.getElementById('disableAdsBtn');

@@ -52,7 +52,7 @@ class Config:
     ACTIVE_REFERRAL_BONUS = float(os.getenv("ACTIVE_REFERRAL_BONUS", 0.03))
     ADS_FOR_ACTIVE_REFERRAL = int(os.getenv("ADS_FOR_ACTIVE_REFERRAL", 30))
     WELCOME_BONUS_AMOUNT = float(os.getenv("WELCOME_BONUS_AMOUNT", 0.1))
-    DISABLE_ADS_COST = float(os.getenv("DISABLE_ADS_COST", 10))
+    DISABLE_ADS_COST = float(os.getenv("DISABLE_ADS_COST", 4))
 
     @classmethod
     def get_network_info(cls):
