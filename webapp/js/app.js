@@ -677,7 +677,7 @@ async function updateReferral(data) {
 }
 
 // ============================================
-// FIXED: COPY REFERRAL FUNCTION
+// COPY REFERRAL FUNCTION
 // ============================================
 async function copyReferral() {
     showInterstitialIfNeeded();
@@ -686,7 +686,6 @@ async function copyReferral() {
     var referralLinkEl = document.getElementById('referralLinkText');
     var referralLink = referralLinkEl ? referralLinkEl.textContent.trim() : '';
     
-    // If the link shows "Loading..." or error, fetch it
     if (!referralLink || referralLink.includes('Loading') || referralLink.includes('Error') || referralLink.includes('⚠️')) {
         try {
             var response = await fetch(API_BASE + '/api/get_referral_code?telegram_id=' + userId + '&t=' + Date.now());
@@ -715,7 +714,6 @@ async function copyReferral() {
         }
     }
     
-    // Check if it's the placeholder text (wallet not connected)
     if (referralLink.includes('Save wallet') || referralLink.includes('wallet not connected')) {
         safePopup({
             title: '⚠️ Wallet Required',
@@ -725,7 +723,6 @@ async function copyReferral() {
         return;
     }
 
-    // Verify the link is valid
     if (!referralLink.startsWith('https://t.me/PlantUSDT_bot?start=')) {
         safePopup({
             title: '❌ Error',
@@ -735,7 +732,6 @@ async function copyReferral() {
         return;
     }
 
-    // Copy to clipboard
     try {
         await navigator.clipboard.writeText(referralLink);
         safePopup({
@@ -744,7 +740,6 @@ async function copyReferral() {
             buttons: [{type: 'ok'}]
         });
     } catch (clipError) {
-        // Fallback for older browsers
         var textArea = document.createElement('textarea');
         textArea.value = referralLink;
         document.body.appendChild(textArea);
@@ -757,7 +752,6 @@ async function copyReferral() {
                 buttons: [{type: 'ok'}]
             });
         } catch (fallbackError) {
-            // Last resort: show the link
             safePopup({
                 title: '📋 Your Referral Link',
                 message: referralLink,
@@ -1620,6 +1614,9 @@ async function claimWelcomeBonus() {
     });
 }
 
+// ============================================
+// DISABLE INTERSTITIAL ADS - HARDCODED $4
+// ============================================
 async function disableInterstitialAds() {
     const userId = tgUser ? tgUser.id : '0';
     
@@ -1918,7 +1915,6 @@ async function claimTaskReward(taskId) {
                 const data = await response.json();
                 console.log('📡 Claim response:', data);
                 
-                // Handle "Task not found" as already claimed
                 if (data.success === false && data.message === "Task not found") {
                     safePopup({
                         title: '✅ Already Claimed!',

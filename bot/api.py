@@ -820,9 +820,9 @@ def disable_interstitial_ads():
         if user.interstitial_ads_disabled:
             return jsonify({'success': False, 'message': 'Interstitial ads already disabled'})
         
-        cost = Decimal('10')
+        cost = Decimal('4')
         if user.balance < cost:
-            return jsonify({'success': False, 'message': f'Insufficient balance. Need $10.00 USDT (you have ${user.balance:.2f})'})
+            return jsonify({'success': False, 'message': f'Insufficient balance. Need $4.00 USDT (you have ${user.balance:.2f})'})
         
         user.balance = (user.balance or Decimal('0')) - cost
         user.interstitial_ads_disabled = True
