@@ -7,6 +7,8 @@ import random
 import string
 from datetime import datetime, timedelta
 from decimal import Decimal
+from functools import wraps
+from collections import defaultdict
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,8 +16,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import Config FIRST
 from config.settings import Config
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
+from flask_session import Session
 
 from database.db_manager import DatabaseManager
 from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, PendingDepositCheck
@@ -25,6 +28,47 @@ app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
 # ============================================
+# SESSION CONFIGURATION
+# ============================================
+app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+
+Session(app)
+
+# ============================================
+# RATE LIMITING
+# ============================================
+rate_limits = defaultdict(list)
+RATE_LIMIT = 60  # requests per minute
+RATE_WINDOW = 60  # seconds
+
+def rate_limit(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get client IP
+        client_ip = request.remote_addr
+        
+        # Clean old requests
+        now = time.time()
+        rate_limits[client_ip] = [t for t in rate_limits[client_ip] if now - t < RATE_WINDOW]
+        
+        # Check limit
+        if len(rate_limits[client_ip]) >= RATE_LIMIT:
+            return jsonify({'success': False, 'message': 'Too many requests. Please wait.'}), 429
+        
+        # Add current request
+        rate_limits[client_ip].append(now)
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ============================================
 # SECURITY FIXES
 # ============================================
 
@@ -32,13 +76,6 @@ logger = logging.getLogger(__name__)
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['TRAP_BAD_REQUEST_ERRORS'] = True
 app.config['TRAP_HTTP_EXCEPTIONS'] = True
-
-# Cookie security
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax'
-)
 
 @app.after_request
 def security_headers(response):
@@ -116,10 +153,11 @@ def get_webapp_dir():
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'webapp')
 
 # ============================================
-# EXISTING ENDPOINTS
+# ENDPOINTS WITH RATE LIMITING
 # ============================================
 
 @app.route('/api/get_wallet', methods=['GET'])
+@rate_limit
 def get_wallet():
     telegram_id = request.args.get('telegram_id', '0')
     if telegram_id == '0':
@@ -135,6 +173,7 @@ def get_wallet():
         session.close()
 
 @app.route('/api/save_wallet', methods=['POST'])
+@rate_limit
 def save_wallet():
     data = request.json
     telegram_id = data.get('telegram_id')
@@ -169,6 +208,7 @@ def save_wallet():
         session.close()
 
 @app.route('/api/withdraw', methods=['POST'])
+@rate_limit
 def withdraw():
     data = request.json
     telegram_id = data.get('telegram_id')
@@ -221,6 +261,7 @@ def withdraw():
         session.close()
 
 @app.route('/api/get_referral_code', methods=['GET'])
+@rate_limit
 def get_referral_code():
     telegram_id = request.args.get('telegram_id', '0')
     
@@ -240,6 +281,7 @@ def get_referral_code():
         session.close()
 
 @app.route('/api/referral_stats/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def get_referral_stats(telegram_id):
     session = db.get_session()
     try:
@@ -264,6 +306,7 @@ def get_referral_stats(telegram_id):
         session.close()
 
 @app.route('/api/user', methods=['GET'])
+@rate_limit
 def get_user():
     telegram_id = request.args.get('telegram_id', '0')
     
@@ -364,6 +407,7 @@ def get_user():
         session.close()
 
 @app.route('/api/real_history', methods=['GET'])
+@rate_limit
 def get_real_history():
     telegram_id = request.args.get('telegram_id', '0')
     
@@ -438,6 +482,7 @@ def get_real_history():
         session.close()
 
 @app.route('/api/investments/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def get_investments(telegram_id):
     session = db.get_session()
     try:
@@ -465,6 +510,7 @@ def get_investments(telegram_id):
         session.close()
 
 @app.route('/api/invest', methods=['POST'])
+@rate_limit
 def invest():
     data = request.json
     telegram_id = data.get('telegram_id')
@@ -525,6 +571,7 @@ def invest():
         session.close()
 
 @app.route('/api/invest_locked', methods=['POST'])
+@rate_limit
 def invest_locked():
     data = request.json
     telegram_id = data.get('telegram_id')
@@ -601,6 +648,7 @@ def invest_locked():
         session.close()
 
 @app.route('/api/check_deposit_with_amount', methods=['GET'])
+@rate_limit
 def check_deposit_with_amount():
     telegram_id = request.args.get('telegram_id')
     expected_amount = request.args.get('expected_amount', type=float)
@@ -645,14 +693,16 @@ def check_deposit_with_amount():
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
 # ============================================
-# AD REWARD ENDPOINT - FIXED WITH DECIMAL
+# AD REWARD ENDPOINT
 # ============================================
 
 @app.route('/api/can_watch_ad', methods=['GET'])
+@rate_limit
 def can_watch_ad():
     return jsonify({'can_watch': True, 'watched_today': 0})
 
 @app.route('/api/credit_ad_reward', methods=['POST'])
+@rate_limit
 def credit_ad_reward():
     from decimal import Decimal
     
@@ -692,6 +742,7 @@ def credit_ad_reward():
 # ============================================
 
 @app.route('/api/claim_investment', methods=['POST'])
+@rate_limit
 def claim_investment():
     from decimal import Decimal
     
@@ -767,6 +818,7 @@ def claim_investment():
 # ============================================
 
 @app.route('/api/referral_tiers', methods=['GET'])
+@rate_limit
 def get_referral_tiers():
     from services.referral import REFERRAL_TIERS
     return jsonify({
@@ -775,6 +827,7 @@ def get_referral_tiers():
     })
 
 @app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def get_referral_stats_full(telegram_id):
     from services.referral import get_referral_stats
     
@@ -795,6 +848,7 @@ def get_referral_stats_full(telegram_id):
         session.close()
 
 @app.route('/api/upgrade_tier', methods=['POST'])
+@rate_limit
 def upgrade_tier():
     from services.referral import upgrade_referral_tier
     
@@ -834,6 +888,7 @@ def upgrade_tier():
 # ============================================
 
 @app.route('/api/disable_interstitial_ads', methods=['POST'])
+@rate_limit
 def disable_interstitial_ads():
     from decimal import Decimal
     from datetime import datetime
@@ -876,6 +931,7 @@ def disable_interstitial_ads():
         session.close()
 
 @app.route('/api/get_active_referrals/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def get_active_referrals(telegram_id):
     from services.referral import get_active_referral_count, get_active_referral_list, is_referral_active
     
@@ -902,6 +958,7 @@ def get_active_referrals(telegram_id):
         session.close()
 
 @app.route('/api/claim_welcome_bonus', methods=['POST'])
+@rate_limit
 def claim_welcome_bonus():
     from services.referral import award_welcome_bonus
     
@@ -935,6 +992,7 @@ def claim_welcome_bonus():
         session.close()
 
 @app.route('/api/get_tasks/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def get_tasks(telegram_id):
     from services.referral import get_user_tasks as get_referral_tasks
     
@@ -962,6 +1020,7 @@ def get_tasks(telegram_id):
 # ============================================
 
 @app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def api_get_tasks(telegram_id):
     session = db.get_session()
     try:
@@ -988,6 +1047,7 @@ def api_get_tasks(telegram_id):
         session.close()
 
 @app.route('/api/claim_task_reward', methods=['POST'])
+@rate_limit
 def api_claim_task_reward():
     from decimal import Decimal
     
@@ -1022,6 +1082,7 @@ def api_claim_task_reward():
         session.close()
 
 @app.route('/api/task_stats/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def api_task_stats(telegram_id):
     session = db.get_session()
     try:
@@ -1044,6 +1105,7 @@ def api_task_stats(telegram_id):
 # ============================================
 
 @app.route('/api/get_user_tasks/<int:telegram_id>', methods=['GET'])
+@rate_limit
 def api_get_user_tasks(telegram_id):
     session = db.get_session()
     try:
@@ -1062,6 +1124,7 @@ def api_get_user_tasks(telegram_id):
         session.close()
 
 @app.route('/api/complete_task', methods=['POST'])
+@rate_limit
 def api_complete_task():
     data = request.json
     telegram_id = data.get('telegram_id')
@@ -1090,6 +1153,7 @@ def api_complete_task():
         session.close()
 
 @app.route('/api/claim_task_reward_old', methods=['POST'])
+@rate_limit
 def api_claim_task_reward_old():
     from decimal import Decimal
     

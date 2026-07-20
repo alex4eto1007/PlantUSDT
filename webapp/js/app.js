@@ -27,7 +27,6 @@ function safePopup(options) {
             alert(message);
         }
     } catch (e) {
-        // Generic error without exposing details
         alert('An error occurred. Please try again.');
     }
 }
@@ -45,7 +44,6 @@ function safePopupWithCallback(options, callback) {
             }
         }
     } catch (e) {
-        // Generic error without exposing details
         alert('An error occurred. Please try again.');
         if (callback) callback('cancel');
     }
@@ -1095,19 +1093,19 @@ function copyAddress() {
 async function checkDeposit() {
     var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
-        statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
+        statusDiv.textContent = '🔍 Checking Polygon for deposits...';
         try {
             var userId = tgUser ? tgUser.id : '0';
             var response = await fetch(API_BASE + '/api/check_deposit?telegram_id=' + userId);
             var data = await response.json();
             if (data.success) {
-                statusDiv.innerHTML = '✅ Deposit detected on Polygon! Balance updated.';
+                statusDiv.textContent = '✅ Deposit detected on Polygon! Balance updated.';
                 loadUserData();
             } else {
-                statusDiv.innerHTML = '⏳ No new deposits found on Polygon.';
+                statusDiv.textContent = '⏳ No new deposits found on Polygon.';
             }
         } catch (error) {
-            statusDiv.innerHTML = '❌ Error checking deposits.';
+            statusDiv.textContent = '❌ Error checking deposits.';
         }
     }
 }
@@ -1129,24 +1127,24 @@ async function checkDepositWithAmount() {
 
     const statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
-        statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
+        statusDiv.textContent = '🔍 Checking Polygon for deposits...';
         statusDiv.className = 'deposit-status pending';
         statusDiv.style.display = 'block';
         try {
             const response = await fetch(`${API_BASE}/api/check_deposit_with_amount?telegram_id=${userId}&expected_amount=${parseFloat(amount)}`);
             const data = await response.json();
             if (data.success) {
-                statusDiv.innerHTML = '✅ ' + data.message;
+                statusDiv.textContent = '✅ ' + data.message;
                 statusDiv.className = 'deposit-status success';
                 setTimeout(() => {
                     window.location.reload();
                 }, 2000);
             } else {
-                statusDiv.innerHTML = '⏳ ' + data.message;
+                statusDiv.textContent = '⏳ ' + data.message;
                 statusDiv.className = 'deposit-status pending';
             }
         } catch (error) {
-            statusDiv.innerHTML = '❌ Error checking deposits on Polygon. Please try again.';
+            statusDiv.textContent = '❌ Error checking deposits on Polygon. Please try again.';
             statusDiv.className = 'deposit-status error';
         }
     }
@@ -1181,7 +1179,7 @@ function filterHistory(type) {
     var historyList = document.getElementById('historyList');
     if (!historyList) return;
     
-    historyList.innerHTML = '<p class="empty-state">Loading...</p>';
+    historyList.textContent = 'Loading...';
     var userId = tgUser ? tgUser.id : '0';
 
     var url1 = API_BASE + '/api/real_history?telegram_id=' + userId;
@@ -1206,7 +1204,7 @@ function filterHistory(type) {
             }
 
             if (allTransactions.length === 0) {
-                historyList.innerHTML = '<p class="empty-state">No transactions found on Polygon.</p>';
+                historyList.textContent = 'No transactions found on Polygon.';
                 return;
             }
 
@@ -1235,7 +1233,7 @@ function filterHistory(type) {
                 if (type === 'withdrawals') displayType = 'withdrawal';
                 if (type === 'earnings') displayType = 'earning';
                 if (type === 'investments') displayType = 'investment';
-                historyList.innerHTML = '<p class="empty-state">No ' + displayType + ' transactions found on Polygon.</p>';
+                historyList.textContent = 'No ' + displayType + ' transactions found on Polygon.';
                 return;
             }
 
@@ -1247,7 +1245,7 @@ function filterHistory(type) {
         })
         .catch(function(error) {
             console.error('Error loading history');
-            historyList.innerHTML = '<p class="empty-state">Error loading history. Please try again.</p>';
+            historyList.textContent = 'Error loading history. Please try again.';
         });
 }
 
