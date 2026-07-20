@@ -36,7 +36,7 @@ SELECT
         ELSE '❌ NOT QUALIFIED'
     END as status,
     CASE 
-        WHEN u.total_invested < 300 THEN '❌ Need $300+ active investment'
+        WHEN u.total_invested < 300 THEN '❌ Need \$300+ active investment'
         WHEN (SELECT COUNT(*) FROM users WHERE referred_by = u.id) < 100 THEN '❌ Need 100+ referrals'
         WHEN (SELECT COUNT(*) FROM users ref 
               WHERE ref.referred_by = u.id 
@@ -51,7 +51,7 @@ WHERE u.telegram_id = $1;
 
 echo ""
 echo "📋 AMBASSADOR REQUIREMENTS:"
-echo "   ✅ Active Investment: $300+"
+echo "   ✅ Active Investment: \$300+"
 echo "   ✅ Total Referrals: 100+"
 echo "   ✅ Active Referrals: 50+ (30 ads OR invested)"
 echo "   ✅ Account Age: 14+ days"
