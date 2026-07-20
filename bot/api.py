@@ -166,7 +166,7 @@ def withdraw():
         if amount < 2:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $2'})
         
-        fee = amount * 0.10
+        fee = amount * 0.05
         net_amount = amount - fee
         
         withdrawal = Withdrawal(

@@ -22,7 +22,7 @@ class Config:
     MAX_FIELD_AMOUNT = float(os.getenv("MAX_FIELD_AMOUNT", 100))
     LOCK_MULTIPLIERS = {1: 1.02, 7: 1.18, 30: 1.80}
     MIN_WITHDRAWAL = float(os.getenv("MIN_WITHDRAWAL", 2))
-    WITHDRAWAL_FEE = float(os.getenv("WITHDRAWAL_FEE", 0.10))
+    WITHDRAWAL_FEE = float(os.getenv("WITHDRAWAL_FEE", 0.05))
     REFERRAL_BONUS_PERCENT = float(os.getenv("REFERRAL_BONUS_PERCENT", 0.01))
     REFERRAL_WINDOW_SECONDS = int(os.getenv("REFERRAL_WINDOW_SECONDS", 180))
     VERCEL_URL = os.getenv("VERCEL_URL", "https://plant-usdt.vercel.app")
