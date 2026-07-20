@@ -17,6 +17,7 @@ SELECT
     u.first_name,
     u.created_at,
     EXTRACT(DAY FROM (NOW() - u.created_at)) as days_old,
+    (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE user_id = u.id AND is_active = true AND is_locked = true) as active_investment,
     u.total_invested,
     u.total_ads_watched,
     (SELECT COUNT(*) FROM users WHERE referred_by = u.id) as total_referrals,
@@ -25,7 +26,7 @@ SELECT
      AND (ref.total_ads_watched >= 30 OR ref.total_invested > 0)
     ) as active_referrals,
     CASE 
-        WHEN u.total_invested >= 300 
+        WHEN (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE user_id = u.id AND is_active = true AND is_locked = true) >= 300 
         AND (SELECT COUNT(*) FROM users WHERE referred_by = u.id) >= 100
         AND (SELECT COUNT(*) FROM users ref 
              WHERE ref.referred_by = u.id 
@@ -36,7 +37,7 @@ SELECT
         ELSE '❌ NOT QUALIFIED'
     END as status,
     CASE 
-        WHEN u.total_invested < 300 THEN '❌ Need \$300+ active investment'
+        WHEN (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE user_id = u.id AND is_active = true AND is_locked = true) < 300 THEN '❌ Need $300+ active investment'
         WHEN (SELECT COUNT(*) FROM users WHERE referred_by = u.id) < 100 THEN '❌ Need 100+ referrals'
         WHEN (SELECT COUNT(*) FROM users ref 
               WHERE ref.referred_by = u.id 
@@ -51,7 +52,7 @@ WHERE u.telegram_id = $1;
 
 echo ""
 echo "📋 AMBASSADOR REQUIREMENTS:"
-echo "   ✅ Active Investment: \$300+"
+echo "   ✅ Active Investment: \$300+ (currently locked in fields)"
 echo "   ✅ Total Referrals: 100+"
 echo "   ✅ Active Referrals: 50+ (30 ads OR invested)"
 echo "   ✅ Account Age: 14+ days"
