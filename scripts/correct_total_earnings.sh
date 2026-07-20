@@ -19,7 +19,7 @@ sudo -u postgres psql -d plantusdt -c "
 UPDATE users u
 SET total_earnings_all_time = (
     COALESCE((SELECT SUM(amount) FROM daily_payouts WHERE user_id = u.id), 0)
-    + COALESCE((SELECT SUM(t.reward) FROM user_task_progress utp JOIN tasks t ON utp.task_id = t.id WHERE utp.user_id = u.id AND utp.claimed = true), 0)
+    + COALESCE(u.tasks_earnings, 0)
     + COALESCE(u.referral_earnings_all_time, 0)
     + COALESCE(u.total_ad_earnings, 0)
 );
