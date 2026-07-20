@@ -78,11 +78,15 @@ def clear_user_cache(telegram_id):
 # ============================================
 # CORS CONFIGURATION
 # ============================================
-CORS(app, origins=["https://plant-usdt.vercel.app", "https://plantusdt.vercel.app"])
+CORS(app, origins=["https://plant-usdt.vercel.app", "https://plantusdt.vercel.app", "https://plantusdt.ddns.net"])
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'https://plant-usdt.vercel.app')
+    # Only allow specific origins
+    origin = request.headers.get('Origin')
+    allowed_origins = ['https://plant-usdt.vercel.app', 'https://plantusdt.vercel.app', 'https://plantusdt.ddns.net']
+    if origin and origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
