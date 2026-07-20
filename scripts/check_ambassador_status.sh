@@ -39,7 +39,7 @@ done
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📋 AMBASSADOR REQUIREMENTS:"
-echo "   ✅ Active Investment: $300+"
+echo "   ✅ Active Investment: \$300+"
 echo "   ✅ Total Referrals: 100+"
 echo "   ✅ Active Referrals: 50+ (30 ads OR invested)"
 echo "   ✅ Account Age: 14+ days"
