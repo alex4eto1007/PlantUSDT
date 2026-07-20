@@ -1,0 +1,43 @@
+# ============================================
+# PLANTUSDT - ROBOTS.TXT
+# ============================================
+
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /backup/
+Disallow: /config/
+Disallow: /database/
+Disallow: /logs/
+Disallow: /scripts/
+Disallow: /venv/
+Disallow: /bot/
+Disallow: /services/
+Disallow: /*.env
+Disallow: /*.log
+Disallow: /*.sql
+Disallow: /*.sh
+Disallow: /*.py
+Disallow: /*.pyc
+Disallow: /*.json
+Disallow: /*.config
+Disallow: /*.ini
+Disallow: /*.conf
+Disallow: /.*
+Disallow: /backup_postgres.sh
+Disallow: /restore_backup.sh
+Disallow: /health_check.sh
+Disallow: /setup_systemd.sh
+
+# Allow indexing of main pages
+Allow: /
+Allow: /index.html
+Allow: /dashboard.html
+Allow: /history.html
+Allow: /deposit.html
+Allow: /deposit_new.html
+Allow: /withdraw.html
+Allow: /invest.html
+
+# Sitemap (optional)
+# Sitemap: https://plantusdt.ddns.net/sitemap.xml

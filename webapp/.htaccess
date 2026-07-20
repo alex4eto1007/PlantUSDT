@@ -1,0 +1,37 @@
+# ============================================
+# PLANTUSDT - SECURITY CONFIGURATION
+# ============================================
+
+# Prevent directory listing
+Options -Indexes
+
+# Hide server signature
+ServerSignature Off
+
+# Protect sensitive files
+<FilesMatch "\.(env|log|config|ini|conf|sql|sh|py|pyc|json|lock|md|txt|git|gitignore)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect hidden files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</IfModule>
+
+# Disable server signature
+<IfModule mod_env.c>
+    SetEnv SERVER_SIGNATURE off
+</IfModule>

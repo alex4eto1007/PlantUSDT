@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>📊 Dashboard - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -129,13 +132,14 @@
     </div>
 
     <script>
-        // API_BASE is declared in app.js - use window.API_BASE
-        // Do NOT redeclare const API_BASE here
-
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
+            try {
+                tg.ready();
+                tg.expand();
+            } catch (e) {
+                console.log('WebApp initialization error');
+            }
 
             var user = tg.initDataUnsafe?.user;
             var userId = user?.id || '0';
@@ -147,7 +151,7 @@
         });
 
         function goBack() {
-            window.history.back();
+            window.location.href = 'index.html';
         }
 
         async function loadDashboard(userId) {
@@ -180,8 +184,8 @@
                     document.getElementById('tierBonus').textContent = stats.tier_bonus + '% referral bonus';
                 }
             } catch (error) {
-                console.error('❌ Error loading dashboard:', error);
-                document.getElementById('loadingMessage').textContent = '❌ Network error: ' + error.message;
+                console.error('❌ Error loading dashboard');
+                document.getElementById('loadingMessage').textContent = '❌ Network error. Please try again.';
                 document.getElementById('loadingMessage').className = 'error-text';
             }
         }

@@ -6,6 +6,9 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>💳 Deposit - PlantUSDT</title>
     <link rel="stylesheet" href="/css/style.css?v=5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -159,9 +162,6 @@
     </div>
 
     <script>
-        // API_BASE is declared in app.js - use window.API_BASE
-        // Do NOT redeclare const API_BASE here
-
         function showAmountConfirmation() {
             var amountInput = document.getElementById('depositAmount');
             var amount = parseFloat(amountInput?.value) || 0;
@@ -178,8 +178,12 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
+            try {
+                tg.ready();
+                tg.expand();
+            } catch (e) {
+                console.log('WebApp initialization error');
+            }
 
             var userId = tg.initDataUnsafe?.user?.id || '0';
             console.log('📱 User ID:', userId);
@@ -202,13 +206,12 @@
                     }
                 })
                 .catch(function(error) {
-                    console.error('❌ Error loading wallet:', error);
+                    console.error('❌ Error loading wallet');
                     var displayEl = document.getElementById('connectedWalletDisplay');
                     displayEl.textContent = '❌ Error loading wallet';
                     displayEl.style.color = '#ff6b6b';
                 });
 
-            // Show confirmation if amount is already entered
             showAmountConfirmation();
         });
 
@@ -253,7 +256,6 @@
                 return;
             }
 
-            // Show confirmation before checking
             var confirmMsg = 'You are about to verify a deposit of $' + parseFloat(amount).toFixed(2) + ' USDT on Polygon.\n\nMake sure you have sent the exact amount to the address above.';
             window.Telegram.WebApp.showPopup({
                 title: '🔍 Verify Deposit',
@@ -289,7 +291,7 @@
                         statusDiv.className = 'deposit-status pending';
                     }
                 } catch (error) {
-                    console.error('Error checking deposit:', error);
+                    console.error('Error checking deposit');
                     statusDiv.innerHTML = '❌ Error checking deposits on Polygon. Please try again.';
                     statusDiv.className = 'deposit-status error';
                 }

@@ -25,6 +25,35 @@ app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
 # ============================================
+# SECURITY FIXES
+# ============================================
+
+# Hide server version
+app.config['PROPAGATE_EXCEPTIONS'] = True
+app.config['TRAP_BAD_REQUEST_ERRORS'] = True
+app.config['TRAP_HTTP_EXCEPTIONS'] = True
+
+# Cookie security
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
+)
+
+@app.after_request
+def security_headers(response):
+    # Hide server info
+    response.headers['Server'] = 'PlantUSDT'
+    
+    # Cache-Control for API responses
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    return response
+
+# ============================================
 # API CACHING
 # ============================================
 cache = {}

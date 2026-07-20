@@ -19,9 +19,6 @@ body {
     padding-bottom: 40px;
 }
 
-/* ============================================
-   HEADER
-   ============================================ */
 .header {
     display: flex;
     justify-content: space-between;
@@ -63,9 +60,6 @@ body {
     color: #00ff87;
 }
 
-/* ============================================
-   NETWORK BADGE
-   ============================================ */
 .network-badge-container {
     text-align: center;
     margin-bottom: 16px;
@@ -98,9 +92,6 @@ body {
     50% { opacity: 0.4; }
 }
 
-/* ============================================
-   EARNINGS
-   ============================================ */
 .earnings-section {
     margin-bottom: 20px;
 }
@@ -145,9 +136,6 @@ body {
     color: #00ff87;
 }
 
-/* ============================================
-   STATS GRID
-   ============================================ */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -187,9 +175,6 @@ body {
     margin-top: 2px;
 }
 
-/* ============================================
-   WALLET
-   ============================================ */
 .wallet-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -257,9 +242,6 @@ body {
     cursor: not-allowed;
 }
 
-/* ============================================
-   FIELDS
-   ============================================ */
 .section-title {
     font-size: 18px;
     font-weight: 700;
@@ -386,9 +368,6 @@ body {
     color: #ccd6f0;
 }
 
-/* ============================================
-   BUTTONS / ACTIONS
-   ============================================ */
 .actions-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -439,9 +418,6 @@ body {
     font-size: 20px;
 }
 
-/* ============================================
-   REFERRAL
-   ============================================ */
 .referral-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -533,9 +509,6 @@ body {
     font-size: 15px;
 }
 
-/* ============================================
-   ADS
-   ============================================ */
 .ad-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(0,255,135,0.15);
@@ -581,9 +554,6 @@ body {
     margin-top: 2px;
 }
 
-/* ============================================
-   TASKS
-   ============================================ */
 .tasks-section {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -598,9 +568,6 @@ body {
     color: #ccd6f0;
 }
 
-/* ============================================
-   TIERS
-   ============================================ */
 .tier-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -686,9 +653,6 @@ body {
     cursor: not-allowed;
 }
 
-/* ============================================
-   INFO / HOW IT WORKS
-   ============================================ */
 .info-card {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -710,9 +674,6 @@ body {
     line-height: 1.6;
 }
 
-/* ============================================
-   DEPOSIT PAGE
-   ============================================ */
 .deposit-address-box {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.05);
@@ -757,9 +718,6 @@ body {
     color: #8247E5;
 }
 
-/* ============================================
-   WITHDRAW PAGE
-   ============================================ */
 .fee-summary {
     background: rgba(0,0,0,0.3);
     border-radius: 8px;
@@ -796,9 +754,6 @@ body {
     color: #ffffff;
 }
 
-/* ============================================
-   HISTORY PAGE
-   ============================================ */
 .history-filters {
     display: flex;
     gap: 8px;
@@ -888,9 +843,6 @@ body {
     font-size: 14px;
 }
 
-/* ============================================
-   DASHBOARD
-   ============================================ */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -927,9 +879,6 @@ body {
     color: #00ff87 !important;
 }
 
-/* ============================================
-   TIER DISPLAY
-   ============================================ */
 .tier-display {
     background: rgba(130,71,229,0.1);
     border: 1px solid rgba(130,71,229,0.2);
@@ -977,9 +926,6 @@ body {
     transform: scale(1.05);
 }
 
-/* ============================================
-   LOADING & ERRORS
-   ============================================ */
 .loading-text {
     color: #8892b0;
     font-size: 14px;
@@ -1022,9 +968,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ============================================
-   BACK BUTTON
-   ============================================ */
 .back-btn {
     font-size: 28px !important;
     padding: 8px 16px !important;
@@ -1050,9 +993,6 @@ body {
     margin: 0 !important;
 }
 
-/* ============================================
-   NETWORK BADGE MINI
-   ============================================ */
 .network-badge-mini {
     display: inline-block;
     background: rgba(130,71,229,0.2);
@@ -1064,9 +1004,6 @@ body {
     flex-shrink: 0;
 }
 
-/* ============================================
-   NETWORK BADGE LARGE (DEPOSIT PAGE)
-   ============================================ */
 .network-badge-large {
     display: inline-flex;
     align-items: center;
@@ -1089,9 +1026,6 @@ body {
     animation: pulse-dot 2s infinite;
 }
 
-/* ============================================
-   NETWORK BADGE SMALL (WITHDRAW PAGE)
-   ============================================ */
 .network-badge-small {
     display: inline-flex;
     align-items: center;
@@ -1113,9 +1047,6 @@ body {
     display: inline-block;
 }
 
-/* ============================================
-   WARNING BOXES
-   ============================================ */
 .warning-box-critical {
     background: rgba(255,107,107,0.15);
     border: 2px solid rgba(255,107,107,0.4);
@@ -1141,9 +1072,6 @@ body {
     border: 1px solid rgba(255,193,7,0.15);
 }
 
-/* ============================================
-   DEPOSIT TIMER MESSAGE
-   ============================================ */
 .deposit-timer-message {
     margin-top: 10px;
     padding: 12px;
@@ -1164,9 +1092,6 @@ body {
     opacity: 0.8;
 }
 
-/* ============================================
-   CONTACT SUPPORT
-   ============================================ */
 .contact-support {
     margin-top: 12px;
     padding: 12px;
@@ -1189,9 +1114,6 @@ body {
     font-weight: 600;
 }
 
-/* ============================================
-   SET WALLET BUTTON
-   ============================================ */
 .set-wallet-btn {
     margin-top: 4px;
     padding: 4px 12px;
@@ -1207,9 +1129,6 @@ body {
     background: rgba(0,255,135,0.2);
 }
 
-/* ============================================
-   FORM INPUTS
-   ============================================ */
 input, textarea, select {
     background: rgba(0,0,0,0.4) !important;
     color: #ccd6f0 !important;
@@ -1252,9 +1171,6 @@ input:disabled, textarea:disabled, select:disabled {
     margin-bottom: 6px !important;
 }
 
-/* ============================================
-   FOOTER
-   ============================================ */
 .footer {
     text-align: center;
     padding: 20px 0;
@@ -1266,9 +1182,6 @@ input:disabled, textarea:disabled, select:disabled {
     margin: 4px 0;
 }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 400px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1295,9 +1208,6 @@ input:disabled, textarea:disabled, select:disabled {
     }
 }
 
-/* ============================================
-   UTILITIES
-   ============================================ */
 .text-center {
     text-align: center;
 }
@@ -1330,9 +1240,6 @@ input:disabled, textarea:disabled, select:disabled {
     margin-bottom: 16px;
 }
 
-/* ============================================
-   SCROLLBAR
-   ============================================ */
 ::-webkit-scrollbar {
     width: 6px;
 }

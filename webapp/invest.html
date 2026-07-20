@@ -3,57 +3,435 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💰 Invest - PlantUSDT</title>
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>🌱 Invest - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js?v=37"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        .back-btn {
+            font-size: 28px !important;
+            padding: 8px 16px !important;
+            cursor: pointer !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 8px !important;
+            color: #ccd6f0 !important;
+            line-height: 1 !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .field-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .field-card.active {
+            border-color: rgba(130,71,229,0.3);
+            background: rgba(130,71,229,0.03);
+        }
+        .field-number {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ccd6f0;
+            margin-bottom: 4px;
+        }
+        .field-status {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .field-status.available { color: #8247E5; }
+        .field-status.locked { color: #ffd93d; }
+        .field-status.ready { color: #00ff87; }
+        .field-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+        }
+        .field-timer {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 8px 0 12px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .field-timer.ready {
+            color: #00ff87;
+            border-color: rgba(0,255,135,0.3);
+            background: rgba(0,255,135,0.08);
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .field-progress {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff87, #8247E5);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .field-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #8892b0;
+            margin: 8px 0 12px;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: #fff;
+            transition: transform 0.2s;
+        }
+        .action-btn:hover { transform: translateY(-2px); }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .action-btn.claim-btn {
+            background: linear-gradient(135deg, #ffd93d, #f9a825);
+            color: #0a0e17;
+        }
+        .info-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .info-card h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #ccd6f0;
+        }
+        .info-card p {
+            font-size: 13px;
+            color: #8892b0;
+            line-height: 1.6;
+        }
+        .action-btn.secondary {
+            width: 100%;
+            margin-top: 12px;
+            border-color: rgba(0,255,135,0.2);
+            color: #00ff87;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .loading-text {
+            color: #8892b0;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+        .error-text {
+            color: #ff6b6b;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
             <button class="back-btn" onclick="goBack()">←</button>
-            <h1>💰 Invest</h1>
+            <h1 style="color:#00ff87;font-size:20px; margin: 0; flex: 1; text-align: center;">🌱 Invest</h1>
+            <span style="font-size:11px;color:#8247E5;background:rgba(130,71,229,0.1);padding:2px 10px;border-radius:12px;">Polygon</span>
         </div>
 
-        <div class="invest-info">
-            <div class="info-card">
-                <h3>📈 Investment Plan</h3>
-                <div class="plan-details">
-                    <div class="plan-item">
-                        <span>Daily Return</span>
-                        <span class="highlight">2%</span>
-                    </div>
-                    <div class="plan-item">
-                        <span>Duration</span>
-                        <span class="highlight">30 Days</span>
-                    </div>
-                    <div class="plan-item">
-                        <span>Total Return</span>
-                        <span class="highlight">160%</span>
-                    </div>
-                    <div class="plan-item">
-                        <span>Min Deposit</span>
-                        <span class="highlight">$5 USDT</span>
-                    </div>
-                </div>
+        <div id="loadingMessage" class="loading-text">Loading your fields...</div>
+
+        <div id="fieldsContainer" style="display:none;">
+            <div class="field-card" id="field1">
+                <div class="field-number">🌾 Field #1</div>
+                <div class="field-status" id="field1Status">Available</div>
+                <div class="field-amount" id="field1Amount">$0.000</div>
+                <div class="field-timer" id="field1Timer">⏳ Payout: --:--:-- UTC</div>
+                <div class="field-progress"><div class="progress-bar" id="field1Progress" style="width:0%"></div></div>
+                <div class="field-details"><span>Days: <span id="field1Days">0/30</span></span><span>Earned: <span id="field1Earned">$0.000</span></span></div>
+                <button class="action-btn" id="field1Btn" onclick="investField(1)">🌱 Plant Now</button>
+            </div>
+
+            <div class="field-card" id="field2">
+                <div class="field-number">🌾 Field #2</div>
+                <div class="field-status" id="field2Status">Available</div>
+                <div class="field-amount" id="field2Amount">$0.000</div>
+                <div class="field-timer" id="field2Timer">⏳ Payout: --:--:-- UTC</div>
+                <div class="field-progress"><div class="progress-bar" id="field2Progress" style="width:0%"></div></div>
+                <div class="field-details"><span>Days: <span id="field2Days">0/30</span></span><span>Earned: <span id="field2Earned">$0.000</span></span></div>
+                <button class="action-btn" id="field2Btn" onclick="investField(2)">🌱 Plant Now</button>
+            </div>
+
+            <div class="field-card" id="field3">
+                <div class="field-number">🌾 Field #3</div>
+                <div class="field-status" id="field3Status">Available</div>
+                <div class="field-amount" id="field3Amount">$0.000</div>
+                <div class="field-timer" id="field3Timer">⏳ Payout: --:--:-- UTC</div>
+                <div class="field-progress"><div class="progress-bar" id="field3Progress" style="width:0%"></div></div>
+                <div class="field-details"><span>Days: <span id="field3Days">0/30</span></span><span>Earned: <span id="field3Earned">$0.000</span></span></div>
+                <button class="action-btn" id="field3Btn" onclick="investField(3)">🌱 Plant Now</button>
             </div>
 
             <div class="info-card">
-                <h3>💰 Your Balance</h3>
-                <div class="balance-display" id="investBalance">$0.00</div>
-                <button class="action-btn success" onclick="navigateTo('deposit')">💳 Deposit First</button>
+                <h3>💎 Investment Options</h3>
+                <p><strong>1 Day:</strong> 2% return</p>
+                <p><strong>7 Days:</strong> 18% return</p>
+                <p><strong>30 Days:</strong> 80% return</p>
+                <p style="color:#8247E5;margin-top:8px;">⛓️ Powered by Polygon Network</p>
             </div>
 
-            <div class="info-card">
-                <h3>📊 Example</h3>
-                <p>Invest $100 USDT</p>
-                <p>→ Earn $2 DAILY</p>
-                <p>→ Total $160 after 30 days</p>
-            </div>
+            <button class="action-btn secondary" onclick="goBack()">📊 Back to Dashboard</button>
         </div>
-
-        <button class="action-btn secondary" onclick="navigateTo('dashboard')">📊 Back to Dashboard</button>
     </div>
 
+    <script>
+        const API_BASE = 'https://plantusdt.ddns.net';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var tg = window.Telegram.WebApp;
+            try {
+                tg.ready();
+                tg.expand();
+            } catch (e) {
+                console.log('WebApp initialization error');
+            }
+
+            var user = tg.initDataUnsafe?.user;
+            var userId = user?.id || '0';
+
+            loadFields(userId);
+        });
+
+        async function loadFields(userId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
+                const data = await response.json();
+
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('fieldsContainer').style.display = 'block';
+
+                if (data.success) {
+                    updateFields(data);
+                }
+            } catch (error) {
+                console.error('Error loading fields');
+                document.getElementById('loadingMessage').textContent = '❌ Error loading fields. Please try again.';
+                document.getElementById('loadingMessage').className = 'error-text';
+            }
+        }
+
+        function updateFields(data) {
+            var fields = data.fields || [];
+
+            for (var i = 1; i <= 3; i++) {
+                var statusEl = document.getElementById('field' + i + 'Status');
+                var amountEl = document.getElementById('field' + i + 'Amount');
+                var daysEl = document.getElementById('field' + i + 'Days');
+                var earnedEl = document.getElementById('field' + i + 'Earned');
+                var progressEl = document.getElementById('field' + i + 'Progress');
+                var cardEl = document.getElementById('field' + i);
+                var btnEl = document.getElementById('field' + i + 'Btn');
+                var timerEl = document.getElementById('field' + i + 'Timer');
+
+                if (!statusEl || !amountEl || !daysEl || !earnedEl || !progressEl || !cardEl || !btnEl || !timerEl) {
+                    continue;
+                }
+
+                var field = fields.find(function(f) { return f.field_number === i; });
+
+                if (field) {
+                    var lockPeriod = field.lock_period || 30;
+                    var isLocked = field.is_locked || false;
+                    var unlockDate = new Date(field.unlock_date);
+                    var now = new Date();
+                    var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
+
+                    amountEl.textContent = '$' + field.amount.toFixed(3);
+                    daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
+
+                    var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
+                    earnedEl.textContent = '$' + displayEarned.toFixed(3);
+
+                    var progress = isLocked ? ((lockPeriod - daysRemaining) / lockPeriod) * 100 : 100;
+                    progressEl.style.width = Math.min(progress, 100) + '%';
+                    cardEl.className = 'field-card active';
+
+                    if (isLocked) {
+                        var timeLeft = unlockDate.getTime() - now.getTime();
+                        if (timeLeft <= 0) {
+                            timerEl.textContent = '🟢 READY TO CLAIM!';
+                            timerEl.className = 'field-timer ready';
+                            statusEl.textContent = '✅ Ready to Claim!';
+                            statusEl.className = 'field-status ready';
+                            btnEl.textContent = '🌾 Claim Now!';
+                            btnEl.className = 'action-btn claim-btn';
+                            btnEl.disabled = false;
+                            btnEl.onclick = (function(fieldNum) {
+                                return function() { claimInvestment(fieldNum); };
+                            })(i);
+                        } else {
+                            var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                            var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                            var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                            var timeString = days > 0 ? days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') : String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                            timerEl.textContent = '🔒 Unlock in: ' + timeString + ' UTC';
+                            timerEl.className = 'field-timer';
+                            statusEl.textContent = '🔒 Locked';
+                            statusEl.className = 'field-status locked';
+                            btnEl.textContent = '🔒 Locked';
+                            btnEl.className = 'action-btn';
+                            btnEl.disabled = true;
+                            btnEl.onclick = null;
+                        }
+                    } else {
+                        timerEl.textContent = '🟢 Available';
+                        timerEl.className = 'field-timer';
+                        statusEl.textContent = '✅ Available';
+                        statusEl.className = 'field-status available';
+                        btnEl.textContent = '🌱 Plant Now';
+                        btnEl.className = 'action-btn';
+                        btnEl.disabled = false;
+                        btnEl.onclick = (function(fieldNum) {
+                            return function() { investField(fieldNum); };
+                        })(i);
+                    }
+                } else {
+                    statusEl.textContent = '✅ Available';
+                    statusEl.className = 'field-status available';
+                    amountEl.textContent = '$0.000';
+                    daysEl.textContent = '0 days';
+                    earnedEl.textContent = '$0.000';
+                    progressEl.style.width = '0%';
+                    cardEl.className = 'field-card';
+                    timerEl.textContent = '⏳ Payout: --:--:-- UTC';
+                    timerEl.className = 'field-timer';
+                    btnEl.textContent = '🌱 Plant Now';
+                    btnEl.className = 'action-btn';
+                    btnEl.disabled = false;
+                    btnEl.onclick = (function(fieldNum) {
+                        return function() { investField(fieldNum); };
+                    })(i);
+                }
+            }
+        }
+
+        function investField(fieldNumber) {
+            if (typeof window.investField === 'function') {
+                window.investField(fieldNumber);
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function claimInvestment(fieldNumber) {
+            var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
+            
+            window.Telegram.WebApp.showPopup({
+                title: '🌾 Claim Investment',
+                message: 'Are you sure you want to claim Field #' + fieldNumber + '?',
+                buttons: [
+                    {id: 'cancel', type: 'cancel'},
+                    {id: 'confirm', type: 'ok', text: '✅ Claim'}
+                ]
+            }, async function(buttonId) {
+                if (buttonId === 'confirm') {
+                    try {
+                        const response = await fetch(`${API_BASE}/api/claim_investment`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                telegram_id: userId,
+                                field_number: fieldNumber
+                            })
+                        });
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            window.Telegram.WebApp.showPopup({
+                                title: '✅ Claimed!',
+                                message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!\n\n🌱 The field is now available for a new investment.',
+                                buttons: [{type: 'ok'}]
+                            });
+                            setTimeout(function() {
+                                loadFields(userId);
+                            }, 1000);
+                        } else {
+                            window.Telegram.WebApp.showPopup({
+                                title: '❌ Error',
+                                message: data.message || 'Failed to claim.',
+                                buttons: [{type: 'ok'}]
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error claiming');
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Error',
+                            message: 'Network error. Please try again.',
+                            buttons: [{type: 'ok'}]
+                        });
+                    }
+                }
+            });
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        window.goBack = goBack;
+        window.investField = investField;
+        window.claimInvestment = claimInvestment;
+        window.loadFields = loadFields;
+        window.updateFields = updateFields;
+    </script>
     <script src="js/app.js?v=37"></script>
 </body>
 </html>

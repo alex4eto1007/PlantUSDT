@@ -6,6 +6,9 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>🏦 Withdraw - PlantUSDT</title>
     <link rel="stylesheet" href="/css/style.css?v=5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -173,14 +176,14 @@
     </div>
 
     <script>
-        // API_BASE is declared in app.js - use window.API_BASE
-        // Do NOT redeclare const API_BASE here
-
-        // Wait for DOM and app.js to load
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
+            try {
+                tg.ready();
+                tg.expand();
+            } catch (e) {
+                console.log('WebApp initialization error');
+            }
 
             var amountInput = document.getElementById('withdrawAmount');
             var feeSummary = document.getElementById('feeSummary');
@@ -204,15 +207,12 @@
                 });
             }
 
-            // Set Wallet button with proper initialization
             var setWalletBtn = document.getElementById('setWalletBtn');
             if (setWalletBtn) {
                 setWalletBtn.addEventListener('click', function() {
-                    // Check if setWallet is available
                     if (typeof window.setWallet === 'function') {
                         window.setWallet();
                     } else {
-                        // Fallback if app.js not loaded yet
                         console.warn('⚠️ setWallet not loaded, using fallback');
                         var userId = tg.initDataUnsafe?.user?.id || '0';
                         fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + userId)
@@ -234,10 +234,10 @@
                                 }
                             })
                             .catch(function(error) {
-                                console.error('Error loading wallet:', error);
+                                console.error('Error loading wallet');
                                 window.Telegram.WebApp.showPopup({
                                     title: '❌ Error',
-                                    message: 'Could not fetch wallet: ' + error.message,
+                                    message: 'Could not fetch wallet. Please try again.',
                                     buttons: [{type: 'ok'}]
                                 });
                             });
@@ -245,9 +245,6 @@
                 });
             }
         });
-
-        // Original setWallet function exposed from app.js (will be used if available)
-        // If app.js loads after DOMContentLoaded, the fallback above will work
 
         function goBack() {
             window.location.href = 'index.html';
@@ -319,7 +316,7 @@
                         }
                     })
                     .catch(function(error) {
-                        console.error('Error:', error);
+                        console.error('Error submitting withdrawal');
                         if (submitBtn) {
                             submitBtn.disabled = false;
                             submitBtn.textContent = '🌱 Request Withdrawal on Polygon';
@@ -335,8 +332,6 @@
         });
 
         window.goBack = goBack;
-        // setWallet is already exposed from app.js
-        // If it's not loaded, the fallback above will handle it
     </script>
     <script src="/js/app.js?v=37"></script>
 </body>

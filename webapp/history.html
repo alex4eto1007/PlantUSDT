@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>📜 Transaction History - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -99,18 +102,19 @@
     </div>
 
     <script>
-        // API_BASE is declared in app.js - use window.API_BASE
-        // Do NOT redeclare const API_BASE here
-
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
+            try {
+                tg.ready();
+                tg.expand();
+            } catch (e) {
+                console.log('WebApp initialization error');
+            }
             filterHistory('all');
         });
 
         function goBack() {
-            window.history.back();
+            window.location.href = 'index.html';
         }
 
         function navigateTo(page) {
@@ -128,7 +132,6 @@
 
         window.goBack = goBack;
         window.navigateTo = navigateTo;
-        // filterHistory is already exposed globally from app.js
     </script>
     <script src="js/app.js?v=37"></script>
 </body>

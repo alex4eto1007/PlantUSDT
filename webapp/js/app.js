@@ -27,7 +27,8 @@ function safePopup(options) {
             alert(message);
         }
     } catch (e) {
-        alert(options.message || options);
+        // Generic error without exposing details
+        alert('An error occurred. Please try again.');
     }
 }
 
@@ -44,8 +45,9 @@ function safePopupWithCallback(options, callback) {
             }
         }
     } catch (e) {
-        alert(options.message || options);
-        if (callback) callback('confirm');
+        // Generic error without exposing details
+        alert('An error occurred. Please try again.');
+        if (callback) callback('cancel');
     }
 }
 
@@ -77,15 +79,19 @@ function showInterstitialIfNeeded() {
 // PAGE NAVIGATION
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    tg.ready();
-    tg.expand();
-    loadUserData();
-    loadSavedWallet();
-    setupEventListeners();
-    startCountdownTimer();
-    loadAdStats();
-    loadActiveReferrals();
-    loadTasks();
+    try {
+        tg.ready();
+        tg.expand();
+        loadUserData();
+        loadSavedWallet();
+        setupEventListeners();
+        startCountdownTimer();
+        loadAdStats();
+        loadActiveReferrals();
+        loadTasks();
+    } catch (e) {
+        console.log('Error initializing app');
+    }
 
     document.addEventListener('click', function(e) {
         var target = e.target.closest('button');
@@ -153,7 +159,7 @@ async function loadUserData() {
             }
         }
     } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('Error loading user data');
     }
 }
 
@@ -194,7 +200,7 @@ async function updateReferralStats(userId) {
             if (level1EarningsEl) level1EarningsEl.textContent = '$' + Number(data.level1_earnings || 0).toFixed(3);
         }
     } catch (error) {
-        console.error('Error loading referral stats:', error);
+        console.error('Error loading referral stats');
     }
 }
 
@@ -485,7 +491,7 @@ async function claimInvestment(fieldNumber) {
                     window.claimInProgress = false;
                 }
             } catch (error) {
-                console.error('❌ Error claiming:', error);
+                console.error('❌ Error claiming');
                 safePopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
@@ -704,7 +710,7 @@ async function copyReferral() {
                 return;
             }
         } catch (error) {
-            console.error('Error getting referral code:', error);
+            console.error('Error getting referral code');
             safePopup({
                 title: '❌ Error',
                 message: 'Network error. Please try again.',
@@ -797,7 +803,7 @@ async function saveWallet() {
             safePopup({title:'❌ Error', message:data.message || 'Failed to save wallet.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
-        console.error('Error saving wallet:', error);
+        console.error('Error saving wallet');
         safePopup({title:'❌ Error', message:'Failed to save wallet. Please try again.', buttons:[{type:'ok'}]});
     }
 }
@@ -873,7 +879,7 @@ async function disconnectWallet() {
                     safePopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
-                console.error('Error disconnecting wallet:', error);
+                console.error('Error disconnecting wallet');
                 safePopup({title:'❌ Error', message:'Failed to disconnect. Please try again.', buttons:[{type:'ok'}]});
             }
         }
@@ -889,7 +895,7 @@ async function loadSavedWallet() {
             updateWalletUI(data.wallet_address);
         }
     } catch (error) {
-        console.error('Error loading wallet:', error);
+        console.error('Error loading wallet');
     }
 }
 
@@ -909,7 +915,7 @@ async function setWallet() {
             safePopup({title:'❌ No Wallet Found', message:'Please save a Polygon wallet address first.', buttons:[{type:'ok'}]});
         }
     } catch (error) {
-        console.error('Error loading wallet:', error);
+        console.error('Error loading wallet');
         safePopup({title:'❌ Error', message:'Failed to load wallet.', buttons:[{type:'ok'}]});
     }
 }
@@ -1012,7 +1018,7 @@ async function investFieldWithLock(fieldNumber) {
                     safePopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
                 }
             } catch (error) {
-                console.error('Error investing:', error);
+                console.error('Error investing');
                 safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
             }
         }
@@ -1240,7 +1246,7 @@ function filterHistory(type) {
             renderHistory(allTransactions);
         })
         .catch(function(error) {
-            console.error('Error loading history:', error);
+            console.error('Error loading history');
             historyList.innerHTML = '<p class="empty-state">Error loading history. Please try again.</p>';
         });
 }
@@ -1348,7 +1354,7 @@ function setupEventListeners() {
                     }
                 })
                 .catch(function(error) {
-                    console.error('Error:', error);
+                    console.error('Error submitting withdrawal');
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
                     safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
                 });
@@ -1374,7 +1380,7 @@ async function creditAdReward() {
         const data = await response.json();
         return data.success || false;
     } catch (error) {
-        console.error('Error crediting ad reward:', error);
+        console.error('Error crediting ad reward');
         return false;
     }
 }
@@ -1418,7 +1424,7 @@ async function watchRewardedAd() {
         });
         return false;
     } catch (error) {
-        console.error('Error watching ad:', error);
+        console.error('Error watching ad');
         safePopup({
             title: '❌ Ad Not Available',
             message: 'No ads available right now. Please try again later.',
@@ -1455,7 +1461,7 @@ async function loadAdStats() {
             }
         }
     } catch (error) {
-        console.error('Error loading ad stats:', error);
+        console.error('Error loading ad stats');
     }
 }
 
@@ -1514,7 +1520,7 @@ async function upgradeReferralTier(tier) {
                     });
                 }
             } catch (error) {
-                console.error('Error upgrading tier:', error);
+                console.error('Error upgrading tier');
                 safePopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
@@ -1562,7 +1568,7 @@ async function loadActiveReferrals() {
             }
         }
     } catch (error) {
-        console.error('Error loading active referrals:', error);
+        console.error('Error loading active referrals');
     }
 }
 
@@ -1603,7 +1609,7 @@ async function claimWelcomeBonus() {
                     });
                 }
             } catch (error) {
-                console.error('Error claiming bonus:', error);
+                console.error('Error claiming bonus');
                 safePopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
@@ -1659,7 +1665,7 @@ async function disableInterstitialAds() {
                     });
                 }
             } catch (error) {
-                console.error('Error disabling ads:', error);
+                console.error('Error disabling ads');
                 safePopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
@@ -1817,7 +1823,7 @@ async function loadTasks() {
             }
         }
     } catch (error) {
-        console.error('❌ Error loading tasks:', error);
+        console.error('❌ Error loading tasks');
     }
 }
 
@@ -1946,7 +1952,7 @@ async function claimTaskReward(taskId) {
                     });
                 }
             } catch (error) {
-                console.error('❌ Error claiming reward:', error);
+                console.error('❌ Error claiming reward');
                 safePopup({
                     title: 'ℹ️ Check Your Balance',
                     message: 'Please refresh the app to see if your reward was credited.',
@@ -1989,8 +1995,7 @@ window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
 window.claimTaskReward = claimTaskReward;
 
-console.log('✅ PlantUSDT app loaded successfully!');
+console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
 console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
 console.log('📢 All amounts displayed with 3 decimal places');
-console.log('🔇 Interstitial ads disabled:', interstitialAdsDisabled);

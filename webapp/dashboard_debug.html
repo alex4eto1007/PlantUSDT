@@ -3,101 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Debug</title>
-    <script src="https://telegram.org/js/telegram-web-app.js?v=37"></script>
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>📊 Dashboard Debug - PlantUSDT</title>
     <style>
-        body { background: #0a0e17; color: #ccd6f0; padding: 20px; font-family: monospace; }
-        .stat { padding: 10px; margin: 5px 0; background: rgba(0,0,0,0.3); border-radius: 8px; }
-        .label { color: #8892b0; font-size: 12px; }
-        .value { color: #00ff87; font-size: 24px; font-weight: bold; }
-        .debug { background: rgba(255,0,0,0.1); border: 1px solid red; padding: 10px; margin-top: 20px; font-size: 11px; color: #ff6b6b; word-break: break-all; }
-        .success { color: #00ff87; }
-        .error { color: #ff6b6b; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #ccd6f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #00ff87; margin-bottom: 20px; }
+        .section {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .section h2 {
+            font-size: 16px;
+            color: #8247E5;
+            margin-bottom: 8px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 14px;
+        }
+        .row:last-child { border-bottom: none; }
+        .label { color: #8892b0; }
+        .value { color: #00ff87; font-weight: 600; }
+        .error-text { color: #ff6b6b; padding: 10px; }
+        .loading-text { color: #8892b0; padding: 20px; text-align: center; }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            color: #ccd6f0;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .json-view {
+            background: rgba(0,0,0,0.4);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #a29bfe;
+        }
     </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <h1>🔍 Dashboard Debug</h1>
-    
-    <div id="status" class="debug">Initializing...</div>
-    
-    <div class="stat">
-        <div class="label">💰 Balance</div>
-        <div class="value" id="debugBalance">$0.00</div>
-    </div>
-    <div class="stat">
-        <div class="label">🌱 Invested</div>
-        <div class="value" id="debugInvested">$0.00</div>
-    </div>
-    <div class="stat">
-        <div class="label">📈 Earned</div>
-        <div class="value" id="debugEarned">$0.00</div>
-    </div>
-    <div class="stat">
-        <div class="label">💳 Deposited</div>
-        <div class="value" id="debugDeposited">$0.00</div>
-    </div>
-    <div class="stat">
-        <div class="label">👥 Referrals</div>
-        <div class="value" id="debugReferrals">0</div>
-    </div>
+    <div class="container">
+        <a href="javascript:void(0)" class="back-btn" onclick="goBack()">← Back</a>
+        <h1>📊 Dashboard Debug</h1>
+        <p style="color:#8892b0;margin-bottom:16px;">This page shows raw data from the API for debugging.</p>
 
-    <div id="debugLog" class="debug"></div>
+        <div id="loadingMessage" class="loading-text">Loading data...</div>
+
+        <div id="debugContent" style="display:none;">
+            <div class="section">
+                <h2>👤 User Info</h2>
+                <div id="userInfo"></div>
+            </div>
+
+            <div class="section">
+                <h2>📊 User Stats</h2>
+                <div id="userStats"></div>
+            </div>
+
+            <div class="section">
+                <h2>💎 Referral Stats</h2>
+                <div id="referralStats"></div>
+            </div>
+
+            <div class="section">
+                <h2>🌱 Fields</h2>
+                <div id="fieldsInfo"></div>
+            </div>
+
+            <div class="section">
+                <h2>📋 Raw API Response (User)</h2>
+                <div class="json-view" id="rawUserData"></div>
+            </div>
+
+            <div class="section">
+                <h2>📋 Raw API Response (Referral Stats)</h2>
+                <div class="json-view" id="rawReferralData"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
+        const API_BASE = 'https://plantusdt.ddns.net';
+
         document.addEventListener('DOMContentLoaded', function() {
-            const status = document.getElementById('status');
-            const log = document.getElementById('debugLog');
-            
-            // Get user from Telegram
-            let tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            
-            let tgUser = tg.initDataUnsafe?.user;
-            let userId = tgUser?.id || '0';
-            
-            log.textContent = `1️⃣ User ID: ${userId}\n`;
-            log.textContent += `2️⃣ User data: ${JSON.stringify(tgUser, null, 2)}\n`;
-            
-            status.textContent = `📡 Fetching data for user: ${userId}`;
-            
-            // Fetch data
-            fetch(`https://plantusdt.ddns.net/api/user?telegram_id=${userId}`)
-                .then(response => response.json())
-                .then(data => {
-                    log.textContent += `3️⃣ API Response: ${JSON.stringify(data, null, 2)}\n`;
-                    log.textContent += `4️⃣ Success: ${data.success}\n`;
-                    
-                    if (data.success) {
-                        // Update stats
-                        document.getElementById('debugBalance').textContent = '$' + (data.balance || 0).toFixed(2);
-                        document.getElementById('debugInvested').textContent = '$' + (data.total_invested || 0).toFixed(2);
-                        document.getElementById('debugEarned').textContent = '$' + (data.total_earnings || 0).toFixed(2);
-                        document.getElementById('debugDeposited').textContent = '$' + (data.total_deposited || 0).toFixed(2);
-                        document.getElementById('debugReferrals').textContent = data.referrals || 0;
-                        
-                        status.textContent = '✅ Data loaded successfully!';
-                        status.className = 'debug success';
-                        
-                        log.textContent += `5️⃣ ✅ Dashboard updated!\n`;
-                        log.textContent += `   Balance: $${(data.balance || 0).toFixed(2)}\n`;
-                        log.textContent += `   Invested: $${(data.total_invested || 0).toFixed(2)}\n`;
-                        log.textContent += `   Earned: $${(data.total_earnings || 0).toFixed(2)}\n`;
-                        log.textContent += `   Deposited: $${(data.total_deposited || 0).toFixed(2)}\n`;
-                        log.textContent += `   Referrals: ${data.referrals || 0}`;
-                    } else {
-                        status.textContent = '❌ API returned success: false';
-                        status.className = 'debug error';
-                        log.textContent += `5️⃣ ❌ API error: ${data.message || 'Unknown'}`;
-                    }
-                })
-                .catch(error => {
-                    status.textContent = '❌ Network error: ' + error.message;
-                    status.className = 'debug error';
-                    log.textContent += `❌ Error: ${error.message}\n`;
-                    log.textContent += `Stack: ${error.stack}`;
-                });
+            var tg = window.Telegram.WebApp;
+            try {
+                tg.ready();
+                tg.expand();
+            } catch (e) {
+                console.log('WebApp initialization error');
+            }
+
+            var user = tg.initDataUnsafe?.user;
+            var userId = user?.id || '0';
+            console.log('📱 User ID:', userId);
+
+            loadDebugData(userId);
         });
+
+        async function loadDebugData(userId) {
+            try {
+                const userResponse = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
+                const userData = await userResponse.json();
+                console.log('📡 User data:', userData);
+
+                const statsResponse = await fetch(`${API_BASE}/api/referral_stats_full/${userId}`);
+                const statsData = await statsResponse.json();
+                console.log('📡 Stats data:', statsData);
+
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('debugContent').style.display = 'block';
+
+                var userInfo = document.getElementById('userInfo');
+                if (userData.success) {
+                    userInfo.innerHTML = `
+                        <div class="row"><span class="label">User ID</span><span class="value">${userId}</span></div>
+                        <div class="row"><span class="label">Username</span><span class="value">${userData.username || 'N/A'}</span></div>
+                        <div class="row"><span class="label">Balance</span><span class="value">$${Number(userData.balance || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Total Invested</span><span class="value">$${Number(userData.total_invested || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Total Deposited</span><span class="value">$${Number(userData.total_deposited || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Total Earnings</span><span class="value">$${Number(userData.total_earnings || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Investment Earnings</span><span class="value">$${Number(userData.investment_earnings || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Referral Earnings</span><span class="value">$${Number(userData.referral_earned || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Ad Earnings</span><span class="value">$${Number(userData.total_ad_earnings || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Tasks Earnings</span><span class="value">$${Number(userData.tasks_earnings || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Referral Tier</span><span class="value">${userData.referral_tier || 'free'}</span></div>
+                        <div class="row"><span class="label">Welcome Bonus Claimed</span><span class="value">${userData.has_received_welcome_bonus ? '✅ Yes' : '❌ No'}</span></div>
+                        <div class="row"><span class="label">Interstitial Ads Disabled</span><span class="value">${userData.interstitial_ads_disabled ? '✅ Yes' : '❌ No'}</span></div>
+                        <div class="row"><span class="label">Referrals Count</span><span class="value">${userData.referrals || 0}</span></div>
+                    `;
+                } else {
+                    userInfo.innerHTML = `<p class="error-text">❌ Error loading user data: ${userData.message || 'Unknown error'}</p>`;
+                }
+
+                var referralStats = document.getElementById('referralStats');
+                if (statsData.success && statsData.stats) {
+                    var stats = statsData.stats;
+                    referralStats.innerHTML = `
+                        <div class="row"><span class="label">Current Tier</span><span class="value">${stats.current_tier || 'free'} ${stats.tier_emoji || ''}</span></div>
+                        <div class="row"><span class="label">Tier Bonus</span><span class="value">${stats.tier_bonus || 0}%</span></div>
+                        <div class="row"><span class="label">Total Referrals</span><span class="value">${stats.total_referred || 0}</span></div>
+                        <div class="row"><span class="label">Active Referrals</span><span class="value">${stats.active_referrals || 0}</span></div>
+                        <div class="row"><span class="label">Active Bonus Earned</span><span class="value">$${Number(stats.active_bonus_earned || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Pending Active Referrals</span><span class="value">${stats.pending_active || 0}</span></div>
+                        <div class="row"><span class="label">Upgrade Spent</span><span class="value">$${Number(stats.upgrade_spent || 0).toFixed(3)}</span></div>
+                        <div class="row"><span class="label">Next Tier</span><span class="value">${stats.next_tier ? stats.next_tier.toUpperCase() : 'Max tier reached'}</span></div>
+                        ${stats.next_tier ? `<div class="row"><span class="label">Next Tier Price</span><span class="value">$${Number(stats.next_tier_price || 0).toFixed(2)}</span></div>` : ''}
+                        ${stats.next_tier_bonus ? `<div class="row"><span class="label">Next Tier Bonus</span><span class="value">${stats.next_tier_bonus}%</span></div>` : ''}
+                    `;
+                } else {
+                    referralStats.innerHTML = `<p class="error-text">❌ Error loading referral stats</p>`;
+                }
+
+                var fieldsInfo = document.getElementById('fieldsInfo');
+                if (userData.success && userData.fields) {
+                    if (userData.fields.length === 0) {
+                        fieldsInfo.innerHTML = `<p style="color:#8892b0;">No active fields. Plant your first field!</p>`;
+                    } else {
+                        var fieldsHtml = '';
+                        userData.fields.forEach(function(field) {
+                            fieldsHtml += `
+                                <div style="background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.03);">
+                                    <div><strong style="color:#00ff87;">Field #${field.field_number}</strong></div>
+                                    <div style="font-size:13px;color:#8892b0;">Amount: $${field.amount.toFixed(3)}</div>
+                                    <div style="font-size:13px;color:#8892b0;">Expected Return: $${field.expected_return.toFixed(3)}</div>
+                                    <div style="font-size:13px;color:#8892b0;">Lock Period: ${field.lock_period || 30} days</div>
+                                    <div style="font-size:13px;color:#8892b0;">Status: ${field.is_locked ? '🔒 Locked' : '🟢 Available'}</div>
+                                    ${field.unlock_date ? `<div style="font-size:13px;color:#8892b0;">Unlock Date: ${new Date(field.unlock_date).toLocaleString()}</div>` : ''}
+                                </div>
+                            `;
+                        });
+                        fieldsInfo.innerHTML = fieldsHtml;
+                    }
+                } else {
+                    fieldsInfo.innerHTML = `<p class="error-text">❌ No fields data</p>`;
+                }
+
+                document.getElementById('rawUserData').textContent = JSON.stringify(userData, null, 2);
+                document.getElementById('rawReferralData').textContent = JSON.stringify(statsData, null, 2);
+
+            } catch (error) {
+                console.error('❌ Error loading debug data');
+                document.getElementById('loadingMessage').textContent = '❌ Error loading data. Please try again.';
+                document.getElementById('loadingMessage').className = 'error-text';
+            }
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        window.goBack = goBack;
+        window.loadDebugData = loadDebugData;
     </script>
 </body>
 </html>
