@@ -22,6 +22,7 @@ SET total_earnings_all_time = (
     + COALESCE(u.tasks_earnings, 0)
     + COALESCE(u.referral_earnings_all_time, 0)
     + COALESCE(u.total_ad_earnings, 0)
+    + COALESCE(u.active_referral_bonus_earned, 0)
 );
 "
 

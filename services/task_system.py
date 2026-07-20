@@ -89,7 +89,7 @@ TASKS = [
     },
 
     # ============================================
-    # SECTION 2: ADS (9 tasks) - UPDATED REWARDS
+    # SECTION 2: ADS (9 tasks)
     # ============================================
     {
         "id": 8,
@@ -475,7 +475,7 @@ TASKS = [
     },
 
     # ============================================
-    # SECTION 5: WELCOME BONUS (1 task) - HIDDEN FROM TASK LIST
+    # SECTION 5: WELCOME BONUS (1 task) - HIDDEN
     # ============================================
     {
         "id": 45,
@@ -558,8 +558,11 @@ def get_user_stats(user: User, session: Session) -> dict:
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
 
-    # FIXED: total_earnings should only be total_earnings_all_time (not double-counted)
-    total_earnings = user.total_earnings_all_time or 0
+    # FIXED: Same calculation as main API
+    referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
+    investment_earnings = float(user.investment_earnings_all_time or 0)
+    total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
+    
     has_invested = total_invested > 0
     
     return {
@@ -580,7 +583,12 @@ def check_task_conditions(user: User, session: Session) -> list:
     total_ads_watched = user.total_ads_watched or 0
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
-    total_earnings = user.total_earnings_all_time or 0
+    
+    # FIXED: Same calculation as main API
+    referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
+    investment_earnings = float(user.investment_earnings_all_time or 0)
+    total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
+    
     has_invested = total_invested > 0
     
     for task in TASKS:
