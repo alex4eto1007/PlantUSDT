@@ -557,8 +557,9 @@ def get_user_stats(user: User, session: Session) -> dict:
     total_ads_watched = user.total_ads_watched or 0
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
-    
-    total_earnings = (user.total_earnings_all_time or 0) + (user.referral_earnings_all_time or 0) + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
+
+    # FIXED: total_earnings should only be total_earnings_all_time (not double-counted)
+    total_earnings = user.total_earnings_all_time or 0
     has_invested = total_invested > 0
     
     return {
@@ -579,7 +580,7 @@ def check_task_conditions(user: User, session: Session) -> list:
     total_ads_watched = user.total_ads_watched or 0
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
-    total_earnings = (user.total_earnings_all_time or 0) + (user.referral_earnings_all_time or 0) + (user.total_ad_earnings or 0) + (user.tasks_earnings or 0)
+    total_earnings = user.total_earnings_all_time or 0
     has_invested = total_invested > 0
     
     for task in TASKS:
