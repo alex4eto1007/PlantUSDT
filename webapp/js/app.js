@@ -1764,23 +1764,23 @@ async function loadTasks() {
                         progressPercent = 100;
                     }
                     
-                    // FIXED: Removed yellow dot, showing only "Claim Now!" text
+                    // FIXED: Removed yellow dot, only "Claim Now!" text and green button
                     const statusBadge = isCompleted ? 
                         'Claim Now!' : 
                         (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
                     const statusColor = isCompleted ? 
-                        '#ffd93d' : 
+                        '#00ff87' : 
                         '#495670';
                     
                     const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(3);
                     
                     html += `
-                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(255,217,61,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="display:flex;align-items:center;gap:10px;flex:1;">
                                     <div style="font-size:20px;">${task.icon || '📌'}</div>
                                     <div style="flex:1;">
-                                        <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#ffd93d' : '#ccd6f0'};">${task.title}</div>
+                                        <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
                                         <div style="font-size:12px;color:#8892b0;">${task.description}</div>
                                         <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
                                         ${!isCompleted && progressText ? `
@@ -1792,7 +1792,7 @@ async function loadTasks() {
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                    ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>` : ''}
                                 </div>
                             </div>
                         </div>
