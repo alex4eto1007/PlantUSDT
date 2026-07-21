@@ -54,19 +54,19 @@ function safePopupWithCallback(options, callback) {
 // ============================================
 function showInterstitialIfNeeded() {
     if (interstitialAdsDisabled) {
-        console.log("🔇 Interstitial ads disabled by user");
+        console.log("Interstitial ads disabled by user");
         return;
     }
     
     var now = Date.now();
     if (now - lastAdTime < AD_COOLDOWN) {
-        console.log("⏳ Ad cooldown active, skipping...");
+        console.log("Ad cooldown active, skipping...");
         return;
     }
     lastAdTime = now;
 
     if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
-        console.log("📢 Showing interstitial ad on button click...");
+        console.log("Showing interstitial ad on button click...");
         setTimeout(function() {
             window.showInterstitialAd().catch(() => {});
         }, 500);
@@ -1764,8 +1764,9 @@ async function loadTasks() {
                         progressPercent = 100;
                     }
                     
+                    // FIXED: Removed yellow dot, showing only "Claim Now!" text
                     const statusBadge = isCompleted ? 
-                        '🟡 Claim Now!' : 
+                        'Claim Now!' : 
                         (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
                     const statusColor = isCompleted ? 
                         '#ffd93d' : 
