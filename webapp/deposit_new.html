@@ -10,8 +10,8 @@
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>💳 Deposit - PlantUSDT</title>
-    <link rel="stylesheet" href="/css/style.css?v=5">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
     <style>
         .network-badge-large { display: inline-flex; align-items: center; gap: 8px; background: rgba(130,71,229,0.15); color: #8247E5; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
         .network-badge-large .dot { width: 8px; height: 8px; border-radius: 50%; background: #8247E5; display: inline-block; animation: pulse-dot 2s infinite; }
@@ -140,7 +140,7 @@
                 <button onclick="copyAddress()" style="margin-top:8px;padding:6px 12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.2);border-radius:4px;color:#00ff87;cursor:pointer;font-size:12px;">📋 Copy Address</button>
             </div>
             <div class="warning-box-critical"><p>⚠️ <strong>IMPORTANT:</strong> Send USDT <strong>FROM YOUR CONNECTED WALLET</strong> on Polygon.<br>Sending from a different wallet or network = <strong>PERMANENT LOSS</strong>.</p></div>
-            <div class="contact-support"><p>❓ Didn't receive your deposit after 5 minutes?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>! 👨‍🔧</p></div>
+            <div class="contact-support"><p>❓ Didn't receive your deposit after 5 minutes?<br>Contact <a href="https://t.me/Alex_PlantUSDT" target="_blank">@Alex_PlantUSDT</a> with your <strong>transaction hash</strong> and <strong>user ID</strong>!</p></div>
         </div>
 
         <div class="form-group">
@@ -186,16 +186,16 @@
             }
 
             var userId = tg.initDataUnsafe?.user?.id || '0';
-            console.log('📱 User ID:', userId);
-            console.log('📡 Fetching wallet from:', window.API_BASE + '/api/get_wallet?telegram_id=' + userId);
+            console.log('User ID:', userId);
+            console.log('Fetching wallet from:', window.API_BASE + '/api/get_wallet?telegram_id=' + userId);
 
             fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + userId)
                 .then(function(response) {
-                    console.log('📡 Wallet API response status:', response.status);
+                    console.log('Wallet API response status:', response.status);
                     return response.json();
                 })
                 .then(function(data) {
-                    console.log('📡 Wallet data:', data);
+                    console.log('Wallet data:', data);
                     var displayEl = document.getElementById('connectedWalletDisplay');
                     if (data.success && data.wallet_address) {
                         displayEl.textContent = data.wallet_address;
@@ -206,9 +206,9 @@
                     }
                 })
                 .catch(function(error) {
-                    console.error('❌ Error loading wallet');
+                    console.error('Error loading wallet');
                     var displayEl = document.getElementById('connectedWalletDisplay');
-                    displayEl.textContent = '❌ Error loading wallet';
+                    displayEl.textContent = 'Error loading wallet';
                     displayEl.style.color = '#ff6b6b';
                 });
 
@@ -220,7 +220,7 @@
             if (address) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(address).then(function() {
-                        window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                        window.Telegram.WebApp.showPopup({ title: 'Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
                     }).catch(function() {
                         var textArea = document.createElement('textarea');
                         textArea.value = address;
@@ -228,7 +228,7 @@
                         textArea.select();
                         document.execCommand('copy');
                         document.body.removeChild(textArea);
-                        window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                        window.Telegram.WebApp.showPopup({ title: 'Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
                     });
                 } else {
                     var textArea = document.createElement('textarea');
@@ -237,7 +237,7 @@
                     textArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
-                    window.Telegram.WebApp.showPopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                    window.Telegram.WebApp.showPopup({ title: 'Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
                 }
             }
         }
@@ -249,7 +249,7 @@
 
             if (!amount || parseFloat(amount) < 5) {
                 window.Telegram.WebApp.showPopup({
-                    title: '⚠️ Invalid Amount',
+                    title: 'Invalid Amount',
                     message: 'Please enter at least $5 USDT on Polygon.',
                     buttons: [{type: 'ok'}]
                 });
@@ -258,11 +258,11 @@
 
             var confirmMsg = 'You are about to verify a deposit of $' + parseFloat(amount).toFixed(2) + ' USDT on Polygon.\n\nMake sure you have sent the exact amount to the address above.';
             window.Telegram.WebApp.showPopup({
-                title: '🔍 Verify Deposit',
+                title: 'Verify Deposit',
                 message: confirmMsg,
                 buttons: [
                     {id: 'cancel', type: 'cancel'},
-                    {id: 'confirm', type: 'ok', text: '✅ Yes, Check Now'}
+                    {id: 'confirm', type: 'ok', text: 'Yes, Check Now'}
                 ]
             }, function(buttonId) {
                 if (buttonId === 'confirm') {
@@ -274,25 +274,25 @@
         async function doDepositCheck(userId, amount) {
             var statusDiv = document.getElementById('depositStatus');
             if (statusDiv) {
-                statusDiv.innerHTML = '🔍 Checking Polygon for deposits...';
+                statusDiv.textContent = 'Checking Polygon for deposits...';
                 statusDiv.className = 'deposit-status pending';
                 statusDiv.style.display = 'block';
                 try {
                     var response = await fetch(window.API_BASE + '/api/check_deposit_with_amount?telegram_id=' + userId + '&expected_amount=' + parseFloat(amount));
                     var data = await response.json();
                     if (data.success) {
-                        statusDiv.innerHTML = '✅ ' + data.message;
+                        statusDiv.textContent = '✅ ' + data.message;
                         statusDiv.className = 'deposit-status success';
                         setTimeout(function() {
                             window.location.reload();
                         }, 2000);
                     } else {
-                        statusDiv.innerHTML = '⏳ ' + data.message;
+                        statusDiv.textContent = '⏳ ' + data.message;
                         statusDiv.className = 'deposit-status pending';
                     }
                 } catch (error) {
                     console.error('Error checking deposit');
-                    statusDiv.innerHTML = '❌ Error checking deposits on Polygon. Please try again.';
+                    statusDiv.textContent = 'Error checking deposits on Polygon. Please try again.';
                     statusDiv.className = 'deposit-status error';
                 }
             }
@@ -307,6 +307,6 @@
         window.goBack = goBack;
         window.showAmountConfirmation = showAmountConfirmation;
     </script>
-    <script src="/js/app.js?v=40"></script>
+    <script src="/js/app.js?v=41"></script>
 </body>
 </html>

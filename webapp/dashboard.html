@@ -8,7 +8,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>📊 Dashboard - PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
     <style>
         .stat-value { font-size: 20px; }
         .loading-text { color: #8892b0; font-size: 14px; text-align: center; padding: 20px; }
@@ -143,9 +143,9 @@
 
             var user = tg.initDataUnsafe?.user;
             var userId = user?.id || '0';
-            console.log('📱 User ID:', userId);
+            console.log('User ID:', userId);
 
-            document.getElementById('loadingMessage').textContent = '📡 Fetching data...';
+            document.getElementById('loadingMessage').textContent = 'Fetching data...';
 
             loadDashboard(userId);
         });
@@ -158,11 +158,11 @@
             try {
                 const userResponse = await fetch(window.API_BASE + '/api/user?telegram_id=' + userId);
                 const userData = await userResponse.json();
-                console.log('📡 User data:', userData);
+                console.log('User data:', userData);
                 
                 const statsResponse = await fetch(window.API_BASE + '/api/referral_stats_full/' + userId);
                 const statsData = await statsResponse.json();
-                console.log('📡 Stats data:', statsData);
+                console.log('Stats data:', statsData);
                 
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('dashboardStats').style.display = 'block';
@@ -184,8 +184,8 @@
                     document.getElementById('tierBonus').textContent = stats.tier_bonus + '% referral bonus';
                 }
             } catch (error) {
-                console.error('❌ Error loading dashboard');
-                document.getElementById('loadingMessage').textContent = '❌ Network error. Please try again.';
+                console.error('Error loading dashboard');
+                document.getElementById('loadingMessage').textContent = 'Network error. Please try again.';
                 document.getElementById('loadingMessage').className = 'error-text';
             }
         }
@@ -193,6 +193,6 @@
         window.goBack = goBack;
         window.loadDashboard = loadDashboard;
     </script>
-    <script src="js/app.js?v=40"></script>
+    <script src="js/app.js?v=41"></script>
 </body>
 </html>

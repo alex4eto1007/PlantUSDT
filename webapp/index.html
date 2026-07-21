@@ -6,21 +6,16 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    
-    <!-- Security Meta Tags -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    
     <title>🌱 PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css?v=25">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <div class="logo">🌱 PlantUSDT</div>
             <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
@@ -32,7 +27,6 @@
             </div>
         </div>
 
-        <!-- Network Badge -->
         <div class="network-badge-container">
             <div class="network-badge">
                 <span class="network-dot polygon"></span>
@@ -41,7 +35,6 @@
             </div>
         </div>
 
-        <!-- Earnings -->
         <div class="earnings-section">
             <div class="earnings-card">
                 <div class="earnings-label">📈 Total Earnings</div>
@@ -55,7 +48,6 @@
             </div>
         </div>
 
-        <!-- Stats -->
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-label">Returns</div><div class="stat-value">2-80%</div></div>
             <div class="stat-card"><div class="stat-icon">🔒</div><div class="stat-label">Lock Period</div><div class="stat-value">1-30 Days</div></div>
@@ -63,7 +55,6 @@
             <div class="stat-card"><div class="stat-icon">⛓️</div><div class="stat-label">Network</div><div class="stat-value" style="font-size:12px;">Polygon</div></div>
         </div>
 
-        <!-- Wallet -->
         <div class="wallet-section" id="walletSection">
             <div class="wallet-status"><span class="wallet-icon">🔗</span><span id="walletText" class="disconnected">Wallet not connected</span></div>
             <div class="wallet-input-group">
@@ -77,7 +68,6 @@
             <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;text-align:center;">⚠️ Only send USDT on Polygon network</div>
         </div>
 
-        <!-- Fields -->
         <div class="section-title">🌱 Your Planting Fields</div>
         <div class="fields-grid">
             <div class="field-card" id="field1">
@@ -109,14 +99,12 @@
             </div>
         </div>
 
-        <!-- Actions -->
         <div class="actions-grid">
             <button class="action-btn" onclick="navigateTo('deposit')" style="background:linear-gradient(135deg,#00d4ff,#0088ff)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">💳</span> Deposit</button>
             <button class="action-btn" onclick="navigateTo('withdraw')" style="background:linear-gradient(135deg,#00ff87,#00cc6a)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">🏦</span> Withdraw</button>
             <button class="action-btn" onclick="navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">📊</span> Dashboard</button>
         </div>
 
-        <!-- Referral Section -->
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
             <p>Earn up to 5% of your referrals' deposits based on your tier!</p>
@@ -146,7 +134,6 @@
             </button>
         </div>
 
-        <!-- Referral Upgrade Section -->
         <div class="referral-upgrade-section" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
             <h3 style="font-size: 18px; margin-bottom: 4px;">📊 Upgrade Referral Bonus</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">Permanently increase your referral earnings!</p>
@@ -204,7 +191,6 @@
             <div id="upgradeResult" style="margin-top: 10px; display: none; padding: 10px; border-radius: 6px;"></div>
         </div>
 
-        <!-- Tasks Section -->
         <div class="tasks-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <h3 style="margin:0;">✅ Tasks</h3>
@@ -213,7 +199,6 @@
             <div id="tasksList"></div>
         </div>
 
-        <!-- Ads Section -->
         <div class="ad-section">
             <h3>📺 Watch Ads & Earn USDT</h3>
             <p style="font-size:13px;color:#8892b0;margin-bottom:12px;">
@@ -240,7 +225,6 @@
             </p>
         </div>
 
-        <!-- Info -->
         <div class="info-card">
             <h3>💎 How It Works</h3>
             <p>1. Enter your Polygon wallet address</p>
@@ -255,7 +239,6 @@
             <p style="color:#8247E5;margin-top:8px;font-weight:500;">⛓️ Powered by Polygon Network</p>
         </div>
 
-        <!-- Footer -->
         <div class="footer">
             <p>🔒 Powered by Polygon Blockchain</p>
             <p>© 2026 PlantUSDT. All rights reserved.</p>
@@ -323,6 +306,6 @@
         console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=40"></script>
+    <script src="js/app.js?v=41"></script>
 </body>
 </html>
