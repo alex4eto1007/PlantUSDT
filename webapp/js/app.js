@@ -1792,7 +1792,7 @@ async function loadTasks() {
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                    ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:4px 10px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:4px;color:#0a0e17;font-weight:700;font-size:11px;cursor:pointer;">💰 Claim</button>` : ''}
                                 </div>
                             </div>
                         </div>
