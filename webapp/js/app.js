@@ -80,13 +80,24 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         tg.ready();
         tg.expand();
-        loadUserData();
-        loadSavedWallet();
-        setupEventListeners();
-        startCountdownTimer();
-        loadAdStats();
-        loadActiveReferrals();
-        loadTasks();
+        
+        // Wait for tgUser to be available
+        function initializeApp() {
+            if (tgUser) {
+                loadUserData();
+                loadSavedWallet();
+                setupEventListeners();
+                startCountdownTimer();
+                loadAdStats();
+                loadActiveReferrals();
+                loadTasks();
+            } else {
+                // Try again after 100ms
+                setTimeout(initializeApp, 100);
+            }
+        }
+        
+        initializeApp();
     } catch (e) {
         console.log('Error initializing app');
     }
