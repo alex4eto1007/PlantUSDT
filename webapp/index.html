@@ -7,6 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>🌱 PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css?v=25">
@@ -14,7 +15,7 @@
     <script src="https://sad.adsgram.ai/js/sad.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="appContent" style="display: none;">
         <div class="header">
             <div class="logo">🌱 PlantUSDT</div>
             <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
@@ -244,6 +245,11 @@
         </div>
     </div>
 
+    <div id="loadingMessage" class="loading-text" style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; gap: 16px;">
+        <div class="loading-spinner"></div>
+        <span>Loading your data...</span>
+    </div>
+
     <script>
         const INTERSTITIAL_ID = "int-36282";
         const REWARDED_ID = "36283";
@@ -305,6 +311,6 @@
         console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=42"></script>
+    <script src="js/app.js?v=43"></script>
 </body>
 </html>

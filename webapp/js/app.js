@@ -13,6 +13,7 @@ let lastAdTime = 0;
 const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
 let isLoading = false;
+let isDataLoaded = false;
 
 // ============================================
 // SAFE POPUP – Works on both Web & Mobile
@@ -152,6 +153,7 @@ async function loadUserData(retries = 3) {
             interstitialAdsDisabled = data.interstitial_ads_disabled || false;
             console.log('📢 interstitial_ads_disabled:', interstitialAdsDisabled);
             
+            isDataLoaded = true;
             updateUI(data);
             updateFields(data);
             updateReferral(data);
@@ -159,6 +161,12 @@ async function loadUserData(retries = 3) {
             await updateReferralStats(userId);
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
+            
+            // Hide loading state
+            var loadingEl = document.getElementById('loadingMessage');
+            var appContent = document.getElementById('appContent');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (appContent) appContent.style.display = 'block';
             
             if (data.interstitial_ads_disabled) {
                 const disableBtn = document.getElementById('disableAdsBtn');
@@ -679,7 +687,6 @@ async function updateReferral(data) {
 
     if (!referralLink) return;
 
-    // If wallet is connected, fetch the referral code
     if (isConnected) {
         var userId = tgUser ? tgUser.id : '0';
         try {
@@ -697,7 +704,6 @@ async function updateReferral(data) {
             referralLink.style.color = '#ff6b6b';
         }
     } else {
-        // If wallet is NOT connected, show the warning
         referralLink.textContent = '⚠️ Save wallet to get referral link';
         referralLink.style.color = '#ff6b6b';
     }
@@ -712,7 +718,6 @@ async function copyReferral() {
     var userId = tgUser ? tgUser.id : '0';
     var referralLinkEl = document.getElementById('referralLinkText');
     
-    // Always fetch fresh referral link
     try {
         var response = await fetch(API_BASE + '/api/get_referral_code?telegram_id=' + userId + '&t=' + Date.now());
         var data = await response.json();
@@ -722,7 +727,6 @@ async function copyReferral() {
                 referralLinkEl.textContent = referralLink;
                 referralLinkEl.style.color = '#ccd6f0';
             }
-            // Copy to clipboard
             try {
                 await navigator.clipboard.writeText(referralLink);
                 safePopup({
@@ -822,7 +826,6 @@ function updateWalletUI(address) {
     if (saveBtn) saveBtn.style.display = 'none';
     if (disconnectBtn) disconnectBtn.style.display = 'flex';
     loadUserData();
-    // Refresh referral link after wallet is connected
     setTimeout(function() {
         var userId = tgUser ? tgUser.id : '0';
         fetch(API_BASE + '/api/user?telegram_id=' + userId)
@@ -1315,10 +1318,9 @@ function setupEventListeners() {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Check if already submitting
             var submitBtn = document.querySelector('.withdraw-btn');
             if (submitBtn && submitBtn.disabled) {
-                return; // Prevent double submission
+                return;
             }
             
             showInterstitialIfNeeded();
@@ -1342,7 +1344,6 @@ function setupEventListeners() {
             
             var userId = tgUser ? tgUser.id : '0';
             
-            // Disable button and show loading
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.textContent = '⏳ Processing...';
@@ -1368,7 +1369,6 @@ function setupEventListeners() {
                 safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
             })
             .finally(function() {
-                // Re-enable button after 3 seconds
                 setTimeout(function() {
                     if (submitBtn) {
                         submitBtn.disabled = false;
@@ -1784,7 +1784,6 @@ async function loadTasks() {
                         progressPercent = 100;
                     }
                     
-                    // FIXED: Removed yellow dot, only "Claim Now!" text and green button
                     const statusBadge = isCompleted ? 
                         'Claim Now!' : 
                         (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
