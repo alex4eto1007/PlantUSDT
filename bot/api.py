@@ -198,6 +198,8 @@ def save_wallet():
 @app.route('/api/withdraw', methods=['POST'])
 @rate_limit
 def withdraw():
+    from decimal import Decimal
+    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     
@@ -242,7 +244,10 @@ def withdraw():
             status='pending'
         )
         session_db.add(withdrawal)
-        user.balance -= amount
+        
+        # FIXED: Convert amount to Decimal before subtraction
+        user.balance -= Decimal(str(amount))
+        
         session_db.commit()
         clear_user_cache(telegram_id)
         return jsonify({'success': True, 'message': 'Withdrawal request submitted'})
