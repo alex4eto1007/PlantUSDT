@@ -226,6 +226,18 @@ def withdraw():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
+        # Check for existing pending withdrawal
+        existing_pending = session_db.query(Withdrawal).filter_by(
+            user_id=user.id,
+            status='pending'
+        ).first()
+        
+        if existing_pending:
+            return jsonify({
+                'success': False,
+                'message': 'You already have a pending withdrawal. Please wait for it to be processed before submitting another one.'
+            }), 400
+        
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
         
@@ -245,7 +257,6 @@ def withdraw():
         )
         session_db.add(withdrawal)
         
-        # FIXED: Convert amount to Decimal before subtraction
         user.balance -= Decimal(str(amount))
         
         session_db.commit()
