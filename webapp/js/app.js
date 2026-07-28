@@ -12,6 +12,7 @@ let timerInterval = null;
 let lastAdTime = 0;
 const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
+let isLoading = false;
 
 // ============================================
 // SAFE POPUP – Works on both Web & Mobile
@@ -81,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.ready();
         tg.expand();
         
-        // Wait for tgUser to be available
         function initializeApp() {
             if (tgUser) {
                 loadUserData();
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadActiveReferrals();
                 loadTasks();
             } else {
-                // Try again after 100ms
                 setTimeout(initializeApp, 100);
             }
         }
@@ -141,7 +140,10 @@ function goBack() {
 // ============================================
 // USER DATA
 // ============================================
-async function loadUserData() {
+async function loadUserData(retries = 3) {
+    if (isLoading) return;
+    isLoading = true;
+    
     try {
         const userId = tgUser ? tgUser.id : '0';
         const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
@@ -168,7 +170,13 @@ async function loadUserData() {
             }
         }
     } catch (error) {
-        console.error('Error loading user data');
+        console.error('Error loading user data:', error);
+        if (retries > 0) {
+            console.log('Retrying user data load... (' + retries + ' attempts left)');
+            setTimeout(() => loadUserData(retries - 1), 1000);
+        }
+    } finally {
+        isLoading = false;
     }
 }
 

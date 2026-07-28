@@ -119,7 +119,6 @@ def get_webapp_dir():
 # AUTHENTICATION HELPER
 # ============================================
 def get_authenticated_user(telegram_id):
-    """Ensure user is authenticated and exists"""
     if not telegram_id or telegram_id == '0':
         return None, jsonify({'success': False, 'message': 'User not authenticated'}), 401
     session_db = db.get_session()
@@ -132,7 +131,6 @@ def get_authenticated_user(telegram_id):
         session_db.close()
 
 def sanitize_input(value):
-    """Sanitize user input"""
     if value is None:
         return None
     return str(value).strip()
@@ -820,6 +818,26 @@ def claim_investment():
     except Exception as e:
         session_db.rollback()
         logger.error(f"Error claiming investment: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        session_db.close()
+
+@app.route('/api/total_withdrawn/<int:telegram_id>', methods=['GET'])
+@rate_limit
+def total_withdrawn(telegram_id):
+    user, err_response, status = get_authenticated_user(str(telegram_id))
+    if err_response:
+        return err_response, status
+    
+    session_db = db.get_session()
+    try:
+        user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        total = session_db.query(func.sum(Withdrawal.amount)).filter_by(user_id=user.id, status='completed').scalar() or 0
+        return jsonify({'success': True, 'total_withdrawn': float(total)})
+    except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         session_db.close()
