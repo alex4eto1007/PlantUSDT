@@ -929,7 +929,6 @@ async function setWallet() {
                 safePopup({title:'✅ Wallet Loaded!', message:'Polygon wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
             }
         } else {
-            // Fixed: Specific error message for no wallet found
             safePopup({
                 title: '❌ No Wallet Found',
                 message: 'Please save a Polygon wallet address first in the main app.',
@@ -1333,11 +1332,19 @@ function setupEventListeners() {
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Check if already submitting
+            var submitBtn = document.querySelector('.withdraw-btn');
+            if (submitBtn && submitBtn.disabled) {
+                return; // Prevent double submission
+            }
+            
             showInterstitialIfNeeded();
             var amountInput = document.getElementById('withdrawAmount');
             var addressInput = document.getElementById('withdrawAddress');
             var amount = amountInput ? amountInput.value : '';
             var address = addressInput ? addressInput.value : '';
+            
             if (!amount || parseFloat(amount) < 2) {
                 safePopup({title:'❌ Error', message:'Please enter at least $2 USDT for withdrawal on Polygon.', buttons:[{type:'ok'}]});
                 return;
@@ -1350,40 +1357,43 @@ function setupEventListeners() {
                 safePopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet on Polygon.', buttons:[{type:'ok'}]});
                 return;
             }
+            
             var userId = tgUser ? tgUser.id : '0';
-            var submitBtn = document.querySelector('.withdraw-btn');
-            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Processing...'; }
+            
+            // Disable button and show loading
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Processing...';
+            }
+            
             fetch(API_BASE + '/api/withdraw', {
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({telegram_id:userId, amount:parseFloat(amount), address:address})
             })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
-                    if (data.success) {
-                        safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
-
-                        if (window.watchRewardedAd) {
-                            console.log("📢 Showing rewarded ad after withdrawal...");
-                            setTimeout(function() { window.watchRewardedAd(); }, 500);
-                        }
-
-                        if (window.showInterstitialAd) {
-                            console.log("📢 Showing interstitial ad after withdrawal (NO REWARD)...");
-                            setTimeout(function() { window.showInterstitialAd(); }, 1000);
-                        }
-
-                        if (amountInput) amountInput.value = '';
-                    } else {
-                        safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
+                    if (amountInput) amountInput.value = '';
+                    if (addressInput) addressInput.value = '';
+                } else {
+                    safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
+                }
+            })
+            .catch(function(error) {
+                console.error('Error submitting withdrawal');
+                safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
+            })
+            .finally(function() {
+                // Re-enable button after 3 seconds
+                setTimeout(function() {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '🌱 Request Withdrawal';
                     }
-                })
-                .catch(function(error) {
-                    console.error('Error submitting withdrawal');
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🌱 Request Withdrawal'; }
-                    safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
-                });
+                }, 3000);
+            });
         });
     }
 }
