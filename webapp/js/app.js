@@ -929,11 +929,20 @@ async function setWallet() {
                 safePopup({title:'✅ Wallet Loaded!', message:'Polygon wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
             }
         } else {
-            safePopup({title:'❌ No Wallet Found', message:'Please save a Polygon wallet address first.', buttons:[{type:'ok'}]});
+            // Fixed: Specific error message for no wallet found
+            safePopup({
+                title: '❌ No Wallet Found',
+                message: 'Please save a Polygon wallet address first in the main app.',
+                buttons: [{type: 'ok'}]
+            });
         }
     } catch (error) {
         console.error('Error loading wallet');
-        safePopup({title:'❌ Error', message:'Failed to load wallet.', buttons:[{type:'ok'}]});
+        safePopup({
+            title: '❌ Error',
+            message: 'Failed to load wallet. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
     }
 }
 

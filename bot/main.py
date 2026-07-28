@@ -46,7 +46,7 @@ deposit_scanner = DepositScanner()
 
 db.create_tables()
 
-VERCEL_URL = "https://plant-usdt.vercel.app?cb=20260732"
+VERCEL_URL = "https://plant-usdt.vercel.app?cb=20260738"
 PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 
 # ============================================
@@ -120,7 +120,7 @@ Grow your USDT with returns up to 80% on Polygon network!
 • 🌿 30 Days: 80% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $2 USDT
-• 🔒 Platform fee: 10% on withdrawals
+• 🔒 Platform fee: 5% on withdrawals
 • 🌱 3 Planting Fields: $100 max each
 • ⛓️ Network: Polygon (MATIC) - Low fees!
 
@@ -240,7 +240,7 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"ID: {w.id}\n"
         text += f"👤 User: @{username}\n"
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
-        text += f"🔒 Fee (10%): ${w.fee:.2f} USDT\n"
+        text += f"🔒 Fee (5%): ${w.fee:.2f} USDT\n"
         text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
         text += f"🏦 Wallet: <code>{w.wallet_address}</code>\n"
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
