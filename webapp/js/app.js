@@ -955,12 +955,13 @@ async function investFieldWithLock(fieldNumber) {
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
 
-    const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5, max $100):');
+    // FIXED: Updated prompt to show decimal examples
+    const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5.00, max $100.00, e.g. 25.50):');
     if (!amount) return;
 
     const amountNum = parseFloat(amount.replace('$', '').trim());
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
-        safePopup({title:'❌ Invalid Amount', message:'Please enter between $5 and $100.', buttons:[{type:'ok'}]});
+        safePopup({title:'❌ Invalid Amount', message:'Please enter between $5.00 and $100.00.', buttons:[{type:'ok'}]});
         return;
     }
 
