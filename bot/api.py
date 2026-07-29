@@ -594,6 +594,8 @@ def invest():
 @app.route('/api/invest_locked', methods=['POST'])
 @rate_limit
 def invest_locked():
+    from decimal import Decimal
+    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     field_number = data.get('field_number')
@@ -654,8 +656,9 @@ def invest_locked():
             principal_returned=False
         )
         session_db.add(investment)
-        user.balance -= amount
-        user.total_invested += amount
+        
+        user.balance -= Decimal(str(amount))
+        
         session_db.commit()
         clear_user_cache(telegram_id)
         
@@ -666,6 +669,10 @@ def invest_locked():
             'expected_return': expected_return,
             'unlock_date': unlock_date.isoformat()
         })
+    except Exception as e:
+        session_db.rollback()
+        logger.error(f"Error in invest_locked: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         session_db.close()
 
