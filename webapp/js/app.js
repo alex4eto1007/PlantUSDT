@@ -158,6 +158,7 @@ async function loadUserData(retries = 3) {
             updateFields(data);
             updateReferral(data);
             updateDashboardUI(data);
+            updateDailyEarnings(data);
             await updateReferralStats(userId);
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
@@ -277,6 +278,17 @@ function updateDashboardUI(data) {
     if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
     if (dashAdEarnings) dashAdEarnings.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
     if (dashTasksEarnings) dashTasksEarnings.textContent = '$' + Number(data.tasks_earnings || 0).toFixed(3);
+}
+
+// ============================================
+// EXPECTED DAILY EARNINGS - NEW FUNCTION
+// ============================================
+function updateDailyEarnings(data) {
+    var dailyEl = document.getElementById('dailyEarnings');
+    if (dailyEl) {
+        var amount = Number(data.expected_daily_earnings || 0);
+        dailyEl.textContent = '+$' + amount.toFixed(2) + ' / day';
+    }
 }
 
 // ============================================
@@ -2037,3 +2049,4 @@ console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
 console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
 console.log('📢 All amounts displayed with 3 decimal places');
+console.log('📈 Expected Daily Earnings feature active');

@@ -60,6 +60,34 @@ body {
     color: #00ff87;
 }
 
+/* ============================================
+   EXPECTED DAILY EARNINGS - NEW SECTION
+   ============================================ */
+.daily-earnings-display {
+    display: flex;
+    flex-direction: column;
+    background: rgba(130,71,229,0.08);
+    border: 1px solid rgba(130,71,229,0.15);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    text-align: left;
+    width: 100%;
+}
+
+.daily-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #a29bfe;
+}
+
+.daily-amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: #a29bfe;
+}
+
 .network-badge-container {
     text-align: center;
     margin-bottom: 16px;
@@ -845,7 +873,7 @@ body {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
 
@@ -877,6 +905,15 @@ body {
 
 .task-stat-highlight .stat-value {
     color: #00ff87 !important;
+}
+
+.withdrawn-stat-highlight {
+    border: 1px solid rgba(255,107,107,0.3) !important;
+    background: rgba(255,107,107,0.05) !important;
+}
+
+.withdrawn-stat-highlight .stat-value {
+    color: #ff6b6b !important;
 }
 
 .tier-display {
@@ -1205,6 +1242,12 @@ input:disabled, textarea:disabled, select:disabled {
     }
     .dashboard-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    .daily-earnings-display {
+        text-align: center;
+    }
+    .daily-amount {
+        font-size: 20px;
     }
 }
 

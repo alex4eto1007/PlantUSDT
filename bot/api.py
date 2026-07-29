@@ -338,7 +338,8 @@ def get_user():
             'interstitial_ads_disabled': False,
             'has_received_welcome_bonus': False,
             'tasks_earnings': 0,
-            'referral_tier': 'free'
+            'referral_tier': 'free',
+            'expected_daily_earnings': 0
         })
     
     cached = get_cached_user(telegram_id)
@@ -368,13 +369,16 @@ def get_user():
                 'interstitial_ads_disabled': False,
                 'has_received_welcome_bonus': False,
                 'tasks_earnings': 0,
-                'referral_tier': 'free'
+                'referral_tier': 'free',
+                'expected_daily_earnings': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
         
         investments = session_db.query(Investment).filter_by(user_id=user.id).all()
         fields = []
+        expected_daily_earnings = 0.0
+        
         for inv in investments:
             if inv.is_active or not inv.is_completed:
                 fields.append({
@@ -390,6 +394,12 @@ def get_user():
                     'is_locked': inv.is_locked,
                     'expected_return': float(inv.expected_return)
                 })
+                
+                # Calculate expected daily earnings for active locked investments
+                if inv.is_active and inv.is_locked and inv.lock_period > 0:
+                    profit = float(inv.expected_return) - float(inv.amount)
+                    daily = profit / inv.lock_period
+                    expected_daily_earnings += daily
         
         level1_refs = session_db.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
@@ -413,7 +423,8 @@ def get_user():
             'interstitial_ads_disabled': user.interstitial_ads_disabled or False,
             'has_received_welcome_bonus': user.has_received_welcome_bonus or False,
             'tasks_earnings': round(float(user.tasks_earnings or 0), 3),
-            'referral_tier': user.referral_tier or 'free'
+            'referral_tier': user.referral_tier or 'free',
+            'expected_daily_earnings': round(expected_daily_earnings, 2)
         }
         
         set_cached_user(telegram_id, response)
