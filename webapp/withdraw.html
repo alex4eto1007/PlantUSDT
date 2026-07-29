@@ -144,7 +144,7 @@
 
         <div class="info-card">
             <h3>Withdrawal Instructions</h3>
-            <p><strong>Min Amount:</strong> $2 USDT<br><strong>Fee:</strong> 5%<br><strong>Network:</strong> Polygon (MATIC) ⛓️<br><strong>Token:</strong> USDT on Polygon<br><strong>Gas Fees:</strong> Covered by us!</p>
+            <p><strong>Min Amount:</strong> $1 USDT<br><strong>Fee:</strong> 5%<br><strong>Network:</strong> Polygon (MATIC) ⛓️<br><strong>Token:</strong> USDT on Polygon<br><strong>Gas Fees:</strong> Covered by us!</p>
             <div class="warning-text">⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.</div>
             <p style="font-size:12px;color:#8892b0;margin-top:8px;">🔒 Your funds will be sent to your Polygon wallet address.</p>
         </div>
@@ -152,7 +152,7 @@
         <form id="withdrawForm">
             <div class="form-group">
                 <label>💰 Amount (USDT on Polygon)</label>
-                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $2)" min="2" step="0.01">
+                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $1)" min="1" step="0.01">
             </div>
 
             <div class="form-group">
@@ -193,7 +193,7 @@
             if (amountInput) {
                 amountInput.addEventListener('input', function() {
                     var amount = parseFloat(this.value) || 0;
-                    if (amount >= 2) {
+                    if (amount >= 1) {
                         var fee = amount * 0.05;
                         var net = amount - fee;
                         feeAmount.textContent = '$' + amount.toFixed(2);
@@ -254,15 +254,21 @@
             if (withdrawForm) {
                 withdrawForm.addEventListener('submit', function(e) {
                     e.preventDefault();
+                    
+                    var submitBtn = document.querySelector('.withdraw-btn');
+                    if (submitBtn && submitBtn.disabled) {
+                        return;
+                    }
+                    
                     var amountInput = document.getElementById('withdrawAmount');
                     var addressInput = document.getElementById('withdrawAddress');
                     var amount = amountInput ? amountInput.value : '';
                     var address = addressInput ? addressInput.value : '';
 
-                    if (!amount || parseFloat(amount) < 2) {
+                    if (!amount || parseFloat(amount) < 1) {
                         window.Telegram.WebApp.showPopup({
                             title: 'Error',
-                            message: 'Please enter at least $2 USDT for withdrawal on Polygon.',
+                            message: 'Please enter at least $1 USDT for withdrawal on Polygon.',
                             buttons: [{type: 'ok'}]
                         });
                         return;
@@ -277,7 +283,7 @@
                     }
 
                     var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
-                    var submitBtn = document.querySelector('.withdraw-btn');
+                    
                     if (submitBtn) {
                         submitBtn.disabled = true;
                         submitBtn.textContent = 'Processing...';
@@ -325,6 +331,14 @@
                             message: 'Network error. Please try again.',
                             buttons: [{type: 'ok'}]
                         });
+                    })
+                    .finally(function() {
+                        setTimeout(function() {
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = 'Request Withdrawal on Polygon';
+                            }
+                        }, 3000);
                     });
                 });
             }
@@ -332,6 +346,6 @@
 
         window.goBack = goBack;
     </script>
-    <script src="/js/app.js?v=42"></script>
+    <script src="/js/app.js?v=43"></script>
 </body>
 </html>

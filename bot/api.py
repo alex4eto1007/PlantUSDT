@@ -241,8 +241,8 @@ def withdraw():
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
         
-        if amount < 2:
-            return jsonify({'success': False, 'message': 'Minimum withdrawal is $2'}), 400
+        if amount < 1:
+            return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
         
         fee = amount * 0.05
         net_amount = amount - fee
