@@ -955,7 +955,6 @@ async function investFieldWithLock(fieldNumber) {
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
 
-    // FIXED: Updated prompt to show decimal examples
     const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5.00, max $100.00, e.g. 25.50):');
     if (!amount) return;
 
@@ -1006,6 +1005,18 @@ async function investFieldWithLock(fieldNumber) {
                         lock_period: days
                     })
                 });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    safePopup({
+                        title:'❌ Error',
+                        message:'Something went wrong. Please try again.',
+                        buttons:[{type:'ok'}]
+                    });
+                    return;
+                }
+
                 const data = await response.json();
                 if (data.success) {
                     safePopup({
@@ -1026,11 +1037,19 @@ async function investFieldWithLock(fieldNumber) {
 
                     loadUserData();
                 } else {
-                    safePopup({title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}]});
+                    safePopup({
+                        title:'❌ Error',
+                        message:data.message || 'Investment failed.',
+                        buttons:[{type:'ok'}]
+                    });
                 }
             } catch (error) {
-                console.error('Error investing');
-                safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
+                console.error('Error investing:', error);
+                safePopup({
+                    title:'❌ Error',
+                    message:'Network error. Please try again.',
+                    buttons:[{type:'ok'}]
+                });
             }
         }
     });
