@@ -661,6 +661,7 @@ def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
         reward = Decimal(str(task["reward"]))
         user.balance = (user.balance or Decimal('0')) + reward
         user.tasks_earnings = (user.tasks_earnings or Decimal('0')) + reward
+        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal("0")) + reward
         
         progress.claimed = True
         progress.claimed_at = datetime.utcnow()
