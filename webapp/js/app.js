@@ -1742,6 +1742,20 @@ async function claimWelcomeBonus() {
                 });
                 const data = await response.json();
                 
+                // FIX: Check for "already claimed" message specifically
+                if (data.success === false && data.message && data.message.toLowerCase().includes('already claimed')) {
+                    // User already claimed, update UI
+                    safePopup({
+                        title: '✅ Already Claimed',
+                        message: 'You have already claimed your welcome bonus!',
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadUserData();
+                    loadActiveReferrals();
+                    loadTasks();
+                    return;
+                }
+                
                 if (data.success) {
                     safePopup({
                         title: '🎉 Bonus Claimed!',
