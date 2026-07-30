@@ -1727,7 +1727,7 @@ async function claimWelcomeBonus() {
     
     safePopupWithCallback({
         title: '🎁 Welcome Bonus',
-        message: 'Claim 0.1 USDT as a welcome bonus!\n\nRequirement: Invest at least once OR watch 30 ads.\n\nNo referral needed! 🎉',
+        message: 'Claim 0.1 USDT as a welcome bonus!\n\nNo requirements — everyone can claim! 🎉',
         buttons: [
             {id: 'cancel', type: 'cancel'},
             {id: 'claim', type: 'ok', text: '🎁 Claim'}
@@ -1921,7 +1921,6 @@ async function loadTasks() {
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
-                            // FIXED: Cap the display value at the condition value
                             var displayValue = Math.min(currentValue, conditionValue);
                             progressText = `${Number(displayValue).toFixed(3)}/${conditionValue}`;
                         } else {
@@ -2194,7 +2193,7 @@ window.claimTaskReward = claimTaskReward;
 window.showMoreTasks = showMoreTasks;
 
 console.log('✅ PlantUSDT app loaded successfully');
-console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
+console.log('📢 Welcome bonus: No requirements — everyone can claim!');
 console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
 console.log('📢 All amounts displayed with 3 decimal places');
 console.log('📈 Expected Daily Earnings feature active');
