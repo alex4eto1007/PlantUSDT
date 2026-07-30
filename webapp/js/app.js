@@ -1740,11 +1740,35 @@ async function claimWelcomeBonus() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId })
                 });
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    // Try to parse error message from response
+                    const errorData = await response.json().catch(() => ({}));
+                    if (errorData.message && errorData.message.toLowerCase().includes('already claimed')) {
+                        safePopup({
+                            title: '✅ Already Claimed',
+                            message: 'You have already claimed your welcome bonus!',
+                            buttons: [{type: 'ok'}]
+                        });
+                        loadUserData();
+                        loadActiveReferrals();
+                        loadTasks();
+                        return;
+                    }
+                    // Otherwise show a generic error
+                    safePopup({
+                        title: '❌ Error',
+                        message: errorData.message || 'Something went wrong. Please try again.',
+                        buttons: [{type: 'ok'}]
+                    });
+                    return;
+                }
+                
                 const data = await response.json();
                 
-                // FIX: Check for "already claimed" message specifically
+                // Check for "already claimed" in success response
                 if (data.success === false && data.message && data.message.toLowerCase().includes('already claimed')) {
-                    // User already claimed, update UI
                     safePopup({
                         title: '✅ Already Claimed',
                         message: 'You have already claimed your welcome bonus!',
@@ -1773,7 +1797,27 @@ async function claimWelcomeBonus() {
                     });
                 }
             } catch (error) {
-                console.error('Error claiming bonus');
+                console.error('Error claiming bonus:', error);
+                // Network error - try to reload user data to see if the bonus was actually credited
+                try {
+                    await loadUserData();
+                    // Check if the user now has the welcome bonus
+                    const userData = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`).then(r => r.json());
+                    if (userData.success && userData.has_received_welcome_bonus) {
+                        safePopup({
+                            title: '✅ Bonus Claimed!',
+                            message: 'Your welcome bonus has been credited! 💰',
+                            buttons: [{type: 'ok'}]
+                        });
+                        loadUserData();
+                        loadActiveReferrals();
+                        loadTasks();
+                        return;
+                    }
+                } catch (e) {
+                    // Ignore
+                }
+                
                 safePopup({
                     title: '❌ Error',
                     message: 'Network error. Please try again.',
