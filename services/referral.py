@@ -205,9 +205,9 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
         logger.info(f"⚠️ User {user_id} already claimed welcome bonus")
         return False, "Welcome bonus already claimed"
     
-    # Check if user is active (any investment OR 30 ads)
-    if not is_referral_active(user_id, session):
-        return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
+    # No requirements needed - everyone is eligible
+    # if not is_referral_active(user_id, session):
+    #     return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
     
     # Check if task 45 is already claimed
     from database.models import UserTaskProgress
