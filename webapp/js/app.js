@@ -399,6 +399,7 @@ function updateFields(data) {
             var unlockDate = new Date(field.unlock_date);
             var now = new Date();
             var daysRemaining = Math.max(0, Math.ceil((unlockDate - now) / (1000 * 60 * 60 * 24)));
+            var daysElapsed = lockPeriod - daysRemaining;
 
             window.fieldData[i] = {
                 unlock_date: field.unlock_date,
@@ -408,7 +409,7 @@ function updateFields(data) {
             };
 
             amountEl.textContent = '$' + field.amount.toFixed(3);
-            daysEl.textContent = isLocked ? daysRemaining + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
+            daysEl.textContent = isLocked ? daysElapsed + '/' + lockPeriod + ' days' : lockPeriod + '/' + lockPeriod + ' days';
 
             var displayEarned = isLocked ? field.expected_return || 0 : field.paid_out || 0;
             earnedEl.textContent = '$' + displayEarned.toFixed(3);
@@ -2149,3 +2150,4 @@ console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral neede
 console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
 console.log('📢 All amounts displayed with 3 decimal places');
 console.log('📈 Expected Daily Earnings feature active');
+console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
