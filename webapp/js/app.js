@@ -1876,6 +1876,9 @@ async function loadTasks() {
                 const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
                 
                 let currentCategory = '';
+                // Track which tasks have been shown per category
+                let categoryCounts = {};
+                
                 for (const task of sortedTasks) {
                     const isCompleted = task.completed;
                     const isClaimed = task.claimed;
@@ -1883,6 +1886,7 @@ async function loadTasks() {
                     
                     if (task.category !== currentCategory) {
                         currentCategory = task.category;
+                        categoryCounts[task.category] = 0;
                         const catInfo = categories[currentCategory] || { icon: '📌', label: currentCategory };
                         html += `
                             <div style="margin-top:16px;margin-bottom:8px;font-size:14px;font-weight:700;color:#8247E5;border-bottom:1px solid rgba(130,71,229,0.2);padding-bottom:4px;">
@@ -1890,6 +1894,32 @@ async function loadTasks() {
                             </div>
                         `;
                     }
+                    
+                    // Check if we should show this task or hide behind "Click here for more"
+                    const shouldShow = task.claimed || 
+                                      (categoryCounts[task.category] < 3) ||
+                                      (isCompleted && !isClaimed);
+                    
+                    if (!shouldShow) {
+                        // Skip rendering this task, but increment the counter
+                        categoryCounts[task.category]++;
+                        continue;
+                    }
+                    
+                    // If this is the first hidden task, show the "Click here for more" button
+                    // We already incremented, so check if this is task #4
+                    if (categoryCounts[task.category] === 3 && !task.claimed && !isCompleted) {
+                        // Show "Click here for more tasks" button before this task
+                        html += `
+                            <button onclick="showMoreTasks('${task.category}')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
+                                📋 Click here for more ${categories[task.category]?.label || task.category} tasks...
+                            </button>
+                        `;
+                    }
+                    
+                    // Increment count BEFORE rendering to ensure we show first 3
+                    const showIndex = categoryCounts[task.category];
+                    categoryCounts[task.category]++;
                     
                     const userStats = data.user_stats || {};
                     let progressText = '';
@@ -1925,30 +1955,39 @@ async function loadTasks() {
                     
                     const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(3);
                     
+                    // Add a hidden class for tasks that are collapsed
+                    const hiddenClass = (!shouldShow) ? 'style="display:none;"' : '';
+                    
                     html += `
-                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <div style="display:flex;align-items:center;gap:10px;flex:1;">
-                                    <div style="font-size:20px;">${task.icon || '📌'}</div>
-                                    <div style="flex:1;">
-                                        <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
-                                        <div style="font-size:12px;color:#8892b0;">${task.description}</div>
-                                        <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
-                                        ${!isCompleted && progressText ? `
-                                            <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;">
-                                                <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
-                                            </div>
-                                        ` : ''}
+                        <div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hiddenClass}>
+                            <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div style="display:flex;align-items:center;gap:10px;flex:1;">
+                                        <div style="font-size:20px;">${task.icon || '📌'}</div>
+                                        <div style="flex:1;">
+                                            <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
+                                            <div style="font-size:12px;color:#8892b0;">${task.description}</div>
+                                            <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
+                                            ${!isCompleted && progressText ? `
+                                                <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;">
+                                                    <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
                                     </div>
-                                </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                    ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    <div style="text-align:right;">
+                                        <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
+                                        ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     `;
                 }
+                
+                // Store the tasks data for the "Show More" functionality
+                window._tasksData = data;
+                window._tasksCategoryMap = categories;
                 
                 if (totalTasks === 0) {
                     html = `
@@ -1975,6 +2014,29 @@ async function loadTasks() {
     } catch (error) {
         console.error('❌ Error loading tasks');
     }
+}
+
+// ============================================
+// SHOW MORE TASKS - Toggle collapsed tasks
+// ============================================
+function showMoreTasks(category) {
+    console.log('📋 Showing more tasks for category:', category);
+    const taskItems = document.querySelectorAll(`.task-item[data-category="${category}"]`);
+    const button = document.querySelector(`button[onclick*="showMoreTasks('${category}')"]`);
+    
+    if (button) {
+        // Hide the button
+        button.style.display = 'none';
+    }
+    
+    // Show all hidden tasks in this category
+    taskItems.forEach(item => {
+        if (item.style.display === 'none' || !item.style.display) {
+            item.style.display = 'block';
+            // Add a fade-in effect
+            item.style.animation = 'fadeIn 0.3s ease';
+        }
+    });
 }
 
 function getTaskConditionValue(taskId) {
@@ -2144,6 +2206,7 @@ window.claimWelcomeBonus = claimWelcomeBonus;
 window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
 window.claimTaskReward = claimTaskReward;
+window.showMoreTasks = showMoreTasks;
 
 console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: 0.1 USDT for ANY active user (no referral needed)');
@@ -2151,3 +2214,4 @@ console.log('📢 Task management system active with 44 visible tasks (Task 45 h
 console.log('📢 All amounts displayed with 3 decimal places');
 console.log('📈 Expected Daily Earnings feature active');
 console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
+console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
