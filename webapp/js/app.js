@@ -722,7 +722,7 @@ async function updateReferral(data) {
 }
 
 // ============================================
-// COPY REFERRAL FUNCTION - FIXED
+// COPY REFERRAL FUNCTION - FIXED WITH TELEGRAM SHARE
 // ============================================
 async function copyReferral() {
     showInterstitialIfNeeded();
@@ -749,7 +749,7 @@ async function copyReferral() {
                 console.log('Clipboard API failed, using fallback...');
             }
             
-            // FALLBACK: Create temporary input field (works on all devices)
+            // FALLBACK 1: execCommand (works on older devices)
             if (!copied) {
                 var textArea = document.createElement('textarea');
                 textArea.value = referralLink;
@@ -774,16 +774,85 @@ async function copyReferral() {
                 document.body.removeChild(textArea);
             }
             
-            // FALLBACK 2: Show the link in a popup with a manual copy button
+            // FALLBACK 2: Telegram native popup with Share + Copy options
             if (!copied) {
-                safePopup({
-                    title: '📋 Copy Referral Link',
-                    message: 'Please copy this link manually:\n\n' + referralLink,
-                    buttons: [{type: 'ok'}]
-                });
+                try {
+                    tg.showPopup({
+                        title: '📋 Share Referral Link',
+                        message: 'Share this link with your friends:\n\n' + referralLink,
+                        buttons: [
+                            {id: 'share', type: 'default', text: '📤 Share'},
+                            {id: 'copy', type: 'default', text: '📋 Copy'},
+                            {id: 'cancel', type: 'cancel'}
+                        ]
+                    }, function(buttonId) {
+                        if (buttonId === 'share') {
+                            // Try to share via Telegram
+                            try {
+                                tg.sendData(JSON.stringify({
+                                    type: 'share_referral',
+                                    link: referralLink
+                                }));
+                            } catch (e) {
+                                // If sendData fails, show manual copy
+                                safePopup({
+                                    title: '📋 Copy Referral Link',
+                                    message: 'Please copy this link manually:\n\n' + referralLink,
+                                    buttons: [{type: 'ok'}]
+                                });
+                            }
+                        } else if (buttonId === 'copy') {
+                            // Try copy one more time with user interaction
+                            var tempInput = document.createElement('input');
+                            tempInput.value = referralLink;
+                            tempInput.style.position = 'fixed';
+                            tempInput.style.left = '-9999px';
+                            tempInput.style.top = '-9999px';
+                            tempInput.style.width = '1px';
+                            tempInput.style.height = '1px';
+                            tempInput.style.opacity = '0';
+                            document.body.appendChild(tempInput);
+                            tempInput.focus();
+                            tempInput.select();
+                            
+                            try {
+                                var copySuccess = document.execCommand('copy');
+                                document.body.removeChild(tempInput);
+                                if (copySuccess) {
+                                    safePopup({
+                                        title: '✅ Copied!',
+                                        message: 'Referral link copied to clipboard!\n\nShare it with your friends! 🎉',
+                                        buttons: [{type: 'ok'}]
+                                    });
+                                } else {
+                                    safePopup({
+                                        title: '📋 Copy Referral Link',
+                                        message: 'Please copy this link manually:\n\n' + referralLink,
+                                        buttons: [{type: 'ok'}]
+                                    });
+                                }
+                            } catch (e) {
+                                document.body.removeChild(tempInput);
+                                safePopup({
+                                    title: '📋 Copy Referral Link',
+                                    message: 'Please copy this link manually:\n\n' + referralLink,
+                                    buttons: [{type: 'ok'}]
+                                });
+                            }
+                        }
+                    });
+                } catch (e) {
+                    // Final fallback: show manual copy
+                    safePopup({
+                        title: '📋 Copy Referral Link',
+                        message: 'Please copy this link manually:\n\n' + referralLink,
+                        buttons: [{type: 'ok'}]
+                    });
+                }
                 return;
             }
             
+            // Success message if copied
             safePopup({
                 title: '✅ Copied!',
                 message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
