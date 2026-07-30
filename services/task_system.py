@@ -609,12 +609,10 @@ def check_task_conditions(user: User, session: Session) -> list:
             completed = total_earnings >= condition_value
         elif condition_type == "welcome_bonus":
             if not user.has_received_welcome_bonus:
-                # FIXED: Check if user has ANY investment (active OR completed)
                 has_any_investment = session.query(Investment).filter(
                     Investment.user_id == user.id
                 ).count() > 0
                 
-                # Also check if they've watched 30+ ads
                 has_enough_ads = (user.total_ads_watched or 0) >= 30
                 
                 if has_any_investment or has_enough_ads:

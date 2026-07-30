@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from database.models import User, Investment, ActiveReferral, ReferralUpgrade
 from database.db_manager import DatabaseManager
 from config.settings import Config
@@ -22,7 +23,6 @@ db = DatabaseManager()
 
 def is_referral_active(user_id: int, session: Session) -> bool:
     """Check if a user qualifies as an active referral (any investment OR 30 ads)"""
-    # FIXED: Check for ANY investment (active OR completed), not just completed
     investments = session.query(Investment).filter(
         Investment.user_id == user_id
     ).count()
@@ -205,9 +205,24 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
         logger.info(f"⚠️ User {user_id} already claimed welcome bonus")
         return False, "Welcome bonus already claimed"
     
-    # FIXED: Use the same check as is_referral_active (any investment OR 30 ads)
+    # Check if user is active (any investment OR 30 ads)
     if not is_referral_active(user_id, session):
         return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
+    
+    # Check if task 45 is already claimed
+    from database.models import UserTaskProgress
+    existing = session.query(UserTaskProgress).filter_by(
+        user_id=user_id,
+        task_id=45,
+        claimed=True
+    ).first()
+    
+    if existing:
+        user.has_received_welcome_bonus = True
+        user.welcome_bonus_claimed_at = datetime.utcnow()
+        session.commit()
+        logger.info(f"ℹ️ Welcome bonus was already claimed for user {user_id}, marking as received")
+        return True, "Welcome bonus already claimed previously!"
     
     success, msg = claim_task_reward(user_id, 45, session)
     
@@ -218,6 +233,13 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
         logger.info(f"✅ Welcome bonus claimed by user {user_id} via task 45")
         return True, "Welcome bonus of 0.1 USDT awarded!"
     else:
+        # If the error is that it's already claimed, mark it as received anyway
+        if "already claimed" in msg.lower():
+            user.has_received_welcome_bonus = True
+            user.welcome_bonus_claimed_at = datetime.utcnow()
+            session.commit()
+            logger.info(f"ℹ️ Welcome bonus was already claimed for user {user_id}, marking as received (from error)")
+            return True, "Welcome bonus already claimed!"
         return False, msg
 
 def get_active_referral_count(user_id: int, session: Session) -> int:
