@@ -1895,32 +1895,30 @@ async function loadTasks() {
                         `;
                     }
                     
-                    // Check if we should show this task or hide behind "Click here for more"
-                    const shouldShow = task.claimed || 
-                                      (categoryCounts[task.category] < 3) ||
-                                      (isCompleted && !isClaimed);
+                    // Count this task regardless of whether we show it
+                    categoryCounts[task.category] = (categoryCounts[task.category] || 0) + 1;
+                    const currentCount = categoryCounts[task.category];
                     
-                    if (!shouldShow) {
-                        // Skip rendering this task, but increment the counter
-                        categoryCounts[task.category]++;
-                        continue;
+                    // Determine if we should show this task or hide behind "more" button
+                    // Show first 3 tasks, completed tasks, or tasks that are ready to claim
+                    const shouldShow = (currentCount <= 3) || isCompleted || (isCompleted && !isClaimed);
+                    
+                    // If this is the 4th task and we haven't shown a "more" button yet for this category
+                    if (currentCount === 4 && !isCompleted) {
+                        const hiddenCount = sortedTasks.filter(t => t.category === task.category && !t.claimed).length - 3;
+                        if (hiddenCount > 0) {
+                            html += `
+                                <button onclick="showMoreTasks('${task.category}')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
+                                    📋 Click here for more ${categories[task.category]?.label || task.category} tasks (${hiddenCount} remaining)...
+                                </button>
+                            `;
+                        }
                     }
                     
-                    // If this is the first hidden task, show the "Click here for more" button
-                    // We already incremented, so check if this is task #4
-                    if (categoryCounts[task.category] === 3 && !task.claimed && !isCompleted) {
-                        // Show "Click here for more tasks" button before this task
-                        html += `
-                            <button onclick="showMoreTasks('${task.category}')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
-                                📋 Click here for more ${categories[task.category]?.label || task.category} tasks...
-                            </button>
-                        `;
-                    }
+                    // Hide the task if it's beyond the first 3 and not completed
+                    const hideTask = (currentCount > 3 && !isCompleted);
                     
-                    // Increment count BEFORE rendering to ensure we show first 3
-                    const showIndex = categoryCounts[task.category];
-                    categoryCounts[task.category]++;
-                    
+                    // Get progress data
                     const userStats = data.user_stats || {};
                     let progressText = '';
                     let progressPercent = 0;
@@ -1947,25 +1945,25 @@ async function loadTasks() {
                     }
                     
                     const statusBadge = isCompleted ? 
-                        'Claim Now!' : 
+                        (isClaimed ? '✅ Claimed' : 'Claim Now!') : 
                         (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
                     const statusColor = isCompleted ? 
-                        '#00ff87' : 
+                        (isClaimed ? '#495670' : '#00ff87') : 
                         '#495670';
                     
                     const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(3);
                     
                     // Add a hidden class for tasks that are collapsed
-                    const hiddenClass = (!shouldShow) ? 'style="display:none;"' : '';
+                    const hiddenStyle = hideTask ? 'style="display:none;"' : '';
                     
                     html += `
-                        <div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hiddenClass}>
-                            <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+                        <div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hiddenStyle}>
+                            <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted && !isClaimed ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;">
                                     <div style="display:flex;align-items:center;gap:10px;flex:1;">
                                         <div style="font-size:20px;">${task.icon || '📌'}</div>
                                         <div style="flex:1;">
-                                            <div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
+                                            <div style="font-weight:600;font-size:14px;color:${isCompleted && !isClaimed ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
                                             <div style="font-size:12px;color:#8892b0;">${task.description}</div>
                                             <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
                                             ${!isCompleted && progressText ? `
@@ -1977,17 +1975,13 @@ async function loadTasks() {
                                     </div>
                                     <div style="text-align:right;">
                                         <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                        ${isCompleted ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>` : ''}
+                                        ${isCompleted && !isClaimed ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>` : ''}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     `;
                 }
-                
-                // Store the tasks data for the "Show More" functionality
-                window._tasksData = data;
-                window._tasksCategoryMap = categories;
                 
                 if (totalTasks === 0) {
                     html = `
