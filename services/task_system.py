@@ -558,7 +558,6 @@ def get_user_stats(user: User, session: Session) -> dict:
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
 
-    # FIXED: total_earnings should only be total_earnings_all_time (not double-counted)
     total_earnings = user.total_earnings_all_time or 0
     has_invested = total_invested > 0
     
@@ -610,7 +609,7 @@ def check_task_conditions(user: User, session: Session) -> list:
             completed = total_earnings >= condition_value
         elif condition_type == "welcome_bonus":
             if not user.has_received_welcome_bonus:
-                # FIXED: Check if user has ANY investment (active OR completed), not just completed
+                # FIXED: Check if user has ANY investment (active OR completed)
                 has_any_investment = session.query(Investment).filter(
                     Investment.user_id == user.id
                 ).count() > 0

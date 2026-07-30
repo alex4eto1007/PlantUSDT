@@ -1876,7 +1876,6 @@ async function loadTasks() {
                 const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
                 
                 let currentCategory = '';
-                // Track which tasks have been shown per category
                 let categoryCounts = {};
                 
                 for (const task of sortedTasks) {
@@ -1895,15 +1894,11 @@ async function loadTasks() {
                         `;
                     }
                     
-                    // Count this task regardless of whether we show it
                     categoryCounts[task.category] = (categoryCounts[task.category] || 0) + 1;
                     const currentCount = categoryCounts[task.category];
                     
-                    // Determine if we should show this task or hide behind "more" button
-                    // Show first 3 tasks, completed tasks, or tasks that are ready to claim
                     const shouldShow = (currentCount <= 3) || isCompleted || (isCompleted && !isClaimed);
                     
-                    // If this is the 4th task and we haven't shown a "more" button yet for this category
                     if (currentCount === 4 && !isCompleted) {
                         const hiddenCount = sortedTasks.filter(t => t.category === task.category && !t.claimed).length - 3;
                         if (hiddenCount > 0) {
@@ -1915,10 +1910,8 @@ async function loadTasks() {
                         }
                     }
                     
-                    // Hide the task if it's beyond the first 3 and not completed
                     const hideTask = (currentCount > 3 && !isCompleted);
                     
-                    // Get progress data
                     const userStats = data.user_stats || {};
                     let progressText = '';
                     let progressPercent = 0;
@@ -1928,7 +1921,9 @@ async function loadTasks() {
                     
                     if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
-                            progressText = `${Number(currentValue).toFixed(3)}/${conditionValue}`;
+                            // FIXED: Cap the display value at the condition value
+                            var displayValue = Math.min(currentValue, conditionValue);
+                            progressText = `${Number(displayValue).toFixed(3)}/${conditionValue}`;
                         } else {
                             progressText = `${Math.round(Number(currentValue))}/${conditionValue}`;
                         }
@@ -1953,7 +1948,6 @@ async function loadTasks() {
                     
                     const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(3);
                     
-                    // Add a hidden class for tasks that are collapsed
                     const hiddenStyle = hideTask ? 'style="display:none;"' : '';
                     
                     html += `
@@ -2019,15 +2013,12 @@ function showMoreTasks(category) {
     const button = document.querySelector(`button[onclick*="showMoreTasks('${category}')"]`);
     
     if (button) {
-        // Hide the button
         button.style.display = 'none';
     }
     
-    // Show all hidden tasks in this category
     taskItems.forEach(item => {
         if (item.style.display === 'none' || !item.style.display) {
             item.style.display = 'block';
-            // Add a fade-in effect
             item.style.animation = 'fadeIn 0.3s ease';
         }
     });
@@ -2209,3 +2200,4 @@ console.log('📢 All amounts displayed with 3 decimal places');
 console.log('📈 Expected Daily Earnings feature active');
 console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
 console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
+console.log('📊 Milestone display fixed: values capped at target');
