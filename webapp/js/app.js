@@ -453,16 +453,18 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT
+// CLAIM INVESTMENT - WITH PROCESSING STATE
 // ============================================
+let claimInProgress = false;
+
 async function claimInvestment(fieldNumber) {
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
 
-    if (window.claimInProgress) {
+    if (claimInProgress) {
         console.log('⏳ Claim already in progress...');
         return;
     }
-    window.claimInProgress = true;
+    claimInProgress = true;
 
     const userId = tgUser ? tgUser.id : '0';
     if (!userId || userId === '0') {
@@ -471,8 +473,17 @@ async function claimInvestment(fieldNumber) {
             message: 'User not authenticated. Please restart the app.',
             buttons: [{type: 'ok'}]
         });
-        window.claimInProgress = false;
+        claimInProgress = false;
         return;
+    }
+
+    // Update button to show processing
+    const btn = document.getElementById('field' + fieldNumber + 'Btn');
+    const originalText = btn ? btn.textContent : '';
+    if (btn) {
+        btn.textContent = '⏳ Processing...';
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
     }
 
     safePopupWithCallback({
@@ -516,7 +527,12 @@ async function claimInvestment(fieldNumber) {
                             loadAdStats();
                             loadActiveReferrals();
                             loadTasks();
-                            window.claimInProgress = false;
+                            claimInProgress = false;
+                            if (btn) {
+                                btn.textContent = originalText;
+                                btn.disabled = false;
+                                btn.style.opacity = '1';
+                            }
                         }, 3000);
                     }, 1000);
 
@@ -526,7 +542,12 @@ async function claimInvestment(fieldNumber) {
                         message: data.message || 'Failed to claim.',
                         buttons: [{type: 'ok'}]
                     });
-                    window.claimInProgress = false;
+                    claimInProgress = false;
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }
                 }
             } catch (error) {
                 console.error('❌ Error claiming');
@@ -535,10 +556,20 @@ async function claimInvestment(fieldNumber) {
                     message: 'Network error. Please try again.',
                     buttons: [{type: 'ok'}]
                 });
-                window.claimInProgress = false;
+                claimInProgress = false;
+                if (btn) {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
             }
         } else {
-            window.claimInProgress = false;
+            claimInProgress = false;
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
         }
     });
 }
@@ -2258,3 +2289,4 @@ console.log('📈 Expected Daily Earnings feature active');
 console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
 console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
 console.log('📊 Milestone display fixed: values capped at target');
+console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');

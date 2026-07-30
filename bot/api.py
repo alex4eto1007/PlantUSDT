@@ -44,7 +44,7 @@ Session(app)
 # RATE LIMITING
 # ============================================
 rate_limits = defaultdict(list)
-RATE_LIMIT = 60  # requests per minute
+RATE_LIMIT = 120  # requests per minute (increased from 60)
 RATE_WINDOW = 60  # seconds
 
 def rate_limit(f):
