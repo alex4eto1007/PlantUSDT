@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from config.settings import Config
 from database.db_manager import DatabaseManager
 from database.models import User, Investment, Withdrawal, Deposit, UncollectedFee
@@ -14,6 +14,7 @@ from services.task_manager import (
 )
 import logging
 import asyncio
+import json
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -119,7 +120,7 @@ Grow your USDT with returns up to 80% on Polygon network!
 • 🌿 7 Days: 18% return
 • 🌿 30 Days: 80% return
 • 💰 Minimum deposit: $5 USDT
-• 🏦 Minimum withdrawal: $2 USDT
+• 🏦 Minimum withdrawal: $1 USDT
 • 🔒 Platform fee: 5% on withdrawals
 • 🌱 3 Planting Fields: $100 max each
 • ⛓️ Network: Polygon (MATIC) - Low fees!
@@ -210,6 +211,44 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
+
+# ============================================
+# WEB APP DATA HANDLER
+# ============================================
+
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle data sent from the Mini App via tg.sendData()"""
+    try:
+        data = json.loads(update.message.web_app_data.data)
+        logger.info(f"📩 WebApp data received: {data}")
+        
+        data_type = data.get('type')
+        user = update.effective_user
+        
+        if data_type == 'share_referral':
+            link = data.get('link')
+            
+            message = (
+                f"🌱 **Share this referral link with your friends!**\n\n"
+                f"{link}\n\n"
+                f"💰 Earn up to 5% of their deposits based on your tier!\n"
+                f"👥 Your current bonus: Check your tier in the Mini App.\n\n"
+                f"📊 Live Transactions: @PlantUSDTtransactions"
+            )
+            
+            await update.message.reply_text(
+                message,
+                parse_mode='Markdown'
+            )
+            logger.info(f"📤 Referral link shared by user {user.id}")
+            
+        else:
+            logger.info(f"Unknown web_app_data type: {data_type}")
+            
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse web_app_data: {e}")
+    except Exception as e:
+        logger.error(f"Error handling web_app_data: {e}")
 
 # ============================================
 # ADMIN COMMANDS
@@ -933,6 +972,9 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
 
+        # Web App Data handler
+        application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
+
         # Admin commands
         application.add_handler(CommandHandler("pending", pending))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
@@ -990,6 +1032,7 @@ def main():
         logger.info("💰 Fee collection system active")
         logger.info("📈 Referral system with tier upgrades active")
         logger.info("📋 Task management system active")
+        logger.info("📩 Web App Data handler active for referral sharing")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
