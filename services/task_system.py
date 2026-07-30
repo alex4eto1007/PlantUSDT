@@ -558,11 +558,8 @@ def get_user_stats(user: User, session: Session) -> dict:
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
 
-    # FIXED: Same calculation as main API
-    referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
-    investment_earnings = float(user.investment_earnings_all_time or 0)
-    total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
-    
+    # FIXED: total_earnings should only be total_earnings_all_time (not double-counted)
+    total_earnings = user.total_earnings_all_time or 0
     has_invested = total_invested > 0
     
     return {
@@ -583,12 +580,7 @@ def check_task_conditions(user: User, session: Session) -> list:
     total_ads_watched = user.total_ads_watched or 0
     total_referrals = session.query(User).filter_by(referred_by=user.id).count()
     total_active_referrals = get_active_referral_count(user.id, session)
-    
-    # FIXED: Same calculation as main API
-    referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
-    investment_earnings = float(user.investment_earnings_all_time or 0)
-    total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
-    
+    total_earnings = user.total_earnings_all_time or 0
     has_invested = total_invested > 0
     
     for task in TASKS:
@@ -618,7 +610,12 @@ def check_task_conditions(user: User, session: Session) -> list:
             completed = total_earnings >= condition_value
         elif condition_type == "welcome_bonus":
             if not user.has_received_welcome_bonus:
-                if is_referral_active(user.id, session):
+                # FIXED: Check if user has ANY investment (active OR completed), not just completed
+                has_any_investment = session.query(Investment).filter(
+                    Investment.user_id == user.id
+                ).count() > 0
+                
+                if has_any_investment:
                     completed = True
         
         if completed:
