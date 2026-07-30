@@ -21,10 +21,10 @@ TIER_ORDER = ["free", "bronze", "silver", "gold", "diamond"]
 db = DatabaseManager()
 
 def is_referral_active(user_id: int, session: Session) -> bool:
-    """Check if a user qualifies as an active referral (30 ads OR 1 investment)"""
+    """Check if a user qualifies as an active referral (any investment OR 30 ads)"""
+    # FIXED: Check for ANY investment (active OR completed), not just completed
     investments = session.query(Investment).filter(
-        Investment.user_id == user_id,
-        Investment.is_completed == True
+        Investment.user_id == user_id
     ).count()
     
     if investments > 0:
@@ -205,6 +205,7 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
         logger.info(f"⚠️ User {user_id} already claimed welcome bonus")
         return False, "Welcome bonus already claimed"
     
+    # FIXED: Use the same check as is_referral_active (any investment OR 30 ads)
     if not is_referral_active(user_id, session):
         return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
     
@@ -235,8 +236,7 @@ def get_active_referral_list(user_id: int, session: Session) -> list:
     for ref in referrals:
         if is_referral_active(ref.id, session):
             has_invested = session.query(Investment).filter(
-                Investment.user_id == ref.id,
-                Investment.is_completed == True
+                Investment.user_id == ref.id
             ).count() > 0
             active_list.append({
                 'id': ref.id,
