@@ -722,7 +722,7 @@ async function updateReferral(data) {
 }
 
 // ============================================
-// COPY REFERRAL FUNCTION
+// COPY REFERRAL FUNCTION - FIXED
 // ============================================
 async function copyReferral() {
     showInterstitialIfNeeded();
@@ -739,26 +739,56 @@ async function copyReferral() {
                 referralLinkEl.textContent = referralLink;
                 referralLinkEl.style.color = '#ccd6f0';
             }
+            
+            // TRY CLIPBOARD API FIRST
+            var copied = false;
             try {
                 await navigator.clipboard.writeText(referralLink);
-                safePopup({
-                    title: '✅ Copied!',
-                    message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
-                    buttons: [{type: 'ok'}]
-                });
+                copied = true;
             } catch (clipError) {
+                console.log('Clipboard API failed, using fallback...');
+            }
+            
+            // FALLBACK: Create temporary input field (works on all devices)
+            if (!copied) {
                 var textArea = document.createElement('textarea');
                 textArea.value = referralLink;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                textArea.style.top = '-9999px';
+                textArea.style.width = '1px';
+                textArea.style.height = '1px';
                 document.body.appendChild(textArea);
+                textArea.focus();
                 textArea.select();
-                document.execCommand('copy');
+                
+                try {
+                    var success = document.execCommand('copy');
+                    if (success) {
+                        copied = true;
+                    }
+                } catch (e) {
+                    console.log('execCommand copy failed');
+                }
+                
                 document.body.removeChild(textArea);
+            }
+            
+            // FALLBACK 2: Show the link in a popup with a manual copy button
+            if (!copied) {
                 safePopup({
-                    title: '✅ Copied!',
-                    message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
+                    title: '📋 Copy Referral Link',
+                    message: 'Please copy this link manually:\n\n' + referralLink,
                     buttons: [{type: 'ok'}]
                 });
+                return;
             }
+            
+            safePopup({
+                title: '✅ Copied!',
+                message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
+                buttons: [{type: 'ok'}]
+            });
         } else {
             safePopup({
                 title: '❌ Error',
@@ -1361,8 +1391,8 @@ function setupEventListeners() {
             var amount = amountInput ? amountInput.value : '';
             var address = addressInput ? addressInput.value : '';
             
-            if (!amount || parseFloat(amount) < 2) {
-                safePopup({title:'❌ Error', message:'Please enter at least $2 USDT for withdrawal on Polygon.', buttons:[{type:'ok'}]});
+            if (!amount || parseFloat(amount) < 1) {
+                safePopup({title:'❌ Error', message:'Please enter at least $1 USDT for withdrawal on Polygon.', buttons:[{type:'ok'}]});
                 return;
             }
             if (!address || !address.startsWith('0x')) {
