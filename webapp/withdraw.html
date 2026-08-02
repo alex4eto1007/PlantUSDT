@@ -100,6 +100,14 @@
             border-color: #8247E5;
             box-shadow: 0 0 20px rgba(130,71,229,0.1);
         }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         .set-wallet-btn {
             margin-top: 4px;
             padding: 4px 12px;
@@ -152,9 +160,9 @@
             <strong>Gas Fees:</strong> Covered by us!</p>
             <div class="fee-breakdown">
                 <strong>Fee Structure:</strong><br>
-                • $1 - $10: 5% only<br>
-                • $10 - $30: 5% + $1 flat fee<br>
-                • $30 - $100: 5% + $5 flat fee<br>
+                • $1 - $9.99: 5% only<br>
+                • $10 - $29.99: 5% + $1 flat fee<br>
+                • $30 - $99.99: 5% + $5 flat fee<br>
                 • $100+: 5% + $15 flat fee
             </div>
             <div class="warning-text">⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.</div>
@@ -207,7 +215,12 @@
 
             if (amountInput) {
                 amountInput.addEventListener('input', function() {
-                    var amount = parseFloat(this.value) || 0;
+                    var rawValue = parseFloat(this.value) || 0;
+                    var amount = Math.round(rawValue * 100) / 100;
+                    if (rawValue !== amount) {
+                        this.value = amount.toFixed(2);
+                    }
+                    
                     if (amount >= 1) {
                         var feePercent = amount * 0.05;
                         var flatFee = 0;

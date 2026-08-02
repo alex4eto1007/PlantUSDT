@@ -244,6 +244,9 @@ def withdraw():
         if amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
         
+        # Round amount to 2 decimal places
+        amount = round(amount, 2)
+        
         # Calculate fee with tiered flat fee
         fee_percent = 0.05
         flat_fee = 0.0
