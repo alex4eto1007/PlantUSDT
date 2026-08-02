@@ -348,20 +348,19 @@
             var withdrawBtn = document.getElementById('withdrawBtn');
 
             if (!lastWithdrawalAt) {
-                // Never withdrawn — available
                 cooldownContainer.style.display = 'none';
                 availableContainer.style.display = 'block';
                 withdrawBtn.disabled = false;
                 return;
             }
 
-            var last = new Date(lastWithdrawalAt);
+            // FIXED: Force UTC parsing by appending 'Z'
+            var last = new Date(lastWithdrawalAt + 'Z');
             var now = new Date();
-            var diff = (now.getTime() - last.getTime()) / 1000; // seconds
-            var cooldown = 86400; // 24 hours
+            var diff = (now.getTime() - last.getTime()) / 1000;
+            var cooldown = 86400;
 
             if (diff >= cooldown) {
-                // Cooldown expired
                 cooldownContainer.style.display = 'none';
                 availableContainer.style.display = 'block';
                 withdrawBtn.disabled = false;
@@ -372,7 +371,6 @@
                 return;
             }
 
-            // Still in cooldown
             var remaining = cooldown - diff;
             cooldownContainer.style.display = 'block';
             availableContainer.style.display = 'none';

@@ -288,7 +288,7 @@ def withdraw():
         session_db.add(withdrawal)
         
         user.balance -= Decimal(str(amount))
-        user.last_withdrawal_at = datetime.utcnow()  # Update cooldown timestamp
+        user.last_withdrawal_at = datetime.utcnow()
         
         session_db.commit()
         clear_user_cache(telegram_id)
