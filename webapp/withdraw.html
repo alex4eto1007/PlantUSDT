@@ -21,6 +21,21 @@
         .fee-row .fee-amount { color: #ff6b6b; }
         .fee-row .amount { color: #ffffff; }
         .fee-breakdown { font-size: 12px; color: #8892b0; margin-top: 4px; }
+        .cooldown-timer {
+            background: rgba(255,193,7,0.08);
+            border: 1px solid rgba(255,193,7,0.2);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 12px 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffd93d;
+        }
+        .cooldown-timer .label { font-size: 12px; color: #8892b0; font-weight: 400; }
+        .cooldown-timer .time { font-size: 20px; color: #ffd93d; }
+        .cooldown-timer .available { color: #00ff87; font-size: 18px; }
         .warning-text { font-size: 12px; color: #ffd93d; margin-top: 8px; padding: 10px; background: rgba(255,193,7,0.08); border-radius: 6px; border: 1px solid rgba(255,193,7,0.15); }
         .info-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
         .info-card h3 { font-size: 16px; margin-bottom: 8px; color: #ccd6f0; }
@@ -154,6 +169,7 @@
         <div class="info-card">
             <h3>Withdrawal Instructions</h3>
             <p><strong>Min Amount:</strong> $1 USDT<br>
+            <strong>Max 1 withdrawal per 24 hours</strong><br>
             <strong>Fee:</strong> 5% + flat fee based on amount<br>
             <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
             <strong>Token:</strong> USDT on Polygon<br>
@@ -164,6 +180,17 @@
                 • $10 - $29.99: 5% + $1 flat fee<br>
                 • $30 - $99.99: 5% + $5 flat fee<br>
                 • $100+: 5% + $15 flat fee
+            </div>
+            <div id="cooldownContainer" style="display:none;">
+                <div class="cooldown-timer" id="cooldownTimer">
+                    <div class="label">🕒 Next withdrawal available in:</div>
+                    <div class="time" id="cooldownDisplay">--:--:--</div>
+                </div>
+            </div>
+            <div id="availableContainer" style="display:none;">
+                <div class="cooldown-timer">
+                    <div class="available">✅ Withdrawal available now!</div>
+                </div>
             </div>
             <div class="warning-text">⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.</div>
             <p style="font-size:12px;color:#8892b0;margin-top:8px;">🔒 Your funds will be sent to your Polygon wallet address.</p>
@@ -189,13 +216,17 @@
                 <div class="fee-row total"><span>You will receive on Polygon:</span><span class="net" id="feeNet">$0.00</span></div>
             </div>
 
-            <button type="submit" class="withdraw-btn">🌱 Request Withdrawal on Polygon</button>
+            <button type="submit" class="withdraw-btn" id="withdrawBtn">🌱 Request Withdrawal on Polygon</button>
         </form>
 
         <button class="action-btn secondary" onclick="goBack()">📊 Back to Dashboard</button>
     </div>
 
     <script>
+        let userId = null;
+        let cooldownInterval = null;
+        let lastWithdrawalAt = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
             try {
@@ -203,6 +234,11 @@
                 tg.expand();
             } catch (e) {
                 console.log('WebApp initialization error');
+            }
+
+            userId = tg.initDataUnsafe?.user?.id || '0';
+            if (userId !== '0') {
+                fetchUserData();
             }
 
             var amountInput = document.getElementById('withdrawAmount');
@@ -291,6 +327,83 @@
             }
         });
 
+        function fetchUserData() {
+            fetch(window.API_BASE + '/api/user?telegram_id=' + userId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        lastWithdrawalAt = data.last_withdrawal_at;
+                        updateCooldownUI();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching user data:', error);
+                });
+        }
+
+        function updateCooldownUI() {
+            var cooldownContainer = document.getElementById('cooldownContainer');
+            var availableContainer = document.getElementById('availableContainer');
+            var cooldownDisplay = document.getElementById('cooldownDisplay');
+            var withdrawBtn = document.getElementById('withdrawBtn');
+
+            if (!lastWithdrawalAt) {
+                // Never withdrawn — available
+                cooldownContainer.style.display = 'none';
+                availableContainer.style.display = 'block';
+                withdrawBtn.disabled = false;
+                return;
+            }
+
+            var last = new Date(lastWithdrawalAt);
+            var now = new Date();
+            var diff = (now.getTime() - last.getTime()) / 1000; // seconds
+            var cooldown = 86400; // 24 hours
+
+            if (diff >= cooldown) {
+                // Cooldown expired
+                cooldownContainer.style.display = 'none';
+                availableContainer.style.display = 'block';
+                withdrawBtn.disabled = false;
+                if (cooldownInterval) {
+                    clearInterval(cooldownInterval);
+                    cooldownInterval = null;
+                }
+                return;
+            }
+
+            // Still in cooldown
+            var remaining = cooldown - diff;
+            cooldownContainer.style.display = 'block';
+            availableContainer.style.display = 'none';
+            withdrawBtn.disabled = true;
+
+            if (cooldownInterval) {
+                clearInterval(cooldownInterval);
+            }
+
+            cooldownInterval = setInterval(function() {
+                var now2 = new Date();
+                var diff2 = (now2.getTime() - last.getTime()) / 1000;
+                var remaining2 = cooldown - diff2;
+                if (remaining2 <= 0) {
+                    clearInterval(cooldownInterval);
+                    cooldownInterval = null;
+                    cooldownContainer.style.display = 'none';
+                    availableContainer.style.display = 'block';
+                    withdrawBtn.disabled = false;
+                    return;
+                }
+                var hours = Math.floor(remaining2 / 3600);
+                var minutes = Math.floor((remaining2 % 3600) / 60);
+                var seconds = Math.floor(remaining2 % 60);
+                cooldownDisplay.textContent = 
+                    String(hours).padStart(2, '0') + ':' +
+                    String(minutes).padStart(2, '0') + ':' +
+                    String(seconds).padStart(2, '0');
+            }, 1000);
+        }
+
         function goBack() {
             window.location.href = 'index.html';
         }
@@ -358,12 +471,26 @@
                             });
                             if (amountInput) amountInput.value = '';
                             if (addressInput) addressInput.value = '';
+                            // Refresh user data to update cooldown
+                            fetchUserData();
                         } else {
-                            window.Telegram.WebApp.showPopup({
-                                title: 'Error',
-                                message: data.message || 'Withdrawal failed.',
-                                buttons: [{type: 'ok'}]
-                            });
+                            // Check for cooldown message
+                            if (data.cooldown_remaining) {
+                                window.Telegram.WebApp.showPopup({
+                                    title: '⏳ Cooldown Active',
+                                    message: data.message,
+                                    buttons: [{type: 'ok'}]
+                                });
+                                // Update cooldown timer
+                                lastWithdrawalAt = new Date(Date.now() - (86400 - data.cooldown_remaining) * 1000);
+                                updateCooldownUI();
+                            } else {
+                                window.Telegram.WebApp.showPopup({
+                                    title: 'Error',
+                                    message: data.message || 'Withdrawal failed.',
+                                    buttons: [{type: 'ok'}]
+                                });
+                            }
                         }
                     })
                     .catch(function(error) {

@@ -199,6 +199,7 @@ def save_wallet():
 @rate_limit
 def withdraw():
     from decimal import Decimal
+    from datetime import datetime, timedelta
     
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
@@ -238,6 +239,21 @@ def withdraw():
                 'message': 'You already have a pending withdrawal. Please wait for it to be processed before submitting another one.'
             }), 400
         
+        # ---- COOLDOWN CHECK ----
+        if user.last_withdrawal_at:
+            time_since_last = (datetime.utcnow() - user.last_withdrawal_at).total_seconds()
+            if time_since_last < 86400:  # 24 hours
+                remaining = int(86400 - time_since_last)
+                hours = remaining // 3600
+                minutes = (remaining % 3600) // 60
+                seconds = remaining % 60
+                time_str = f"{hours}h {minutes}m {seconds}s"
+                return jsonify({
+                    'success': False,
+                    'message': f'You can withdraw again in {time_str}',
+                    'cooldown_remaining': remaining
+                }), 400
+        
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
         
@@ -272,6 +288,7 @@ def withdraw():
         session_db.add(withdrawal)
         
         user.balance -= Decimal(str(amount))
+        user.last_withdrawal_at = datetime.utcnow()  # Update cooldown timestamp
         
         session_db.commit()
         clear_user_cache(telegram_id)
@@ -353,7 +370,8 @@ def get_user():
             'has_received_welcome_bonus': False,
             'tasks_earnings': 0,
             'referral_tier': 'free',
-            'expected_daily_earnings': 0
+            'expected_daily_earnings': 0,
+            'last_withdrawal_at': None
         })
     
     cached = get_cached_user(telegram_id)
@@ -384,7 +402,8 @@ def get_user():
                 'has_received_welcome_bonus': False,
                 'tasks_earnings': 0,
                 'referral_tier': 'free',
-                'expected_daily_earnings': 0
+                'expected_daily_earnings': 0,
+                'last_withdrawal_at': None
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -438,7 +457,8 @@ def get_user():
             'has_received_welcome_bonus': user.has_received_welcome_bonus or False,
             'tasks_earnings': round(float(user.tasks_earnings or 0), 3),
             'referral_tier': user.referral_tier or 'free',
-            'expected_daily_earnings': round(expected_daily_earnings, 2)
+            'expected_daily_earnings': round(expected_daily_earnings, 2),
+            'last_withdrawal_at': user.last_withdrawal_at.isoformat() if user.last_withdrawal_at else None
         }
         
         set_cached_user(telegram_id, response)
