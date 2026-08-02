@@ -244,7 +244,18 @@ def withdraw():
         if amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
         
-        fee = amount * 0.05
+        # Calculate fee with tiered flat fee
+        fee_percent = 0.05
+        flat_fee = 0.0
+        
+        if amount >= 10 and amount < 30:
+            flat_fee = 1.0
+        elif amount >= 30 and amount < 100:
+            flat_fee = 5.0
+        elif amount >= 100:
+            flat_fee = 15.0
+        
+        fee = (amount * fee_percent) + flat_fee
         net_amount = amount - fee
         
         withdrawal = Withdrawal(
