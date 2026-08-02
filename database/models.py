@@ -53,6 +53,10 @@ class User(Base):
     tasks_completed = Column(Integer, default=0)
     last_task_completed_at = Column(DateTime, nullable=True)
     tasks_earnings = Column(Numeric(20,6), default=0.0)
+    notes = Column(Text, nullable=True)
+    
+    # WITHDRAWAL COOLDOWN
+    last_withdrawal_at = Column(DateTime, nullable=True)
 
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
