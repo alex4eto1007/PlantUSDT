@@ -96,6 +96,37 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def update_user_info(self, telegram_id, username=None, first_name=None):
+        """
+        Update user's username and first_name if they have changed.
+        Returns True if any update was made, False otherwise.
+        """
+        session = self.get_session()
+        try:
+            user = session.query(User).filter_by(telegram_id=telegram_id).first()
+            if not user:
+                return False
+
+            changed = False
+            if username is not None and user.username != username:
+                user.username = username
+                changed = True
+            if first_name is not None and user.first_name != first_name:
+                user.first_name = first_name
+                changed = True
+
+            if changed:
+                session.commit()
+                logger.info(f"🔄 Updated user {telegram_id} info: username={username}, first_name={first_name}")
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            logger.error(f"❌ Error updating user info for {telegram_id}: {e}")
+            return False
+        finally:
+            session.close()
+
     def get_pending_withdrawals(self):
         session = self.get_session()
         try:

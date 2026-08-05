@@ -98,6 +98,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.utcnow()
     existing_user = db.get_user(user.id)
 
+    # ============================================
+    # UPDATE USER INFO (NAME & USERNAME) ON EVERY START
+    # ============================================
+    db.update_user_info(user.id, user.username, user.first_name)
+
     if not existing_user:
         referred_by = None
         if context.args and len(context.args) > 0:
@@ -197,6 +202,10 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
+    
+    # Update user info on /app command too
+    db.update_user_info(user.id, user.username, user.first_name)
+    
     keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
@@ -769,6 +778,9 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
     
+    # Update user info
+    db.update_user_info(user.id, user.username, user.first_name)
+    
     args = context.args
     if len(args) < 1:
         tier_list = "\n".join([f"{info['emoji']} {tier.title()}: {info['bonus_percent']}% (${info['price']:.2f})" for tier, info in REFERRAL_TIERS.items() if tier != "free"])
@@ -910,6 +922,9 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
     
+    # Update user info
+    db.update_user_info(user.id, user.username, user.first_name)
+    
     session = db.get_session()
     try:
         user_obj = session.query(User).filter_by(telegram_id=user.id).first()
@@ -1033,6 +1048,7 @@ def main():
         logger.info("📈 Referral system with tier upgrades active")
         logger.info("📋 Task management system active")
         logger.info("📩 Web App Data handler active for referral sharing")
+        logger.info("🔄 User info (name/username) auto-updates on each interaction")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
