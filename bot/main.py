@@ -2,7 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from config.settings import Config
 from database.db_manager import DatabaseManager
-from database.models import User, Investment, Withdrawal, Deposit, UncollectedFee
+from database.models import User, Investment, Withdrawal, Deposit, UncollectedFee, AuditLog
 from services.investment import InvestmentService
 from services.wallet import WalletService
 from services.deposit_scanner import DepositScanner
@@ -17,6 +17,7 @@ import asyncio
 import json
 from datetime import datetime, timedelta
 from collections import defaultdict
+from decimal import Decimal
 
 # ============================================
 # RATE LIMITING
@@ -973,6 +974,87 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
+# MANUAL BALANCE UPDATE WITH AUDIT LOG
+# ============================================
+
+async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to manually update a user's balance with audit logging"""
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 3:
+        await update.message.reply_text(
+            "❌ Usage: /manual_balance <user_id> <amount> <description>\n\n"
+            "Example: /manual_balance 123456789 0.50 'Bonus for testing'\n\n"
+            "Use negative amount to deduct: /manual_balance 123456789 -0.50 'Fee adjustment'"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        target_user_id = int(context.args[0])
+        amount = Decimal(str(context.args[1]))
+        description = ' '.join(context.args[2:])
+        
+        session = db.get_session()
+        target_user = session.query(User).filter_by(telegram_id=target_user_id).first()
+        
+        if not target_user:
+            await update.message.reply_text(f"❌ User {target_user_id} not found.")
+            session.close()
+            return
+        
+        old_balance = Decimal(target_user.balance or 0)
+        new_balance = old_balance + amount
+        
+        target_user.balance = new_balance
+        target_user.total_earnings_all_time = (target_user.total_earnings_all_time or Decimal('0')) + amount
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=target_user.id,
+            action='manual_update',
+            field_changed='balance',
+            old_value=float(old_balance),
+            new_value=float(new_balance),
+            amount=float(amount),
+            description=description,
+            source='admin',
+            created_by=user.id,
+            created_at=datetime.utcnow()
+        )
+        session.add(audit)
+        session.commit()
+        
+        await update.message.reply_text(
+            f"✅ Balance updated for @{target_user.username or 'User'}!\n\n"
+            f"📊 Old balance: ${old_balance:.2f}\n"
+            f"📊 New balance: ${new_balance:.2f}\n"
+            f"💰 Amount: ${amount:.2f}\n"
+            f"📝 Description: {description}\n"
+            f"🆔 User ID: {target_user_id}"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        session.close()
+        
+    except ValueError as e:
+        await update.message.reply_text(f"❌ Invalid input: {e}")
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error in manual_balance: {e}")
+        await update.message.reply_text(f"❌ Error: {str(e)}")
+        session.close()
+
+# ============================================
 # MAIN FUNCTION
 # ============================================
 
@@ -998,6 +1080,7 @@ def main():
         application.add_handler(CommandHandler("test_channel", test_channel))
         application.add_handler(CommandHandler("admin_help", admin_help))
         application.add_handler(CommandHandler("reset_referral", reset_referral))
+        application.add_handler(CommandHandler("manual_balance", manual_balance))
 
         # Admin task commands
         application.add_handler(CommandHandler("add_task", add_task))
@@ -1049,6 +1132,8 @@ def main():
         logger.info("📋 Task management system active")
         logger.info("📩 Web App Data handler active for referral sharing")
         logger.info("🔄 User info (name/username) auto-updates on each interaction")
+        logger.info("📝 Audit log table active for all balance changes")
+        logger.info("⚙️ Manual balance command available: /manual_balance")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

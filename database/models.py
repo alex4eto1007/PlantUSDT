@@ -69,6 +69,22 @@ class User(Base):
     pending_deposit_checks = relationship("PendingDepositCheck", back_populates="user")
     completed_tasks = relationship("UserTask", back_populates="user")
     task_progress = relationship("UserTaskProgress", back_populates="user")
+    audit_logs = relationship("AuditLog", back_populates="user")
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String(50), nullable=False)  # balance_update, task_earnings_update, withdrawal, deposit, ad_reward, manual_update
+    field_changed = Column(String(50))  # balance, tasks_earnings, etc.
+    old_value = Column(Numeric(20,6))
+    new_value = Column(Numeric(20,6))
+    amount = Column(Numeric(20,6))
+    description = Column(Text)
+    source = Column(String(50))  # admin, task_claim, welcome_bonus, ad_reward, etc.
+    created_by = Column(BigInteger)  # admin telegram_id or system
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship("User", back_populates="audit_logs")
 
 class Task(Base):
     __tablename__ = "tasks"

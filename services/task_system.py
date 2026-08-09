@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.orm import Session
-from database.models import User, UserTaskProgress, Investment
+from database.models import User, UserTaskProgress, Investment, AuditLog
 from database.db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -609,7 +609,14 @@ def check_task_conditions(user: User, session: Session) -> list:
             completed = total_earnings >= condition_value
         elif condition_type == "welcome_bonus":
             if not user.has_received_welcome_bonus:
-                completed = True
+                has_any_investment = session.query(Investment).filter(
+                    Investment.user_id == user.id
+                ).count() > 0
+                
+                has_enough_ads = (user.total_ads_watched or 0) >= 30
+                
+                if has_any_investment or has_enough_ads:
+                    completed = True
         
         if completed:
             if not progress:
@@ -659,12 +666,27 @@ def claim_task_reward(user_id: int, task_id: int, session: Session) -> tuple:
             return False, "User not found"
         
         reward = Decimal(str(task["reward"]))
+        old_value = Decimal(user.tasks_earnings or 0)
         user.balance = (user.balance or Decimal('0')) + reward
         user.tasks_earnings = (user.tasks_earnings or Decimal('0')) + reward
-        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal("0")) + reward
+        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
         
         progress.claimed = True
         progress.claimed_at = datetime.utcnow()
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=user.id,
+            action='task_claim',
+            field_changed='tasks_earnings',
+            old_value=float(old_value),
+            new_value=float(user.tasks_earnings),
+            amount=float(reward),
+            description=f'Claimed task #{task_id}: {task["title"]}',
+            source='task_claim',
+            created_at=datetime.utcnow()
+        )
+        session.add(audit)
         
         session.commit()
         logger.info(f"✅ Task {task_id} reward claimed by user {user_id}: +${reward}")
