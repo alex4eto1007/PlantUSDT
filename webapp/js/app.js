@@ -16,6 +16,93 @@ let isLoading = false;
 let isDataLoaded = false;
 
 // ============================================
+// MATH CAPTCHA FOR AD REWARDS
+// ============================================
+
+let mathCaptchaAnswer = null;
+let mathCaptchaQuestion = null;
+let pendingAdCallback = null;
+
+function generateMathCaptcha() {
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const operators = ['+', '-'];
+    const op = operators[Math.floor(Math.random() * operators.length)];
+    
+    let answer;
+    switch(op) {
+        case '+': answer = num1 + num2; break;
+        case '-': answer = num1 - num2; break;
+    }
+    
+    mathCaptchaQuestion = `${num1} ${op} ${num2} = ?`;
+    mathCaptchaAnswer = answer;
+    return { question: mathCaptchaQuestion, answer: mathCaptchaAnswer };
+}
+
+function getDeviceFingerprint() {
+    try {
+        const screen = `${screen.width}x${screen.height}x${screen.colorDepth}`;
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const language = navigator.language;
+        const userAgent = navigator.userAgent.substring(0, 100);
+        return `${screen}|${timezone}|${language}|${userAgent}`;
+    } catch (e) {
+        return 'unknown';
+    }
+}
+
+function showMathCaptcha(callback) {
+    const captcha = generateMathCaptcha();
+    
+    // Use Telegram's showPopup with a simple input
+    tg.showPopup({
+        title: '🧮 Verify You\'re Human',
+        message: `Solve this simple math question to earn your ad reward:\n\n${captcha.question}`,
+        buttons: [
+            {id: 'cancel', type: 'cancel'},
+            {id: 'ok', type: 'default', text: 'Answer'}
+        ]
+    }, function(buttonId) {
+        if (buttonId === 'ok') {
+            // Ask for the answer using another popup
+            tg.showPopup({
+                title: '🧮 Enter Your Answer',
+                message: `What is ${captcha.question}`,
+                buttons: [
+                    {id: 'cancel', type: 'cancel'},
+                    {id: 'submit', type: 'default', text: 'Submit'}
+                ]
+            }, function(btnId) {
+                if (btnId === 'submit') {
+                    // Use prompt as fallback for input
+                    const userAnswer = prompt(`Solve: ${captcha.question}`);
+                    if (userAnswer !== null) {
+                        const parsed = parseInt(userAnswer);
+                        if (!isNaN(parsed) && parsed === captcha.answer) {
+                            callback(true, captcha.answer, captcha.question);
+                        } else {
+                            tg.showPopup({
+                                title: '❌ Wrong Answer',
+                                message: 'Incorrect. Please try again.',
+                                buttons: [{type: 'ok'}]
+                            });
+                            callback(false, null, null);
+                        }
+                    } else {
+                        callback(false, null, null);
+                    }
+                } else {
+                    callback(false, null, null);
+                }
+            });
+        } else {
+            callback(false, null, null);
+        }
+    });
+}
+
+// ============================================
 // SAFE POPUP – Works on both Web & Mobile
 // ============================================
 function safePopup(options) {
@@ -1544,25 +1631,30 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS
+// AD REWARD FUNCTIONS - WITH MATH CAPTCHA
 // ============================================
 async function canWatchAd() {
     return true;
 }
 
-async function creditAdReward() {
+async function creditAdRewardWithCaptcha(answer, question, fingerprint) {
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(API_BASE + '/api/credit_ad_reward', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegram_id: userId })
+            body: JSON.stringify({
+                telegram_id: userId,
+                captcha_answer: answer,
+                captcha_question: question,
+                device_fingerprint: fingerprint
+            })
         });
         const data = await response.json();
-        return data.success || false;
+        return data;
     } catch (error) {
-        console.error('Error crediting ad reward');
-        return false;
+        console.error('Error crediting ad reward:', error);
+        return { success: false, message: 'Network error' };
     }
 }
 
@@ -1579,40 +1671,72 @@ async function watchRewardedAd() {
         return false;
     }
 
-    try {
-        const result = await window.showRewardedAd();
-        console.log('📢 Ad result:', result);
+    // Show math captcha first
+    showMathCaptcha(async function(success, answer, question) {
+        if (!success) {
+            console.log('📢 Captcha failed or cancelled');
+            return false;
+        }
 
-        if (result.done && !result.error && result.state === 'destroy') {
-            const credited = await creditAdReward();
-            if (credited) {
+        try {
+            const result = await window.showRewardedAd();
+            console.log('📢 Ad result:', result);
+
+            if (result.done && !result.error && result.state === 'destroy') {
+                const fingerprint = getDeviceFingerprint();
+                const data = await creditAdRewardWithCaptcha(answer, question, fingerprint);
+                
+                if (data.success) {
+                    safePopup({
+                        title: '🎁 Bonus Earned!',
+                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadUserData();
+                    loadAdStats();
+                    loadActiveReferrals();
+                    loadTasks();
+                    return true;
+                } else if (data.need_captcha) {
+                    safePopup({
+                        title: '🧮 Verification Required',
+                        message: data.message || 'Please solve the math question.',
+                        buttons: [{type: 'ok'}]
+                    });
+                    return false;
+                } else if (data.message && data.message.includes('daily ad limit')) {
+                    safePopup({
+                        title: '📊 Daily Limit Reached',
+                        message: data.message,
+                        buttons: [{type: 'ok'}]
+                    });
+                    return false;
+                } else {
+                    safePopup({
+                        title: '❌ Error',
+                        message: data.message || 'Failed to earn ad reward.',
+                        buttons: [{type: 'ok'}]
+                    });
+                    return false;
+                }
+            } else {
                 safePopup({
-                    title: '🎁 Bonus Earned!',
-                    message: 'You earned $0.001 USDT for watching the ad!',
+                    title: '❌ Ad Not Available',
+                    message: 'No ads available right now. Please try again later.',
                     buttons: [{type: 'ok'}]
                 });
-                loadUserData();
-                loadAdStats();
-                loadActiveReferrals();
-                loadTasks();
-                return true;
+                return false;
             }
+        } catch (error) {
+            console.error('Error watching ad:', error);
+            safePopup({
+                title: '❌ Error',
+                message: 'Network error. Please try again.',
+                buttons: [{type: 'ok'}]
+            });
+            return false;
         }
-        safePopup({
-            title: '❌ Ad Not Available',
-            message: 'No ads available right now. Please try again later.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
-    } catch (error) {
-        console.error('Error watching ad');
-        safePopup({
-            title: '❌ Ad Not Available',
-            message: 'No ads available right now. Please try again later.',
-            buttons: [{type: 'ok'}]
-        });
-        return false;
-    }
+    });
 }
 
 async function loadAdStats() {
@@ -1950,13 +2074,20 @@ async function loadTasks() {
                     }
                 }
                 
-                const visibleTasks = data.tasks.filter(task => !task.claimed);
+                // Filter out ads tasks (8-16) and claimed tasks
+                const visibleTasks = data.tasks.filter(task => {
+                    // Completely remove ads tasks (8-16)
+                    if (task.task_id >= 8 && task.task_id <= 16) {
+                        return false;
+                    }
+                    return !task.claimed;
+                });
+                
                 console.log('📊 Visible tasks (not claimed):', visibleTasks.length);
                 totalTasks = visibleTasks.length;
                 
                 const categories = {
                     'investments': { icon: '🌱', label: 'Investments' },
-                    'ads': { icon: '📺', label: 'Watch Ads' },
                     'referrals': { icon: '👤', label: 'Referrals' },
                     'active_referrals': { icon: '🔥', label: 'Active Referrals' },
                     'milestones': { icon: '🏆', label: 'Milestones' }
@@ -2070,7 +2201,7 @@ async function loadTasks() {
                         <div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);">
                             <div style="font-size:48px;margin-bottom:10px;">🎉</div>
                             <div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div>
-                            <div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all 44 tasks. Great job!</div>
+                            <div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all tasks. Great job!</div>
                         </div>
                     `;
                 }
@@ -2080,7 +2211,7 @@ async function loadTasks() {
                 
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
-                    const total = data.stats.total_tasks || 44;
+                    const total = data.stats.total_tasks || 0;
                     const done = data.stats.completed_tasks || 0;
                     progressEl.textContent = `${done}/${total} tasks completed`;
                     progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
@@ -2115,7 +2246,6 @@ function showMoreTasks(category) {
 function getTaskConditionValue(taskId) {
     const taskConditions = {
         1: 1, 2: 10, 3: 50, 4: 100, 5: 200, 6: 500, 7: 1000,
-        8: 1, 9: 5, 10: 10, 11: 25, 12: 50, 13: 100, 14: 250, 15: 500, 16: 1000,
         17: 1, 18: 3, 19: 5, 20: 10, 21: 25, 22: 50, 23: 100, 24: 250, 25: 500, 26: 1000,
         27: 1, 28: 3, 29: 5, 30: 10, 31: 25, 32: 50, 33: 100, 34: 250, 35: 500, 36: 1000,
         37: 1, 38: 10, 39: 25, 40: 50, 41: 100, 42: 250, 43: 500, 44: 1000
@@ -2132,15 +2262,6 @@ function getTaskCurrentValue(taskId, userStats) {
         5: Number(userStats.total_invested) || 0,
         6: Number(userStats.total_invested) || 0,
         7: Number(userStats.total_invested) || 0,
-        8: Number(userStats.total_ads_watched) || 0,
-        9: Number(userStats.total_ads_watched) || 0,
-        10: Number(userStats.total_ads_watched) || 0,
-        11: Number(userStats.total_ads_watched) || 0,
-        12: Number(userStats.total_ads_watched) || 0,
-        13: Number(userStats.total_ads_watched) || 0,
-        14: Number(userStats.total_ads_watched) || 0,
-        15: Number(userStats.total_ads_watched) || 0,
-        16: Number(userStats.total_ads_watched) || 0,
         17: Number(userStats.total_referrals) || 0,
         18: Number(userStats.total_referrals) || 0,
         19: Number(userStats.total_referrals) || 0,
@@ -2283,10 +2404,12 @@ window.showMoreTasks = showMoreTasks;
 
 console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: No requirements — everyone can claim!');
-console.log('📢 Task management system active with 44 visible tasks (Task 45 hidden)');
+console.log('📢 Task management system active with 35 visible tasks (ads tasks removed)');
 console.log('📢 All amounts displayed with 3 decimal places');
 console.log('📈 Expected Daily Earnings feature active');
 console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
 console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
 console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
+console.log('🧮 Math captcha required before watching ads');
+console.log('📺 Ads tasks (8-16) have been permanently removed');

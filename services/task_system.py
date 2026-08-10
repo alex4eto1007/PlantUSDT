@@ -89,98 +89,9 @@ TASKS = [
     },
 
     # ============================================
-    # SECTION 2: ADS (9 tasks)
+    # SECTION 2: ADS (9 tasks) - COMPLETELY REMOVED
     # ============================================
-    {
-        "id": 8,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 1 Ad",
-        "description": "Watch your first rewarded ad",
-        "reward": 0.01,
-        "condition_type": "total_ads_watched",
-        "condition_value": 1
-    },
-    {
-        "id": 9,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 5 Ads",
-        "description": "Watch 5 ads total",
-        "reward": 0.02,
-        "condition_type": "total_ads_watched",
-        "condition_value": 5
-    },
-    {
-        "id": 10,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 10 Ads",
-        "description": "Watch 10 ads total",
-        "reward": 0.03,
-        "condition_type": "total_ads_watched",
-        "condition_value": 10
-    },
-    {
-        "id": 11,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 25 Ads",
-        "description": "Watch 25 ads total",
-        "reward": 0.04,
-        "condition_type": "total_ads_watched",
-        "condition_value": 25
-    },
-    {
-        "id": 12,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 50 Ads",
-        "description": "Watch 50 ads total",
-        "reward": 0.05,
-        "condition_type": "total_ads_watched",
-        "condition_value": 50
-    },
-    {
-        "id": 13,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 100 Ads",
-        "description": "Watch 100 ads total",
-        "reward": 0.10,
-        "condition_type": "total_ads_watched",
-        "condition_value": 100
-    },
-    {
-        "id": 14,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 250 Ads",
-        "description": "Watch 250 ads total",
-        "reward": 0.25,
-        "condition_type": "total_ads_watched",
-        "condition_value": 250
-    },
-    {
-        "id": 15,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 500 Ads",
-        "description": "Watch 500 ads total",
-        "reward": 0.60,
-        "condition_type": "total_ads_watched",
-        "condition_value": 500
-    },
-    {
-        "id": 16,
-        "category": "ads",
-        "icon": "📺",
-        "title": "Watch 1000 Ads",
-        "description": "Watch 1,000 ads total",
-        "reward": 1.50,
-        "condition_type": "total_ads_watched",
-        "condition_value": 1000
-    },
+    # Tasks 8-16 have been completely removed
 
     # ============================================
     # SECTION 3A: NORMAL REFERRALS (10 tasks)
@@ -600,6 +511,7 @@ def check_task_conditions(user: User, session: Session) -> list:
         elif condition_type == "total_invested":
             completed = total_invested >= condition_value
         elif condition_type == "total_ads_watched":
+            # Ads tasks have been removed, but keep for backward compatibility
             completed = total_ads_watched >= condition_value
         elif condition_type == "total_referrals":
             completed = total_referrals >= condition_value
