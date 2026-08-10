@@ -58,6 +58,12 @@ class User(Base):
     # WITHDRAWAL COOLDOWN
     last_withdrawal_at = Column(DateTime, nullable=True)
 
+    # ANTI-ABUSE FIELDS
+    daily_ad_count = Column(Integer, default=0)
+    last_ad_reset = Column(DateTime, default=datetime.utcnow)
+    device_fingerprint = Column(Text, nullable=True)
+    flagged_for_anomaly = Column(Boolean, default=False)
+
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")

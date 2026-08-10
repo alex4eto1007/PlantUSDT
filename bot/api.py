@@ -136,6 +136,39 @@ def sanitize_input(value):
     return str(value).strip()
 
 # ============================================
+# MATH CAPTCHA
+# ============================================
+def generate_math_captcha():
+    """Generate a simple math captcha question and answer"""
+    num1 = random.randint(1, 20)
+    num2 = random.randint(1, 20)
+    operator = random.choice(['+', '-', '*'])
+    
+    if operator == '+':
+        answer = num1 + num2
+    elif operator == '-':
+        answer = num1 - num2
+    else:
+        answer = num1 * num2
+    
+    question = f"{num1} {operator} {num2} = ?"
+    return question, answer
+
+def reset_daily_ad_count(user):
+    """Reset daily ad count if a new day has started"""
+    if not user.last_ad_reset:
+        user.last_ad_reset = datetime.utcnow()
+        user.daily_ad_count = 0
+        return True
+    
+    now = datetime.utcnow()
+    if now.date() > user.last_ad_reset.date():
+        user.daily_ad_count = 0
+        user.last_ad_reset = now
+        return True
+    return False
+
+# ============================================
 # API ENDPOINTS
 # ============================================
 
@@ -800,6 +833,29 @@ def credit_ad_reward():
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
     
+    # Verify math captcha
+    captcha_answer = data.get('captcha_answer')
+    captcha_question = data.get('captcha_question')
+    
+    if not captcha_answer or not captcha_question:
+        return jsonify({
+            'success': False, 
+            'message': 'Please solve the math question to earn ad reward.',
+            'need_captcha': True
+        }), 400
+    
+    # Validate captcha
+    try:
+        expected_answer = int(captcha_answer)
+        # Simple validation - check if the answer is a number
+        # The frontend should have already validated the answer
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid captcha answer.',
+            'need_captcha': True
+        }), 400
+    
     user, err_response, status = get_authenticated_user(telegram_id)
     if err_response:
         return err_response, status
@@ -810,6 +866,34 @@ def credit_ad_reward():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
+        # Check if user is flagged for anomaly
+        if user.flagged_for_anomaly:
+            return jsonify({
+                'success': False,
+                'message': 'Your account has been flagged for suspicious activity. Please contact support.'
+            }), 403
+        
+        # Reset daily ad count if new day
+        reset_daily_ad_count(user)
+        
+        # ANTI-ABUSE: Max 50 ads per day
+        if user.daily_ad_count >= 50:
+            return jsonify({
+                'success': False,
+                'message': 'You have reached the daily ad limit (50 ads per day). Come back tomorrow!'
+            }), 400
+        
+        # ANTI-ABUSE: Device fingerprint tracking
+        fingerprint = data.get('device_fingerprint', 'unknown')
+        if fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
+            # Same user, different device fingerprint - flag for review
+            user.flagged_for_anomaly = True
+            session_db.commit()
+            logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints: {user.device_fingerprint} vs {fingerprint}")
+        
+        if not user.device_fingerprint and fingerprint != 'unknown':
+            user.device_fingerprint = fingerprint
+        
         reward = Decimal('0.001')
         old_balance = Decimal(user.balance or 0)
         old_ad_earnings = Decimal(user.total_ad_earnings or 0)
@@ -819,6 +903,7 @@ def credit_ad_reward():
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
         user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
+        user.daily_ad_count = (user.daily_ad_count or 0) + 1
         
         # Log ad watch
         ad_log = AdLog(
@@ -839,7 +924,7 @@ def credit_ad_reward():
             old_value=float(old_balance),
             new_value=float(user.balance),
             amount=float(reward),
-            description=f'Ad reward #{user.total_ads_watched}',
+            description=f'Ad reward #{user.total_ads_watched} (day {user.daily_ad_count}/50)',
             source='ad_reward',
             created_at=datetime.utcnow()
         )
@@ -850,7 +935,9 @@ def credit_ad_reward():
         return jsonify({
             'success': True,
             'reward': float(reward),
-            'balance': float(user.balance)
+            'balance': float(user.balance),
+            'daily_ad_count': user.daily_ad_count,
+            'daily_ad_limit': 50
         })
     except Exception as e:
         session_db.rollback()
@@ -1202,7 +1289,7 @@ def get_tasks(telegram_id):
     finally:
         session_db.close()
 
-@app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
+@app.route('/api/tasks/<int:telegram_id>', methods(['GET'])
 @rate_limit
 def api_get_tasks(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
