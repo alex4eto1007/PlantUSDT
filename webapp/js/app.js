@@ -1640,7 +1640,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - WITH MATH CAPTCHA (AFTER AD)
+// AD REWARD FUNCTIONS - WITH IMMEDIATE UI UPDATE
 // ============================================
 async function canWatchAd() {
     return true;
@@ -1727,17 +1727,83 @@ async function watchRewardedAd() {
                 const data = await response.json();
                 
                 if (data.success) {
+                    // ✅ IMMEDIATE UI UPDATE – use the returned data
+                    const dailyCount = data.daily_ad_count || 0;
+                    const dailyLimit = 50;
+
+                    // Update Ads Today
+                    const adsTodayEl = document.getElementById('adsToday');
+                    if (adsTodayEl) {
+                        adsTodayEl.textContent = dailyCount + ' / ' + dailyLimit;
+                        if (dailyCount >= dailyLimit) {
+                            adsTodayEl.style.color = '#ff6b6b';
+                        } else if (dailyCount >= dailyLimit * 0.8) {
+                            adsTodayEl.style.color = '#ffd93d';
+                        } else {
+                            adsTodayEl.style.color = '#00ff87';
+                        }
+                    }
+
+                    // Update Progress Bar
+                    const progressEl = document.getElementById('adProgressBar');
+                    if (progressEl) {
+                        const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
+                        progressEl.style.width = progress + '%';
+                        if (dailyCount >= dailyLimit) {
+                            progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
+                        } else if (dailyCount >= dailyLimit * 0.8) {
+                            progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
+                        } else {
+                            progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+                        }
+                    }
+
+                    // Update Total Ad Earnings
+                    const adEarningsEl = document.getElementById('adEarnings');
+                    if (adEarningsEl) {
+                        // The API returns total balance, but we can update ad earnings
+                        // by refreshing user data. For now, we'll update from data if available.
+                        // If not, we'll refresh later.
+                    }
+
+                    // Update Watch Button state
+                    const watchBtn = document.getElementById('watchAdBtn');
+                    if (watchBtn) {
+                        if (dailyCount >= dailyLimit) {
+                            watchBtn.disabled = true;
+                            watchBtn.style.opacity = '0.5';
+                            watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
+                            const statusEl = document.getElementById('adStatus');
+                            if (statusEl) {
+                                statusEl.style.display = 'block';
+                                statusEl.textContent = '⏳ Come back tomorrow for more ads!';
+                                statusEl.style.color = '#ff6b6b';
+                            }
+                        } else {
+                            watchBtn.disabled = false;
+                            watchBtn.style.opacity = '1';
+                            watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
+                            const statusEl = document.getElementById('adStatus');
+                            if (statusEl) {
+                                statusEl.style.display = 'none';
+                            }
+                        }
+                    }
+
+                    // Show success popup
                     safePopup({
                         title: '🎁 Bonus Earned!',
-                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
+                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/${dailyLimit} today)`,
                         buttons: [{type: 'ok'}]
                     });
-                    // Force refresh with delay
+
+                    // Refresh other data (balance, earnings, tasks, etc.) after a delay
                     setTimeout(() => {
                         loadUserData();
                         loadActiveReferrals();
                         loadTasks();
                     }, 500);
+
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({
@@ -2511,4 +2577,4 @@ console.log('🧮 Math captcha simplified to a single prompt after watching ad')
 console.log('📺 Ads tasks (8-16) have been permanently removed');
 console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
 console.log('🔄 UTC reset timer shows time until daily ad limit resets at midnight UTC');
-console.log('📈 Ad count updates immediately after watching ad with forced refresh');
+console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI refresh');
