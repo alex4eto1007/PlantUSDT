@@ -58,7 +58,7 @@ function showMathCaptcha(callback) {
     // Use Telegram's showPopup with a simple input
     tg.showPopup({
         title: '🧮 Verify You\'re Human',
-        message: `Solve this simple math question to earn your ad reward:\n\n${captcha.question}`,
+        message: `Solve this simple math question to claim your ad reward:\n\n${captcha.question}`,
         buttons: [
             {id: 'cancel', type: 'cancel'},
             {id: 'ok', type: 'default', text: 'Answer'}
@@ -1631,7 +1631,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - WITH MATH CAPTCHA
+// AD REWARD FUNCTIONS - WITH MATH CAPTCHA (AFTER AD)
 // ============================================
 async function canWatchAd() {
     return true;
@@ -1671,72 +1671,100 @@ async function watchRewardedAd() {
         return false;
     }
 
-    // Show math captcha first
-    showMathCaptcha(async function(success, answer, question) {
-        if (!success) {
-            console.log('📢 Captcha failed or cancelled');
-            return false;
-        }
+    try {
+        const result = await window.showRewardedAd();
+        console.log('📢 Ad result:', result);
 
-        try {
-            const result = await window.showRewardedAd();
-            console.log('📢 Ad result:', result);
-
-            if (result.done && !result.error && result.state === 'destroy') {
-                const fingerprint = getDeviceFingerprint();
-                const data = await creditAdRewardWithCaptcha(answer, question, fingerprint);
-                
-                if (data.success) {
+        if (result.done && !result.error && result.state === 'destroy') {
+            // Show math captcha AFTER ad is watched
+            showMathCaptcha(async function(success, answer, question) {
+                if (!success) {
+                    console.log('📢 Captcha failed or cancelled');
                     safePopup({
-                        title: '🎁 Bonus Earned!',
-                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
-                        buttons: [{type: 'ok'}]
-                    });
-                    loadUserData();
-                    loadAdStats();
-                    loadActiveReferrals();
-                    loadTasks();
-                    return true;
-                } else if (data.need_captcha) {
-                    safePopup({
-                        title: '🧮 Verification Required',
-                        message: data.message || 'Please solve the math question.',
-                        buttons: [{type: 'ok'}]
-                    });
-                    return false;
-                } else if (data.message && data.message.includes('daily ad limit')) {
-                    safePopup({
-                        title: '📊 Daily Limit Reached',
-                        message: data.message,
-                        buttons: [{type: 'ok'}]
-                    });
-                    return false;
-                } else {
-                    safePopup({
-                        title: '❌ Error',
-                        message: data.message || 'Failed to earn ad reward.',
+                        title: '🧮 Verification Failed',
+                        message: 'Please solve the math question to earn your reward.',
                         buttons: [{type: 'ok'}]
                     });
                     return false;
                 }
-            } else {
-                safePopup({
-                    title: '❌ Ad Not Available',
-                    message: 'No ads available right now. Please try again later.',
-                    buttons: [{type: 'ok'}]
-                });
-                return false;
-            }
-        } catch (error) {
-            console.error('Error watching ad:', error);
+
+                const userId = tgUser ? tgUser.id : '0';
+                const fingerprint = getDeviceFingerprint();
+                
+                try {
+                    const response = await fetch(API_BASE + '/api/credit_ad_reward', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            telegram_id: userId,
+                            captcha_answer: answer,
+                            captcha_question: question,
+                            device_fingerprint: fingerprint
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        safePopup({
+                            title: '🎁 Bonus Earned!',
+                            message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
+                            buttons: [{type: 'ok'}]
+                        });
+                        loadUserData();
+                        loadAdStats();
+                        loadActiveReferrals();
+                        loadTasks();
+                        return true;
+                    } else if (data.need_captcha) {
+                        safePopup({
+                            title: '🧮 Verification Required',
+                            message: data.message || 'Please solve the math question.',
+                            buttons: [{type: 'ok'}]
+                        });
+                        return false;
+                    } else if (data.message && data.message.includes('daily ad limit')) {
+                        safePopup({
+                            title: '📊 Daily Limit Reached',
+                            message: data.message,
+                            buttons: [{type: 'ok'}]
+                        });
+                        return false;
+                    } else {
+                        safePopup({
+                            title: '❌ Error',
+                            message: data.message || 'Failed to earn ad reward.',
+                            buttons: [{type: 'ok'}]
+                        });
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Error crediting ad reward:', error);
+                    safePopup({
+                        title: '❌ Error',
+                        message: 'Network error. Please try again.',
+                        buttons: [{type: 'ok'}]
+                    });
+                    return false;
+                }
+            });
+        } else {
             safePopup({
-                title: '❌ Error',
-                message: 'Network error. Please try again.',
+                title: '❌ Ad Not Available',
+                message: 'No ads available right now. Please try again later.',
                 buttons: [{type: 'ok'}]
             });
             return false;
         }
-    });
+    } catch (error) {
+        console.error('Error watching ad:', error);
+        safePopup({
+            title: '❌ Error',
+            message: 'Network error. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+        return false;
+    }
 }
 
 async function loadAdStats() {
@@ -2040,7 +2068,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASK SYSTEM - 44 VISIBLE TASKS (Task 45 Hidden)
+// TASK SYSTEM - VISIBLE TASKS (ADS TASKS REMOVED)
 // ============================================
 
 async function loadTasks() {
@@ -2411,5 +2439,5 @@ console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
 console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
 console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
-console.log('🧮 Math captcha required before watching ads');
+console.log('🧮 Math captcha appears AFTER watching ad');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
