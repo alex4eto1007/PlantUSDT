@@ -70,21 +70,35 @@ class User(Base):
     completed_tasks = relationship("UserTask", back_populates="user")
     task_progress = relationship("UserTaskProgress", back_populates="user")
     audit_logs = relationship("AuditLog", back_populates="user")
+    ad_logs = relationship("AdLog", back_populates="user")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    action = Column(String(50), nullable=False)  # balance_update, task_earnings_update, withdrawal, deposit, ad_reward, manual_update
-    field_changed = Column(String(50))  # balance, tasks_earnings, etc.
+    action = Column(String(50), nullable=False)
+    field_changed = Column(String(50))
     old_value = Column(Numeric(20,6))
     new_value = Column(Numeric(20,6))
     amount = Column(Numeric(20,6))
     description = Column(Text)
-    source = Column(String(50))  # admin, task_claim, welcome_bonus, ad_reward, etc.
-    created_by = Column(BigInteger)  # admin telegram_id or system
+    source = Column(String(50))
+    created_by = Column(BigInteger)
     created_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User", back_populates="audit_logs")
+
+class AdLog(Base):
+    __tablename__ = "ad_logs"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    watched_at = Column(DateTime, default=datetime.utcnow)
+    reward = Column(Numeric(20,6), default=0.001)
+    ip_address = Column(String(100))
+    user_agent = Column(String(500))
+    ad_id = Column(String(100))
+    session_id = Column(String(100))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship("User", back_populates="ad_logs")
 
 class Task(Base):
     __tablename__ = "tasks"

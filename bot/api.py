@@ -20,7 +20,7 @@ from flask import Flask, jsonify, request, send_from_directory, session
 from flask_session import Session
 
 from database.db_manager import DatabaseManager
-from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, PendingDepositCheck
+from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, PendingDepositCheck, AuditLog, AdLog
 from sqlalchemy import func
 
 app = Flask(__name__)
@@ -289,6 +289,20 @@ def withdraw():
         
         user.balance -= Decimal(str(amount))
         user.last_withdrawal_at = datetime.utcnow()
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=user.id,
+            action='withdrawal_request',
+            field_changed='balance',
+            old_value=float(user.balance + Decimal(str(amount))),
+            new_value=float(user.balance),
+            amount=float(amount),
+            description=f'Withdrawal request of ${amount:.2f} to {address[:10]}...',
+            source='user',
+            created_at=datetime.utcnow()
+        )
+        session_db.add(audit)
         
         session_db.commit()
         clear_user_cache(telegram_id)
@@ -779,6 +793,7 @@ def can_watch_ad():
 @rate_limit
 def credit_ad_reward():
     from decimal import Decimal
+    from datetime import datetime
     
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
@@ -796,10 +811,39 @@ def credit_ad_reward():
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
         reward = Decimal('0.001')
+        old_balance = Decimal(user.balance or 0)
+        old_ad_earnings = Decimal(user.total_ad_earnings or 0)
+        old_total_earnings = Decimal(user.total_earnings_all_time or 0)
+        
         user.balance = (user.balance or Decimal('0')) + reward
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
         user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
+        
+        # Log ad watch
+        ad_log = AdLog(
+            user_id=user.id,
+            watched_at=datetime.utcnow(),
+            reward=reward,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', 'unknown'),
+            session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
+        )
+        session_db.add(ad_log)
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=user.id,
+            action='ad_earnings',
+            field_changed='balance',
+            old_value=float(old_balance),
+            new_value=float(user.balance),
+            amount=float(reward),
+            description=f'Ad reward #{user.total_ads_watched}',
+            source='ad_reward',
+            created_at=datetime.utcnow()
+        )
+        session_db.add(audit)
         
         session_db.commit()
         clear_user_cache(telegram_id)
@@ -853,6 +897,9 @@ def claim_investment():
         
         profit = Decimal(str(investment.expected_return)) - Decimal(str(investment.amount))
         amount_to_credit = Decimal(str(investment.expected_return))
+        old_balance = Decimal(user.balance or 0)
+        old_investment_earnings = Decimal(user.investment_earnings_all_time or 0)
+        old_total_earnings = Decimal(user.total_earnings_all_time or 0)
         
         investment.is_locked = False
         investment.is_active = False
@@ -873,6 +920,21 @@ def claim_investment():
             paid_at=now
         )
         session_db.add(payout)
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=user.id,
+            action='investment_claim',
+            field_changed='balance',
+            old_value=float(old_balance),
+            new_value=float(user.balance),
+            amount=float(amount_to_credit),
+            description=f'Claimed Field #{field_number} ({investment.lock_period} days)',
+            source='investment',
+            created_at=datetime.utcnow()
+        )
+        session_db.add(audit)
+        
         session_db.commit()
         clear_user_cache(telegram_id)
         
@@ -1009,12 +1071,28 @@ def disable_interstitial_ads():
             return jsonify({'success': False, 'message': 'Interstitial ads already disabled'}), 400
         
         cost = Decimal('4')
+        old_balance = Decimal(user.balance or 0)
+        
         if user.balance < cost:
             return jsonify({'success': False, 'message': f'Insufficient balance. Need $4.00 USDT (you have ${user.balance:.2f})'}), 400
         
         user.balance = (user.balance or Decimal('0')) - cost
         user.interstitial_ads_disabled = True
         user.interstitial_disabled_at = datetime.utcnow()
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=user.id,
+            action='disable_ads',
+            field_changed='balance',
+            old_value=float(old_balance),
+            new_value=float(user.balance),
+            amount=float(cost),
+            description='Disabled interstitial ads',
+            source='user',
+            created_at=datetime.utcnow()
+        )
+        session_db.add(audit)
         
         session_db.commit()
         clear_user_cache(telegram_id)
