@@ -1767,6 +1767,9 @@ async function watchRewardedAd() {
     }
 }
 
+// ============================================
+// LOAD AD STATS - FIXED TO SHOW DAILY COUNT
+// ============================================
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
@@ -1779,18 +1782,55 @@ async function loadAdStats() {
         }
 
         const adsTodayEl = document.getElementById('adsToday');
+        const dailyLimit = 50;
+        const dailyCount = userData.daily_ad_count || 0;
+        
         if (adsTodayEl) {
-            adsTodayEl.textContent = '♾️ Unlimited';
+            adsTodayEl.textContent = dailyCount + ' / ' + dailyLimit;
+            // Color based on progress
+            if (dailyCount >= dailyLimit) {
+                adsTodayEl.style.color = '#ff6b6b';
+            } else if (dailyCount >= dailyLimit * 0.8) {
+                adsTodayEl.style.color = '#ffd93d';
+            } else {
+                adsTodayEl.style.color = '#00ff87';
+            }
+        }
+
+        // Update progress bar
+        const progressEl = document.getElementById('adProgressBar');
+        if (progressEl) {
+            const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
+            progressEl.style.width = progress + '%';
+            // Color based on progress
+            if (dailyCount >= dailyLimit) {
+                progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
+            } else if (dailyCount >= dailyLimit * 0.8) {
+                progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
+            } else {
+                progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+            }
         }
 
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
-            watchBtn.disabled = false;
-            watchBtn.style.opacity = '1';
-            watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-            if (statusEl) {
-                statusEl.style.display = 'none';
+            if (dailyCount >= dailyLimit) {
+                watchBtn.disabled = true;
+                watchBtn.style.opacity = '0.5';
+                watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
+                if (statusEl) {
+                    statusEl.style.display = 'block';
+                    statusEl.textContent = '⏳ Come back tomorrow for more ads!';
+                    statusEl.style.color = '#ff6b6b';
+                }
+            } else {
+                watchBtn.disabled = false;
+                watchBtn.style.opacity = '1';
+                watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
+                if (statusEl) {
+                    statusEl.style.display = 'none';
+                }
             }
         }
     } catch (error) {
@@ -2441,3 +2481,4 @@ console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
 console.log('🧮 Math captcha appears AFTER watching ad');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
+console.log('📊 Ad daily limit: 50/50 with progress bar');
