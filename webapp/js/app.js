@@ -16,6 +16,10 @@ let interstitialAdsDisabled = false;
 let isLoading = false;
 let isDataLoaded = false;
 
+// Global variable to store latest ad count to prevent overwrites
+window._latestAdCount = null;
+window._adCountTimestamp = null;
+
 // ============================================
 // MATH CAPTCHA FOR AD REWARDS - SIMPLIFIED
 // ============================================
@@ -1640,7 +1644,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - WITH IMMEDIATE UI UPDATE
+// AD REWARD FUNCTIONS - WITH IMMEDIATE UI UPDATE & DEBUG LOGGING
 // ============================================
 async function canWatchAd() {
     return true;
@@ -1660,10 +1664,78 @@ async function creditAdRewardWithCaptcha(answer, question, fingerprint) {
             })
         });
         const data = await response.json();
+        console.log('📊 creditAdRewardWithCaptcha response:', data);
         return data;
     } catch (error) {
         console.error('Error crediting ad reward:', error);
         return { success: false, message: 'Network error' };
+    }
+}
+
+function updateAdUI(dailyCount) {
+    const dailyLimit = 50;
+    console.log('📊 updateAdUI called with count:', dailyCount);
+    
+    // Store globally to prevent overwrites
+    window._latestAdCount = dailyCount;
+    window._adCountTimestamp = Date.now();
+    
+    // Update Ads Today
+    const adsTodayEl = document.getElementById('adsToday');
+    if (adsTodayEl) {
+        console.log('📊 Found adsToday element, setting to:', dailyCount + ' / ' + dailyLimit);
+        adsTodayEl.textContent = dailyCount + ' / ' + dailyLimit;
+        if (dailyCount >= dailyLimit) {
+            adsTodayEl.style.color = '#ff6b6b';
+        } else if (dailyCount >= dailyLimit * 0.8) {
+            adsTodayEl.style.color = '#ffd93d';
+        } else {
+            adsTodayEl.style.color = '#00ff87';
+        }
+    } else {
+        console.warn('📊 adsToday element NOT FOUND!');
+    }
+
+    // Update Progress Bar
+    const progressEl = document.getElementById('adProgressBar');
+    if (progressEl) {
+        const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
+        progressEl.style.width = progress + '%';
+        if (dailyCount >= dailyLimit) {
+            progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
+        } else if (dailyCount >= dailyLimit * 0.8) {
+            progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
+        } else {
+            progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+        }
+    } else {
+        console.warn('📊 adProgressBar element NOT FOUND!');
+    }
+
+    // Update Watch Button state
+    const watchBtn = document.getElementById('watchAdBtn');
+    if (watchBtn) {
+        if (dailyCount >= dailyLimit) {
+            watchBtn.disabled = true;
+            watchBtn.style.opacity = '0.5';
+            watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
+            const statusEl = document.getElementById('adStatus');
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.textContent = '⏳ Come back tomorrow for more ads!';
+                statusEl.style.color = '#ff6b6b';
+            }
+        } else {
+            watchBtn.disabled = false;
+            watchBtn.style.opacity = '1';
+            watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
+            const statusEl = document.getElementById('adStatus');
+            if (statusEl) {
+                statusEl.style.display = 'none';
+            }
+        }
+    } else {
+        console.warn('📊 watchAdBtn element NOT FOUND!');
     }
 }
 
@@ -1725,84 +1797,37 @@ async function watchRewardedAd() {
                 });
                 
                 const data = await response.json();
+                console.log('📊 API Response from credit_ad_reward:', data);
                 
                 if (data.success) {
                     // ✅ IMMEDIATE UI UPDATE – use the returned data
                     const dailyCount = data.daily_ad_count || 0;
-                    const dailyLimit = 50;
-
-                    // Update Ads Today
-                    const adsTodayEl = document.getElementById('adsToday');
-                    if (adsTodayEl) {
-                        adsTodayEl.textContent = dailyCount + ' / ' + dailyLimit;
-                        if (dailyCount >= dailyLimit) {
-                            adsTodayEl.style.color = '#ff6b6b';
-                        } else if (dailyCount >= dailyLimit * 0.8) {
-                            adsTodayEl.style.color = '#ffd93d';
-                        } else {
-                            adsTodayEl.style.color = '#00ff87';
-                        }
-                    }
-
-                    // Update Progress Bar
-                    const progressEl = document.getElementById('adProgressBar');
-                    if (progressEl) {
-                        const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
-                        progressEl.style.width = progress + '%';
-                        if (dailyCount >= dailyLimit) {
-                            progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
-                        } else if (dailyCount >= dailyLimit * 0.8) {
-                            progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
-                        } else {
-                            progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
-                        }
-                    }
+                    console.log('📊 Ad count from API:', dailyCount);
+                    
+                    // Update UI immediately using the dedicated function
+                    updateAdUI(dailyCount);
 
                     // Update Total Ad Earnings
                     const adEarningsEl = document.getElementById('adEarnings');
-                    if (adEarningsEl) {
-                        // The API returns total balance, but we can update ad earnings
-                        // by refreshing user data. For now, we'll update from data if available.
-                        // If not, we'll refresh later.
-                    }
-
-                    // Update Watch Button state
-                    const watchBtn = document.getElementById('watchAdBtn');
-                    if (watchBtn) {
-                        if (dailyCount >= dailyLimit) {
-                            watchBtn.disabled = true;
-                            watchBtn.style.opacity = '0.5';
-                            watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
-                            const statusEl = document.getElementById('adStatus');
-                            if (statusEl) {
-                                statusEl.style.display = 'block';
-                                statusEl.textContent = '⏳ Come back tomorrow for more ads!';
-                                statusEl.style.color = '#ff6b6b';
-                            }
-                        } else {
-                            watchBtn.disabled = false;
-                            watchBtn.style.opacity = '1';
-                            watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-                            const statusEl = document.getElementById('adStatus');
-                            if (statusEl) {
-                                statusEl.style.display = 'none';
-                            }
-                        }
+                    if (adEarningsEl && data.total_ad_earnings !== undefined) {
+                        adEarningsEl.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
                     }
 
                     // Show success popup
                     safePopup({
                         title: '🎁 Bonus Earned!',
-                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/${dailyLimit} today)`,
+                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/50 today)`,
                         buttons: [{type: 'ok'}]
                     });
 
-                    // Refresh other data (balance, earnings, tasks, etc.) after a delay
+                    // Refresh other data (balance, earnings, tasks, etc.) after a longer delay
+                    // This prevents the updated count from being overwritten by stale data
                     setTimeout(() => {
+                        console.log('📊 Refreshing other data after ad...');
                         loadUserData();
                         loadActiveReferrals();
                         loadTasks();
-                    }, 500);
+                    }, 2000);
 
                     return true;
                 } else if (data.need_captcha) {
@@ -1856,7 +1881,7 @@ async function watchRewardedAd() {
 }
 
 // ============================================
-// LOAD AD STATS - FIXED TO SHOW DAILY COUNT
+// LOAD AD STATS - WITH PREVENTION OF STALE OVERWRITES
 // ============================================
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
@@ -1864,28 +1889,45 @@ async function loadAdStats() {
         // Fetch fresh user data directly with cache-buster
         const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
         const userData = await response.json();
+        console.log('📊 loadAdStats fetched user data:', userData);
 
         if (!userData.success) {
             console.error('Failed to fetch user data for ad stats');
             return;
         }
 
+        // Get daily count from server
+        const serverDailyCount = userData.daily_ad_count || 0;
+        
+        // Check if we have a newer count stored from immediate update
+        // If the stored count is newer (timestamp within last 10 seconds) and higher, use it
+        let finalCount = serverDailyCount;
+        if (window._latestAdCount !== null && window._adCountTimestamp !== null) {
+            const timeSinceUpdate = Date.now() - window._adCountTimestamp;
+            if (timeSinceUpdate < 10000 && window._latestAdCount > serverDailyCount) {
+                console.log('📊 loadAdStats: Using stored latest count (', window._latestAdCount, ') instead of server (', serverDailyCount, ')');
+                finalCount = window._latestAdCount;
+            }
+        }
+        
+        console.log('📊 loadAdStats final count:', finalCount);
+
+        // Update Total Ad Earnings
         const adEarningsEl = document.getElementById('adEarnings');
         if (adEarningsEl) {
             adEarningsEl.textContent = '$' + Number(userData.total_ad_earnings || 0).toFixed(3);
         }
 
+        // Update Ads Today using the final count
         const adsTodayEl = document.getElementById('adsToday');
         const dailyLimit = 50;
-        // Get daily_ad_count from user data
-        const dailyCount = userData.daily_ad_count || 0;
         
         if (adsTodayEl) {
-            adsTodayEl.textContent = dailyCount + ' / ' + dailyLimit;
+            adsTodayEl.textContent = finalCount + ' / ' + dailyLimit;
             // Color based on progress
-            if (dailyCount >= dailyLimit) {
+            if (finalCount >= dailyLimit) {
                 adsTodayEl.style.color = '#ff6b6b';
-            } else if (dailyCount >= dailyLimit * 0.8) {
+            } else if (finalCount >= dailyLimit * 0.8) {
                 adsTodayEl.style.color = '#ffd93d';
             } else {
                 adsTodayEl.style.color = '#00ff87';
@@ -1895,21 +1937,22 @@ async function loadAdStats() {
         // Update progress bar
         const progressEl = document.getElementById('adProgressBar');
         if (progressEl) {
-            const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
+            const progress = Math.min((finalCount / dailyLimit) * 100, 100);
             progressEl.style.width = progress + '%';
-            if (dailyCount >= dailyLimit) {
+            if (finalCount >= dailyLimit) {
                 progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
-            } else if (dailyCount >= dailyLimit * 0.8) {
+            } else if (finalCount >= dailyLimit * 0.8) {
                 progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
             } else {
                 progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
             }
         }
 
+        // Update Watch Button state
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
-            if (dailyCount >= dailyLimit) {
+            if (finalCount >= dailyLimit) {
                 watchBtn.disabled = true;
                 watchBtn.style.opacity = '0.5';
                 watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
@@ -2578,3 +2621,4 @@ console.log('📺 Ads tasks (8-16) have been permanently removed');
 console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
 console.log('🔄 UTC reset timer shows time until daily ad limit resets at midnight UTC');
 console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI refresh');
+console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
