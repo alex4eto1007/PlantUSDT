@@ -56,7 +56,6 @@ function getDeviceFingerprint() {
 function showMathCaptcha(callback) {
     const captcha = generateMathCaptcha();
     
-    // Use prompt with clear message - this is the simplest approach
     const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question to claim your ad reward:\n\n${captcha.question}\n\nEnter your answer:`);
     
     if (userAnswer === null) {
@@ -271,6 +270,9 @@ async function loadUserData(retries = 3) {
                     disableBtn.style.opacity = '0.5';
                 }
             }
+            
+            // Refresh ad stats after user data loads
+            loadAdStats();
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -1730,10 +1732,12 @@ async function watchRewardedAd() {
                         message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
                         buttons: [{type: 'ok'}]
                     });
-                    loadUserData();
-                    loadAdStats();
-                    loadActiveReferrals();
-                    loadTasks();
+                    // Force refresh with delay
+                    setTimeout(() => {
+                        loadUserData();
+                        loadActiveReferrals();
+                        loadTasks();
+                    }, 500);
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({
@@ -1791,8 +1795,8 @@ async function watchRewardedAd() {
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        // Fetch fresh user data directly
-        const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
+        // Fetch fresh user data directly with cache-buster
+        const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
         const userData = await response.json();
 
         if (!userData.success) {
@@ -2507,3 +2511,4 @@ console.log('🧮 Math captcha simplified to a single prompt after watching ad')
 console.log('📺 Ads tasks (8-16) have been permanently removed');
 console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
 console.log('🔄 UTC reset timer shows time until daily ad limit resets at midnight UTC');
+console.log('📈 Ad count updates immediately after watching ad with forced refresh');
