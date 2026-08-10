@@ -418,7 +418,8 @@ def get_user():
             'tasks_earnings': 0,
             'referral_tier': 'free',
             'expected_daily_earnings': 0,
-            'last_withdrawal_at': None
+            'last_withdrawal_at': None,
+            'daily_ad_count': 0
         })
     
     cached = get_cached_user(telegram_id)
@@ -450,7 +451,8 @@ def get_user():
                 'tasks_earnings': 0,
                 'referral_tier': 'free',
                 'expected_daily_earnings': 0,
-                'last_withdrawal_at': None
+                'last_withdrawal_at': None,
+                'daily_ad_count': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -505,7 +507,8 @@ def get_user():
             'tasks_earnings': round(float(user.tasks_earnings or 0), 3),
             'referral_tier': user.referral_tier or 'free',
             'expected_daily_earnings': round(expected_daily_earnings, 2),
-            'last_withdrawal_at': user.last_withdrawal_at.isoformat() if user.last_withdrawal_at else None
+            'last_withdrawal_at': user.last_withdrawal_at.isoformat() if user.last_withdrawal_at else None,
+            'daily_ad_count': user.daily_ad_count or 0
         }
         
         set_cached_user(telegram_id, response)
@@ -847,8 +850,6 @@ def credit_ad_reward():
     # Validate captcha
     try:
         expected_answer = int(captcha_answer)
-        # Simple validation - check if the answer is a number
-        # The frontend should have already validated the answer
     except ValueError:
         return jsonify({
             'success': False,
@@ -937,7 +938,8 @@ def credit_ad_reward():
             'reward': float(reward),
             'balance': float(user.balance),
             'daily_ad_count': user.daily_ad_count,
-            'daily_ad_limit': 50
+            'daily_ad_limit': 50,
+            'total_ad_earnings': float(user.total_ad_earnings)
         })
     except Exception as e:
         session_db.rollback()
