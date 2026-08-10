@@ -1289,7 +1289,7 @@ def get_tasks(telegram_id):
     finally:
         session_db.close()
 
-@app.route('/api/tasks/<int:telegram_id>', methods(['GET'])
+@app.route('/api/tasks/<int:telegram_id>', methods=['GET'])
 @rate_limit
 def api_get_tasks(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
