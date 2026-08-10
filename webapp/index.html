@@ -225,8 +225,13 @@
             </div>
             
             <!-- Ad Progress Bar -->
-            <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:8px;margin-bottom:12px;overflow:hidden;">
+            <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:8px;margin-bottom:6px;overflow:hidden;">
                 <div id="adProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
+            </div>
+            
+            <!-- Ad Reset Timer -->
+            <div id="adResetTimer" style="text-align:center;font-size:11px;color:#495670;margin-top:4px;margin-bottom:12px;font-family:'Courier New',monospace;">
+                🔄 Resets in: 00:00:00 UTC
             </div>
             
             <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad & Earn $0.001</button>
@@ -327,6 +332,6 @@
         console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=47"></script>
+    <script src="js/app.js?v=48"></script>
 </body>
 </html>

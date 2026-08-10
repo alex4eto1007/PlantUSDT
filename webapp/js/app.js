@@ -9,6 +9,7 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
+let resetTimerInterval = null;
 let lastAdTime = 0;
 const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
@@ -16,7 +17,7 @@ let isLoading = false;
 let isDataLoaded = false;
 
 // ============================================
-// MATH CAPTCHA FOR AD REWARDS
+// MATH CAPTCHA FOR AD REWARDS - SIMPLIFIED
 // ============================================
 
 let mathCaptchaAnswer = null;
@@ -55,51 +56,52 @@ function getDeviceFingerprint() {
 function showMathCaptcha(callback) {
     const captcha = generateMathCaptcha();
     
-    // Use Telegram's showPopup with a simple input
-    tg.showPopup({
-        title: '🧮 Verify You\'re Human',
-        message: `Solve this simple math question to claim your ad reward:\n\n${captcha.question}`,
-        buttons: [
-            {id: 'cancel', type: 'cancel'},
-            {id: 'ok', type: 'default', text: 'Answer'}
-        ]
-    }, function(buttonId) {
-        if (buttonId === 'ok') {
-            // Ask for the answer using another popup
-            tg.showPopup({
-                title: '🧮 Enter Your Answer',
-                message: `What is ${captcha.question}`,
-                buttons: [
-                    {id: 'cancel', type: 'cancel'},
-                    {id: 'submit', type: 'default', text: 'Submit'}
-                ]
-            }, function(btnId) {
-                if (btnId === 'submit') {
-                    // Use prompt as fallback for input
-                    const userAnswer = prompt(`Solve: ${captcha.question}`);
-                    if (userAnswer !== null) {
-                        const parsed = parseInt(userAnswer);
-                        if (!isNaN(parsed) && parsed === captcha.answer) {
-                            callback(true, captcha.answer, captcha.question);
-                        } else {
-                            tg.showPopup({
-                                title: '❌ Wrong Answer',
-                                message: 'Incorrect. Please try again.',
-                                buttons: [{type: 'ok'}]
-                            });
-                            callback(false, null, null);
-                        }
-                    } else {
-                        callback(false, null, null);
-                    }
-                } else {
-                    callback(false, null, null);
-                }
-            });
-        } else {
-            callback(false, null, null);
+    // Use prompt with clear message - this is the simplest approach
+    const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question to claim your ad reward:\n\n${captcha.question}\n\nEnter your answer:`);
+    
+    if (userAnswer === null) {
+        callback(false, null, null);
+        return;
+    }
+    
+    const parsed = parseInt(userAnswer);
+    if (!isNaN(parsed) && parsed === captcha.answer) {
+        callback(true, captcha.answer, captcha.question);
+    } else {
+        tg.showPopup({
+            title: '❌ Wrong Answer',
+            message: 'Incorrect. Please try again.',
+            buttons: [{type: 'ok'}]
+        });
+        callback(false, null, null);
+    }
+}
+
+// ============================================
+// UTC MIDNIGHT RESET TIMER
+// ============================================
+
+function updateAdResetTimer() {
+    const now = new Date();
+    const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+    const timeLeft = utcMidnight - now;
+    
+    if (timeLeft <= 0) {
+        const timerEl = document.getElementById('adResetTimer');
+        if (timerEl) {
+            timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
         }
-    });
+        return;
+    }
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    
+    const timerEl = document.getElementById('adResetTimer');
+    if (timerEl) {
+        timerEl.textContent = `🔄 Resets in: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} UTC`;
+    }
 }
 
 // ============================================
@@ -179,6 +181,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadAdStats();
                 loadActiveReferrals();
                 loadTasks();
+                
+                // Start UTC reset timer
+                updateAdResetTimer();
+                if (resetTimerInterval) clearInterval(resetTimerInterval);
+                resetTimerInterval = setInterval(updateAdResetTimer, 1000);
             } else {
                 setTimeout(initializeApp, 100);
             }
@@ -1676,78 +1683,89 @@ async function watchRewardedAd() {
         console.log('📢 Ad result:', result);
 
         if (result.done && !result.error && result.state === 'destroy') {
-            // Show math captcha AFTER ad is watched
-            showMathCaptcha(async function(success, answer, question) {
-                if (!success) {
-                    console.log('📢 Captcha failed or cancelled');
+            // Show math captcha AFTER ad is watched - simplified with prompt
+            const captcha = generateMathCaptcha();
+            const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question to claim your ad reward:\n\n${captcha.question}\n\nEnter your answer:`);
+            
+            if (userAnswer === null) {
+                console.log('📢 Captcha cancelled');
+                safePopup({
+                    title: '🧮 Verification Cancelled',
+                    message: 'You need to solve the math question to earn your reward.',
+                    buttons: [{type: 'ok'}]
+                });
+                return false;
+            }
+            
+            const parsed = parseInt(userAnswer);
+            if (isNaN(parsed) || parsed !== captcha.answer) {
+                safePopup({
+                    title: '❌ Wrong Answer',
+                    message: 'Incorrect. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+                return false;
+            }
+
+            const userId = tgUser ? tgUser.id : '0';
+            const fingerprint = getDeviceFingerprint();
+            
+            try {
+                const response = await fetch(API_BASE + '/api/credit_ad_reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: userId,
+                        captcha_answer: captcha.answer,
+                        captcha_question: captcha.question,
+                        device_fingerprint: fingerprint
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
                     safePopup({
-                        title: '🧮 Verification Failed',
-                        message: 'Please solve the math question to earn your reward.',
+                        title: '🎁 Bonus Earned!',
+                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
+                        buttons: [{type: 'ok'}]
+                    });
+                    loadUserData();
+                    loadAdStats();
+                    loadActiveReferrals();
+                    loadTasks();
+                    return true;
+                } else if (data.need_captcha) {
+                    safePopup({
+                        title: '🧮 Verification Required',
+                        message: data.message || 'Please solve the math question.',
                         buttons: [{type: 'ok'}]
                     });
                     return false;
-                }
-
-                const userId = tgUser ? tgUser.id : '0';
-                const fingerprint = getDeviceFingerprint();
-                
-                try {
-                    const response = await fetch(API_BASE + '/api/credit_ad_reward', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            telegram_id: userId,
-                            captcha_answer: answer,
-                            captcha_question: question,
-                            device_fingerprint: fingerprint
-                        })
+                } else if (data.message && data.message.includes('daily ad limit')) {
+                    safePopup({
+                        title: '📊 Daily Limit Reached',
+                        message: data.message,
+                        buttons: [{type: 'ok'}]
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        safePopup({
-                            title: '🎁 Bonus Earned!',
-                            message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${data.daily_ad_count}/${data.daily_ad_limit} today)`,
-                            buttons: [{type: 'ok'}]
-                        });
-                        loadUserData();
-                        loadAdStats();
-                        loadActiveReferrals();
-                        loadTasks();
-                        return true;
-                    } else if (data.need_captcha) {
-                        safePopup({
-                            title: '🧮 Verification Required',
-                            message: data.message || 'Please solve the math question.',
-                            buttons: [{type: 'ok'}]
-                        });
-                        return false;
-                    } else if (data.message && data.message.includes('daily ad limit')) {
-                        safePopup({
-                            title: '📊 Daily Limit Reached',
-                            message: data.message,
-                            buttons: [{type: 'ok'}]
-                        });
-                        return false;
-                    } else {
-                        safePopup({
-                            title: '❌ Error',
-                            message: data.message || 'Failed to earn ad reward.',
-                            buttons: [{type: 'ok'}]
-                        });
-                        return false;
-                    }
-                } catch (error) {
-                    console.error('Error crediting ad reward:', error);
+                    return false;
+                } else {
                     safePopup({
                         title: '❌ Error',
-                        message: 'Network error. Please try again.',
+                        message: data.message || 'Failed to earn ad reward.',
                         buttons: [{type: 'ok'}]
                     });
                     return false;
                 }
-            });
+            } catch (error) {
+                console.error('Error crediting ad reward:', error);
+                safePopup({
+                    title: '❌ Error',
+                    message: 'Network error. Please try again.',
+                    buttons: [{type: 'ok'}]
+                });
+                return false;
+            }
         } else {
             safePopup({
                 title: '❌ Ad Not Available',
@@ -1773,8 +1791,14 @@ async function watchRewardedAd() {
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const userResponse = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
-        const userData = await userResponse.json();
+        // Fetch fresh user data directly
+        const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId);
+        const userData = await response.json();
+
+        if (!userData.success) {
+            console.error('Failed to fetch user data for ad stats');
+            return;
+        }
 
         const adEarningsEl = document.getElementById('adEarnings');
         if (adEarningsEl) {
@@ -1783,6 +1807,7 @@ async function loadAdStats() {
 
         const adsTodayEl = document.getElementById('adsToday');
         const dailyLimit = 50;
+        // Get daily_ad_count from user data
         const dailyCount = userData.daily_ad_count || 0;
         
         if (adsTodayEl) {
@@ -1802,7 +1827,6 @@ async function loadAdStats() {
         if (progressEl) {
             const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
             progressEl.style.width = progress + '%';
-            // Color based on progress
             if (dailyCount >= dailyLimit) {
                 progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
             } else if (dailyCount >= dailyLimit * 0.8) {
@@ -1834,7 +1858,7 @@ async function loadAdStats() {
             }
         }
     } catch (error) {
-        console.error('Error loading ad stats');
+        console.error('Error loading ad stats:', error);
     }
 }
 
@@ -2479,6 +2503,7 @@ console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
 console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
 console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
-console.log('🧮 Math captcha appears AFTER watching ad');
+console.log('🧮 Math captcha simplified to a single prompt after watching ad');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
-console.log('📊 Ad daily limit: 50/50 with progress bar');
+console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
+console.log('🔄 UTC reset timer shows time until daily ad limit resets at midnight UTC');
