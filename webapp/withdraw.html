@@ -170,16 +170,17 @@
             <h3>Withdrawal Instructions</h3>
             <p><strong>Min Amount:</strong> $1 USDT<br>
             <strong>Max 1 withdrawal per 24 hours</strong><br>
-            <strong>Fee:</strong> 5% + flat fee based on amount<br>
+            <strong>Fee:</strong> Tiered structure based on amount<br>
             <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
             <strong>Token:</strong> USDT on Polygon<br>
             <strong>Gas Fees:</strong> Covered by us!</p>
             <div class="fee-breakdown">
                 <strong>Fee Structure:</strong><br>
-                • $1 - $9.99: 5% only<br>
-                • $10 - $29.99: 5% + $1 flat fee<br>
-                • $30 - $99.99: 5% + $5 flat fee<br>
-                • $100+: 5% + $15 flat fee
+                • $1 - $9.99: 5%<br>
+                • $10 - $29.99: 10% + $0.50<br>
+                • $30 - $49.99: 15% + $2.50<br>
+                • $50 - $99.99: 20% + $4<br>
+                • $100+: 25% + $8
             </div>
             <div id="cooldownContainer" style="display:none;">
                 <div class="cooldown-timer" id="cooldownTimer">
@@ -211,7 +212,7 @@
 
             <div class="fee-summary" id="feeSummary" style="display:none;">
                 <div class="fee-row"><span>Amount:</span><span class="amount" id="feeAmount">$0.00</span></div>
-                <div class="fee-row"><span>Fee (5%):</span><span class="fee-amount" id="feeAmountFee">$0.00</span></div>
+                <div class="fee-row"><span>Fee (%):</span><span class="fee-amount" id="feeAmountFee">$0.00</span></div>
                 <div class="fee-row" id="flatFeeRow" style="display:none;"><span>Flat Fee:</span><span class="fee-amount" id="feeFlatAmount">$0.00</span></div>
                 <div class="fee-row total"><span>You will receive on Polygon:</span><span class="net" id="feeNet">$0.00</span></div>
             </div>
@@ -258,15 +259,27 @@
                     }
                     
                     if (amount >= 1) {
-                        var feePercent = amount * 0.05;
+                        // New fee structure
+                        var feePercent = 0;
                         var flatFee = 0;
-                        if (amount >= 10 && amount < 30) {
-                            flatFee = 1.0;
-                        } else if (amount >= 30 && amount < 100) {
-                            flatFee = 5.0;
-                        } else if (amount >= 100) {
-                            flatFee = 15.0;
+                        
+                        if (amount < 10) {
+                            feePercent = amount * 0.05;
+                            flatFee = 0;
+                        } else if (amount < 30) {
+                            feePercent = amount * 0.10;
+                            flatFee = 0.50;
+                        } else if (amount < 50) {
+                            feePercent = amount * 0.15;
+                            flatFee = 2.50;
+                        } else if (amount < 100) {
+                            feePercent = amount * 0.20;
+                            flatFee = 4.00;
+                        } else {
+                            feePercent = amount * 0.25;
+                            flatFee = 8.00;
                         }
+                        
                         var totalFee = feePercent + flatFee;
                         var net = amount - totalFee;
 
@@ -354,7 +367,6 @@
                 return;
             }
 
-            // FIXED: Force UTC parsing by appending 'Z'
             var last = new Date(lastWithdrawalAt + 'Z');
             var now = new Date();
             var diff = (now.getTime() - last.getTime()) / 1000;
@@ -469,17 +481,14 @@
                             });
                             if (amountInput) amountInput.value = '';
                             if (addressInput) addressInput.value = '';
-                            // Refresh user data to update cooldown
                             fetchUserData();
                         } else {
-                            // Check for cooldown message
                             if (data.cooldown_remaining) {
                                 window.Telegram.WebApp.showPopup({
                                     title: '⏳ Cooldown Active',
                                     message: data.message,
                                     buttons: [{type: 'ok'}]
                                 });
-                                // Update cooldown timer
                                 lastWithdrawalAt = new Date(Date.now() - (86400 - data.cooldown_remaining) * 1000);
                                 updateCooldownUI();
                             } else {
@@ -517,6 +526,6 @@
 
         window.goBack = goBack;
     </script>
-    <script src="/js/app.js?v=51"></script>
+    <script src="/js/app.js?v=52"></script>
 </body>
 </html>
