@@ -260,6 +260,22 @@ async function loadUserData(retries = 3) {
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
             
+            // Check if ad count should be reset (new day)
+            if (data.daily_ad_count === 0 && data.total_ad_earnings > 0) {
+                // It's a new day — update UI to show 0
+                const adsTodayEl = document.getElementById('adsToday');
+                if (adsTodayEl) {
+                    adsTodayEl.textContent = '0 / 50';
+                    adsTodayEl.style.color = '#00ff87';
+                }
+                // Update progress bar
+                const progressEl = document.getElementById('adProgressBar');
+                if (progressEl) {
+                    progressEl.style.width = '0%';
+                    progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+                }
+            }
+            
             // Hide loading state
             var loadingEl = document.getElementById('loadingMessage');
             var appContent = document.getElementById('appContent');
@@ -2622,3 +2638,4 @@ console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
 console.log('🔄 UTC reset timer shows time until daily ad limit resets at midnight UTC');
 console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI refresh');
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
+console.log('🔄 Daily ad count resets properly at UTC midnight');

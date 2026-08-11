@@ -159,12 +159,16 @@ def reset_daily_ad_count(user):
     if not user.last_ad_reset:
         user.last_ad_reset = datetime.utcnow()
         user.daily_ad_count = 0
+        # Clear cache for this user
+        clear_user_cache(user.telegram_id)
         return True
     
     now = datetime.utcnow()
     if now.date() > user.last_ad_reset.date():
         user.daily_ad_count = 0
         user.last_ad_reset = now
+        # Clear cache for this user
+        clear_user_cache(user.telegram_id)
         return True
     return False
 
@@ -296,17 +300,26 @@ def withdraw():
         # Round amount to 2 decimal places
         amount = round(amount, 2)
         
-        # Calculate fee with tiered flat fee
-        fee_percent = 0.05
+        # Calculate fee with new structure
+        fee_percent = 0.0
         flat_fee = 0.0
-        
-        if amount >= 10 and amount < 30:
-            flat_fee = 1.0
-        elif amount >= 30 and amount < 100:
-            flat_fee = 5.0
-        elif amount >= 100:
-            flat_fee = 15.0
-        
+
+        if amount < 10:
+            fee_percent = 0.05
+            flat_fee = 0.0
+        elif amount < 30:
+            fee_percent = 0.10
+            flat_fee = 0.50
+        elif amount < 50:
+            fee_percent = 0.15
+            flat_fee = 2.50
+        elif amount < 100:
+            fee_percent = 0.20
+            flat_fee = 4.00
+        else:
+            fee_percent = 0.25
+            flat_fee = 8.00
+
         fee = (amount * fee_percent) + flat_fee
         net_amount = amount - fee
         
@@ -456,6 +469,12 @@ def get_user():
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
+        
+        # Check if it's a new day and invalidate cache if needed
+        if user and user.last_ad_reset:
+            now = datetime.utcnow()
+            if now.date() > user.last_ad_reset.date():
+                clear_user_cache(telegram_id)
         
         investments = session_db.query(Investment).filter_by(user_id=user.id).all()
         fields = []
@@ -874,7 +893,7 @@ def credit_ad_reward():
                 'message': 'Your account has been flagged for suspicious activity. Please contact support.'
             }), 403
         
-        # Reset daily ad count if new day
+        # Reset daily ad count if new day (this clears cache)
         reset_daily_ad_count(user)
         
         # ANTI-ABUSE: Max 50 ads per day
