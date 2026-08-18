@@ -2639,4 +2639,4 @@ console.log('🔄 UTC reset timer shows time until daily ad limit resets at midn
 console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI refresh');
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
 console.log('🔄 Daily ad count resets properly at UTC midnight');
-console.log('💰 Withdrawal fee display updated to new structure: 5%, 10%+0.50, 15%+2.50, 20%+4, 25%+8');
+console.log('💰 Withdrawal fee display updated: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');

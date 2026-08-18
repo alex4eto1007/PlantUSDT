@@ -300,27 +300,21 @@ def withdraw():
         # Round amount to 2 decimal places
         amount = round(amount, 2)
         
-        # Calculate fee with new structure
+        # Calculate fee (percentage only - no flat fees)
         fee_percent = 0.0
-        flat_fee = 0.0
 
         if amount < 10:
             fee_percent = 0.05
-            flat_fee = 0.0
         elif amount < 30:
             fee_percent = 0.10
-            flat_fee = 0.50
         elif amount < 50:
             fee_percent = 0.15
-            flat_fee = 2.50
         elif amount < 100:
             fee_percent = 0.20
-            flat_fee = 4.00
         else:
             fee_percent = 0.25
-            flat_fee = 8.00
 
-        fee = (amount * fee_percent) + flat_fee
+        fee = amount * fee_percent
         net_amount = amount - fee
         
         withdrawal = Withdrawal(
