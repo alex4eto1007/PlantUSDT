@@ -260,19 +260,35 @@ async function loadUserData(retries = 3) {
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
             
-            // Check if ad count should be reset (new day)
-            if (data.daily_ad_count === 0 && data.total_ad_earnings > 0) {
-                // It's a new day — update UI to show 0
-                const adsTodayEl = document.getElementById('adsToday');
-                if (adsTodayEl) {
-                    adsTodayEl.textContent = '0 / 50';
-                    adsTodayEl.style.color = '#00ff87';
-                }
-                // Update progress bar
-                const progressEl = document.getElementById('adProgressBar');
-                if (progressEl) {
-                    progressEl.style.width = '0%';
-                    progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+            // ---- CHECK IF IT'S A NEW DAY ----
+            // This prevents the "stuck at 50/50" issue
+            if (data.last_ad_reset) {
+                const lastReset = new Date(data.last_ad_reset);
+                const now = new Date();
+                if (now.getUTCDate() !== lastReset.getUTCDate() || 
+                    now.getUTCMonth() !== lastReset.getUTCMonth() || 
+                    now.getUTCFullYear() !== lastReset.getUTCFullYear()) {
+                    // It's a new day — reset the display to 0
+                    const adsTodayEl = document.getElementById('adsToday');
+                    if (adsTodayEl) {
+                        adsTodayEl.textContent = '0 / 50';
+                        adsTodayEl.style.color = '#00ff87';
+                    }
+                    const progressEl = document.getElementById('adProgressBar');
+                    if (progressEl) {
+                        progressEl.style.width = '0%';
+                        progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+                    }
+                    const watchBtn = document.getElementById('watchAdBtn');
+                    if (watchBtn) {
+                        watchBtn.disabled = false;
+                        watchBtn.style.opacity = '1';
+                        watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
+                    }
+                    const statusEl = document.getElementById('adStatus');
+                    if (statusEl) {
+                        statusEl.style.display = 'none';
+                    }
                 }
             }
             
@@ -2698,3 +2714,4 @@ console.log('🔄 Daily ad count resets properly at UTC midnight');
 console.log('💰 Withdrawal fee display updated: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
 console.log('💳 Withdrawals are now FULL BALANCE ONLY — no partial withdrawals');
 console.log('📋 Active referrals: first 3 shown, click to show all');
+console.log('🔄 New day detection on page load — prevents stuck 50/50 issue');
