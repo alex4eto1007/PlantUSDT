@@ -236,6 +236,7 @@ def save_wallet():
 def withdraw():
     from decimal import Decimal
     from datetime import datetime, timedelta
+    import math
     
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
@@ -301,11 +302,19 @@ def withdraw():
                 'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
             }), 400
         
-        # Round amount DOWN to 2 decimal places (floor)
-        amount = math.floor(amount * 100) / 100
+        # ---- TRUNCATE TO 2 DECIMAL PLACES (FLOOR) ----
+        # User can withdraw the floored amount, dust remains in balance
+        withdraw_amount = math.floor(amount * 100) / 100
+        dust = amount - withdraw_amount
         
-        if amount < 1:
+        # Keep dust in user's balance
+        user.balance = Decimal(str(dust))
+        
+        if withdraw_amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
+        
+        # Use withdraw_amount for the rest of the withdrawal process
+        amount = withdraw_amount
         
         # Calculate fee (percentage only - no flat fees)
         fee_percent = 0.0
@@ -334,18 +343,15 @@ def withdraw():
         )
         session_db.add(withdrawal)
         
-        user.balance -= Decimal(str(amount))
-        user.last_withdrawal_at = datetime.utcnow()
-        
         # Log to audit log
         audit = AuditLog(
             user_id=user.id,
             action='withdrawal_request',
             field_changed='balance',
-            old_value=float(user.balance + Decimal(str(amount))),
+            old_value=float(user.balance + Decimal(str(amount)) + Decimal(str(dust))),
             new_value=float(user.balance),
             amount=float(amount),
-            description=f'Withdrawal request of ${amount:.2f} to {address[:10]}...',
+            description=f'Withdrawal request of ${amount:.2f} to {address[:10]}... (dust: ${dust:.3f})',
             source='user',
             created_at=datetime.utcnow()
         )
