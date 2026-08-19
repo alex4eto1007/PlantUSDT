@@ -1380,7 +1380,7 @@ def api_claim_task_reward():
     finally:
         session_db.close()
 
-@app.route('/api/task_stats/<int:telegram_id>', methods=['GET'])
+@app.route('/api/task_stats/<int:telegram_id>', methods(['GET'])
 @rate_limit
 def api_task_stats(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
