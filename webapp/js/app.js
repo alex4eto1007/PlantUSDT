@@ -2640,3 +2640,4 @@ console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI 
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
 console.log('🔄 Daily ad count resets properly at UTC midnight');
 console.log('💰 Withdrawal fee display updated: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
+console.log('💳 Withdrawals are now FULL BALANCE ONLY — no partial withdrawals');

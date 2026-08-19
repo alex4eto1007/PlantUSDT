@@ -156,6 +156,32 @@
             cursor: not-allowed;
             transform: none;
         }
+        .full-balance-display {
+            text-align: center;
+            padding: 16px;
+            background: rgba(0,255,135,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(0,255,135,0.1);
+            margin-bottom: 16px;
+        }
+        .full-balance-display .label {
+            font-size: 14px;
+            color: #8892b0;
+            display: block;
+        }
+        .full-balance-display .amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00ff87;
+            display: block;
+            margin-top: 4px;
+        }
+        .full-balance-display .sub {
+            font-size: 12px;
+            color: #495670;
+            display: block;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -168,7 +194,7 @@
 
         <div class="info-card">
             <h3>Withdrawal Instructions</h3>
-            <p><strong>Min Amount:</strong> $1 USDT<br>
+            <p><strong>Full Balance Only:</strong> You can only withdraw your entire balance.<br>
             <strong>Max 1 withdrawal per 24 hours</strong><br>
             <strong>Fee:</strong> Percentage only — no flat fees<br>
             <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
@@ -198,9 +224,16 @@
         </div>
 
         <form id="withdrawForm">
-            <div class="form-group">
+            <!-- Full Balance Display -->
+            <div class="full-balance-display">
+                <span class="label">💰 Amount to Withdraw</span>
+                <span class="amount" id="fullBalanceDisplay">$0.000</span>
+                <span class="sub">Full balance only — no partial withdrawals</span>
+            </div>
+
+            <div class="form-group" style="display:none;">
                 <label>💰 Amount (USDT on Polygon)</label>
-                <input type="number" id="withdrawAmount" placeholder="Enter amount (min $1)" min="1" step="0.01">
+                <input type="number" id="withdrawAmount" placeholder="Full balance only" min="1" step="0.01" disabled>
             </div>
 
             <div class="form-group">
@@ -210,13 +243,13 @@
                 <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Must be a Polygon network wallet address</p>
             </div>
 
-            <div class="fee-summary" id="feeSummary" style="display:none;">
+            <div class="fee-summary" id="feeSummary">
                 <div class="fee-row"><span>Amount:</span><span class="amount" id="feeAmount">$0.00</span></div>
                 <div class="fee-row"><span>Fee:</span><span class="fee-amount" id="feeAmountFee">$0.00</span></div>
                 <div class="fee-row total"><span>You will receive on Polygon:</span><span class="net" id="feeNet">$0.00</span></div>
             </div>
 
-            <button type="submit" class="withdraw-btn" id="withdrawBtn">🌱 Request Withdrawal on Polygon</button>
+            <button type="submit" class="withdraw-btn" id="withdrawBtn">🌱 Withdraw Full Balance</button>
         </form>
 
         <button class="action-btn secondary" onclick="goBack()">📊 Back to Dashboard</button>
@@ -226,6 +259,7 @@
         let userId = null;
         let cooldownInterval = null;
         let lastWithdrawalAt = null;
+        let fullBalance = 0;
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
@@ -239,49 +273,7 @@
             userId = tg.initDataUnsafe?.user?.id || '0';
             if (userId !== '0') {
                 fetchUserData();
-            }
-
-            var amountInput = document.getElementById('withdrawAmount');
-            var feeSummary = document.getElementById('feeSummary');
-            var feeAmount = document.getElementById('feeAmount');
-            var feeAmountFee = document.getElementById('feeAmountFee');
-            var feeNet = document.getElementById('feeNet');
-
-            if (amountInput) {
-                amountInput.addEventListener('input', function() {
-                    var rawValue = parseFloat(this.value) || 0;
-                    var amount = Math.round(rawValue * 100) / 100;
-                    if (rawValue !== amount) {
-                        this.value = amount.toFixed(2);
-                    }
-                    
-                    if (amount >= 1) {
-                        // New fee structure (percentage only — no flat fees)
-                        var feePercent = 0;
-                        
-                        if (amount < 10) {
-                            feePercent = amount * 0.05;
-                        } else if (amount < 30) {
-                            feePercent = amount * 0.10;
-                        } else if (amount < 50) {
-                            feePercent = amount * 0.15;
-                        } else if (amount < 100) {
-                            feePercent = amount * 0.20;
-                        } else {
-                            feePercent = amount * 0.25;
-                        }
-                        
-                        var totalFee = feePercent;
-                        var net = amount - totalFee;
-
-                        feeAmount.textContent = '$' + amount.toFixed(2);
-                        feeAmountFee.textContent = '$' + feePercent.toFixed(2);
-                        feeNet.textContent = '$' + net.toFixed(2);
-                        feeSummary.style.display = 'block';
-                    } else {
-                        feeSummary.style.display = 'none';
-                    }
-                });
+                loadFullBalance();
             }
 
             var setWalletBtn = document.getElementById('setWalletBtn');
@@ -322,6 +314,57 @@
                 });
             }
         });
+
+        function loadFullBalance() {
+            if (!userId || userId === '0') return;
+            
+            fetch(window.API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        fullBalance = data.balance || 0;
+                        document.getElementById('fullBalanceDisplay').textContent = '$' + fullBalance.toFixed(3);
+                        
+                        // Update fee summary
+                        updateFeeSummary(fullBalance);
+                        
+                        // Set the hidden amount input
+                        document.getElementById('withdrawAmount').value = fullBalance;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading balance:', error);
+                });
+        }
+
+        function updateFeeSummary(amount) {
+            if (amount < 1) {
+                document.getElementById('feeSummary').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('feeSummary').style.display = 'block';
+            
+            var feePercent = 0;
+            if (amount < 10) {
+                feePercent = 0.05;
+            } else if (amount < 30) {
+                feePercent = 0.10;
+            } else if (amount < 50) {
+                feePercent = 0.15;
+            } else if (amount < 100) {
+                feePercent = 0.20;
+            } else {
+                feePercent = 0.25;
+            }
+            
+            var totalFee = amount * feePercent;
+            var net = amount - totalFee;
+            
+            document.getElementById('feeAmount').textContent = '$' + amount.toFixed(2);
+            document.getElementById('feeAmountFee').textContent = '$' + totalFee.toFixed(2);
+            document.getElementById('feeNet').textContent = '$' + net.toFixed(2);
+        }
 
         function fetchUserData() {
             fetch(window.API_BASE + '/api/user?telegram_id=' + userId)
@@ -414,13 +457,13 @@
                     
                     var amountInput = document.getElementById('withdrawAmount');
                     var addressInput = document.getElementById('withdrawAddress');
-                    var amount = amountInput ? amountInput.value : '';
+                    var amount = fullBalance;
                     var address = addressInput ? addressInput.value : '';
 
-                    if (!amount || parseFloat(amount) < 1) {
+                    if (amount < 1) {
                         window.Telegram.WebApp.showPopup({
                             title: 'Error',
-                            message: 'Please enter at least $1 USDT for withdrawal on Polygon.',
+                            message: 'Your balance is less than $1. Minimum withdrawal is $1.',
                             buttons: [{type: 'ok'}]
                         });
                         return;
@@ -446,7 +489,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             telegram_id: userId,
-                            amount: parseFloat(amount),
+                            amount: amount,
                             address: address
                         })
                     })
@@ -454,7 +497,7 @@
                     .then(function(data) {
                         if (submitBtn) {
                             submitBtn.disabled = false;
-                            submitBtn.textContent = 'Request Withdrawal on Polygon';
+                            submitBtn.textContent = 'Withdraw Full Balance';
                         }
                         if (data.success) {
                             window.Telegram.WebApp.showPopup({
@@ -462,9 +505,9 @@
                                 message: data.message || 'Withdrawal submitted on Polygon!',
                                 buttons: [{type: 'ok'}]
                             });
-                            if (amountInput) amountInput.value = '';
                             if (addressInput) addressInput.value = '';
                             fetchUserData();
+                            loadFullBalance();
                         } else {
                             if (data.cooldown_remaining) {
                                 window.Telegram.WebApp.showPopup({
@@ -487,7 +530,7 @@
                         console.error('Error submitting withdrawal');
                         if (submitBtn) {
                             submitBtn.disabled = false;
-                            submitBtn.textContent = 'Request Withdrawal on Polygon';
+                            submitBtn.textContent = 'Withdraw Full Balance';
                         }
                         window.Telegram.WebApp.showPopup({
                             title: 'Error',
@@ -499,7 +542,7 @@
                         setTimeout(function() {
                             if (submitBtn) {
                                 submitBtn.disabled = false;
-                                submitBtn.textContent = 'Request Withdrawal on Polygon';
+                                submitBtn.textContent = 'Withdraw Full Balance';
                             }
                         }, 3000);
                     });
@@ -508,7 +551,8 @@
         });
 
         window.goBack = goBack;
+        window.loadFullBalance = loadFullBalance;
     </script>
-    <script src="/js/app.js?v=53"></script>
+    <script src="/js/app.js?v=54"></script>
 </body>
 </html>

@@ -159,7 +159,6 @@ def reset_daily_ad_count(user):
     if not user.last_ad_reset:
         user.last_ad_reset = datetime.utcnow()
         user.daily_ad_count = 0
-        # Clear cache for this user
         clear_user_cache(user.telegram_id)
         return True
     
@@ -167,7 +166,6 @@ def reset_daily_ad_count(user):
     if now.date() > user.last_ad_reset.date():
         user.daily_ad_count = 0
         user.last_ad_reset = now
-        # Clear cache for this user
         clear_user_cache(user.telegram_id)
         return True
     return False
@@ -279,7 +277,7 @@ def withdraw():
         # ---- COOLDOWN CHECK ----
         if user.last_withdrawal_at:
             time_since_last = (datetime.utcnow() - user.last_withdrawal_at).total_seconds()
-            if time_since_last < 86400:  # 24 hours
+            if time_since_last < 86400:
                 remaining = int(86400 - time_since_last)
                 hours = remaining // 3600
                 minutes = (remaining % 3600) // 60
@@ -293,6 +291,14 @@ def withdraw():
         
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
+        
+        # ---- FULL BALANCE ONLY ----
+        # Allow small tolerance for floating point issues (0.001)
+        if abs(amount - float(user.balance)) > 0.001:
+            return jsonify({
+                'success': False,
+                'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
+            }), 400
         
         if amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
