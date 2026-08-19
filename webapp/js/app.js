@@ -19,6 +19,7 @@ let isDataLoaded = false;
 // Global variable to store latest ad count to prevent overwrites
 window._latestAdCount = null;
 window._adCountTimestamp = null;
+window._lastTimerValue = null;
 
 // ============================================
 // MATH CAPTCHA FOR AD REWARDS - SIMPLIFIED
@@ -81,7 +82,7 @@ function showMathCaptcha(callback) {
 }
 
 // ============================================
-// UTC MIDNIGHT RESET TIMER
+// UTC MIDNIGHT RESET TIMER - WITH AUTO-REFRESH
 // ============================================
 
 function updateAdResetTimer() {
@@ -89,22 +90,24 @@ function updateAdResetTimer() {
     const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
     const timeLeft = utcMidnight - now;
     
-    if (timeLeft <= 0) {
-        const timerEl = document.getElementById('adResetTimer');
-        if (timerEl) {
-            timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
-        }
-        return;
-    }
-    
-    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-    
     const timerEl = document.getElementById('adResetTimer');
-    if (timerEl) {
+    if (!timerEl) return;
+    
+    if (timeLeft <= 0) {
+        timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
+        // Refresh data at midnight
+        if (window._lastTimerValue !== null && window._lastTimerValue > 0) {
+            console.log('🔄 UTC Midnight reached — refreshing ad data...');
+            loadUserData();
+            loadAdStats();
+        }
+    } else {
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
         timerEl.textContent = `🔄 Resets in: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} UTC`;
     }
+    window._lastTimerValue = timeLeft;
 }
 
 // ============================================
@@ -260,8 +263,7 @@ async function loadUserData(retries = 3) {
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
             
-            // ---- CHECK IF IT'S A NEW DAY ----
-            // This prevents the "stuck at 50/50" issue
+            // ---- CHECK IF IT'S A NEW DAY USING last_ad_reset ----
             if (data.last_ad_reset) {
                 const lastReset = new Date(data.last_ad_reset);
                 const now = new Date();
@@ -269,26 +271,8 @@ async function loadUserData(retries = 3) {
                     now.getUTCMonth() !== lastReset.getUTCMonth() || 
                     now.getUTCFullYear() !== lastReset.getUTCFullYear()) {
                     // It's a new day — reset the display to 0
-                    const adsTodayEl = document.getElementById('adsToday');
-                    if (adsTodayEl) {
-                        adsTodayEl.textContent = '0 / 50';
-                        adsTodayEl.style.color = '#00ff87';
-                    }
-                    const progressEl = document.getElementById('adProgressBar');
-                    if (progressEl) {
-                        progressEl.style.width = '0%';
-                        progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
-                    }
-                    const watchBtn = document.getElementById('watchAdBtn');
-                    if (watchBtn) {
-                        watchBtn.disabled = false;
-                        watchBtn.style.opacity = '1';
-                        watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-                    }
-                    const statusEl = document.getElementById('adStatus');
-                    if (statusEl) {
-                        statusEl.style.display = 'none';
-                    }
+                    console.log('🔄 New day detected via last_ad_reset — resetting ad display');
+                    resetAdDisplay();
                 }
             }
             
@@ -319,6 +303,31 @@ async function loadUserData(retries = 3) {
     } finally {
         isLoading = false;
     }
+}
+
+function resetAdDisplay() {
+    const adsTodayEl = document.getElementById('adsToday');
+    if (adsTodayEl) {
+        adsTodayEl.textContent = '0 / 50';
+        adsTodayEl.style.color = '#00ff87';
+    }
+    const progressEl = document.getElementById('adProgressBar');
+    if (progressEl) {
+        progressEl.style.width = '0%';
+        progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
+    }
+    const watchBtn = document.getElementById('watchAdBtn');
+    if (watchBtn) {
+        watchBtn.disabled = false;
+        watchBtn.style.opacity = '1';
+        watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
+    }
+    const statusEl = document.getElementById('adStatus');
+    if (statusEl) {
+        statusEl.style.display = 'none';
+    }
+    window._latestAdCount = 0;
+    window._adCountTimestamp = Date.now();
 }
 
 function refreshData() {
@@ -2707,11 +2716,10 @@ console.log('⏳ Claim buttons now show Processing... state to prevent double-cl
 console.log('🧮 Math captcha simplified to a single prompt after watching ad');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
 console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
-console.log('🔄 UTC reset timer shows time until daily ad limit resets at midnight UTC');
+console.log('🔄 UTC reset timer auto-refreshes at midnight');
 console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI refresh');
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
 console.log('🔄 Daily ad count resets properly at UTC midnight');
 console.log('💰 Withdrawal fee display updated: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
 console.log('💳 Withdrawals are now FULL BALANCE ONLY — no partial withdrawals');
 console.log('📋 Active referrals: first 3 shown, click to show all');
-console.log('🔄 New day detection on page load — prevents stuck 50/50 issue');

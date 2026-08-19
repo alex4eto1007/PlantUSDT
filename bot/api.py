@@ -439,7 +439,8 @@ def get_user():
             'referral_tier': 'free',
             'expected_daily_earnings': 0,
             'last_withdrawal_at': None,
-            'daily_ad_count': 0
+            'daily_ad_count': 0,
+            'last_ad_reset': None
         })
     
     cached = get_cached_user(telegram_id)
@@ -472,7 +473,8 @@ def get_user():
                 'referral_tier': 'free',
                 'expected_daily_earnings': 0,
                 'last_withdrawal_at': None,
-                'daily_ad_count': 0
+                'daily_ad_count': 0,
+                'last_ad_reset': None
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -534,7 +536,8 @@ def get_user():
             'referral_tier': user.referral_tier or 'free',
             'expected_daily_earnings': round(expected_daily_earnings, 2),
             'last_withdrawal_at': user.last_withdrawal_at.isoformat() if user.last_withdrawal_at else None,
-            'daily_ad_count': user.daily_ad_count or 0
+            'daily_ad_count': user.daily_ad_count or 0,
+            'last_ad_reset': user.last_ad_reset.isoformat() if user.last_ad_reset else None
         }
         
         set_cached_user(telegram_id, response)
