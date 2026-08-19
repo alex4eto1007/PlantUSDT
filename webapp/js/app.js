@@ -2076,15 +2076,44 @@ async function loadActiveReferrals() {
             const listEl = document.getElementById('activeReferralList');
             if (listEl) {
                 if (data.active_list && data.active_list.length > 0) {
-                    let html = '<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals (eligible for 0.03 USDT bonus):</div>';
-                    data.active_list.forEach(ref => {
+                    const total = data.active_list.length;
+                    const showCount = 3;
+                    const hasMore = total > showCount;
+                    const visibleRefs = data.active_list.slice(0, showCount);
+                    
+                    let html = `<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals (eligible for 0.03 USDT bonus):</div>`;
+                    
+                    visibleRefs.forEach(ref => {
                         const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
+                        html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
                             <span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span>
                             <span style="font-size:11px;color:#00ff87;">✅ ${status}</span>
                             <span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span>
                         </div>`;
                     });
+                    
+                    if (hasMore) {
+                        const hiddenCount = total - showCount;
+                        html += `
+                            <div id="hiddenActiveRefs" style="display:none;">
+                        `;
+                        // Add the rest
+                        data.active_list.slice(showCount).forEach(ref => {
+                            const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
+                            html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
+                                <span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span>
+                                <span style="font-size:11px;color:#00ff87;">✅ ${status}</span>
+                                <span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span>
+                            </div>`;
+                        });
+                        html += `
+                            </div>
+                            <button onclick="toggleActiveReferrals()" style="width:100%;padding:8px;margin-top:6px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
+                                📋 Show all ${total} active referrals (${hiddenCount} more)
+                            </button>
+                        `;
+                    }
+                    
                     listEl.innerHTML = html;
                     listEl.style.display = 'block';
                 } else {
@@ -2095,6 +2124,32 @@ async function loadActiveReferrals() {
         }
     } catch (error) {
         console.error('Error loading active referrals');
+    }
+}
+
+function toggleActiveReferrals() {
+    const hiddenDiv = document.getElementById('hiddenActiveRefs');
+    const button = document.querySelector('button[onclick="toggleActiveReferrals()"]');
+    
+    if (hiddenDiv) {
+        if (hiddenDiv.style.display === 'none' || hiddenDiv.style.display === '') {
+            hiddenDiv.style.display = 'block';
+            if (button) {
+                button.textContent = '🔼 Show less';
+            }
+        } else {
+            hiddenDiv.style.display = 'none';
+            if (button) {
+                const total = document.querySelectorAll('.active-ref-item').length || 0;
+                const visible = 3;
+                const hiddenCount = total - visible;
+                if (hiddenCount > 0) {
+                    button.textContent = `📋 Show all ${total} active referrals (${hiddenCount} more)`;
+                } else {
+                    button.style.display = 'none';
+                }
+            }
+        }
     }
 }
 
@@ -2617,6 +2672,7 @@ window.claimInvestment = claimInvestment;
 window.showInterstitialIfNeeded = showInterstitialIfNeeded;
 window.upgradeReferralTier = upgradeReferralTier;
 window.loadActiveReferrals = loadActiveReferrals;
+window.toggleActiveReferrals = toggleActiveReferrals;
 window.claimWelcomeBonus = claimWelcomeBonus;
 window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
@@ -2641,3 +2697,4 @@ console.log('🛡️ loadAdStats now respects latest ad count and prevents stale
 console.log('🔄 Daily ad count resets properly at UTC midnight');
 console.log('💰 Withdrawal fee display updated: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
 console.log('💳 Withdrawals are now FULL BALANCE ONLY — no partial withdrawals');
+console.log('📋 Active referrals: first 3 shown, click to show all');
