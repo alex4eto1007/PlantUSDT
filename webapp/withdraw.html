@@ -176,6 +176,12 @@
             display: block;
             margin-top: 4px;
         }
+        .full-balance-display .dust {
+            font-size: 12px;
+            color: #495670;
+            display: block;
+            margin-top: 4px;
+        }
         .full-balance-display .sub {
             font-size: 12px;
             color: #495670;
@@ -228,6 +234,7 @@
             <div class="full-balance-display">
                 <span class="label">💰 Amount to Withdraw</span>
                 <span class="amount" id="fullBalanceDisplay">$0.000</span>
+                <span class="dust" id="dustDisplay">(dust: $0.000 will remain)</span>
                 <span class="sub">Full balance only — no partial withdrawals</span>
             </div>
 
@@ -260,6 +267,8 @@
         let cooldownInterval = null;
         let lastWithdrawalAt = null;
         let fullBalance = 0;
+        let dustAmount = 0;
+        let withdrawAmount = 0;
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
@@ -323,13 +332,19 @@
                 .then(data => {
                     if (data.success) {
                         fullBalance = data.balance || 0;
-                        document.getElementById('fullBalanceDisplay').textContent = '$' + fullBalance.toFixed(3);
                         
-                        // Update fee summary
-                        updateFeeSummary(fullBalance);
+                        // Truncate (floor) to 2 decimal places
+                        withdrawAmount = Math.floor(fullBalance * 100) / 100;
+                        dustAmount = fullBalance - withdrawAmount;
+                        
+                        document.getElementById('fullBalanceDisplay').textContent = '$' + withdrawAmount.toFixed(2);
+                        document.getElementById('dustDisplay').textContent = '(dust: $' + dustAmount.toFixed(3) + ' will remain)';
+                        
+                        // Update fee summary with the withdrawable amount
+                        updateFeeSummary(withdrawAmount);
                         
                         // Set the hidden amount input
-                        document.getElementById('withdrawAmount').value = fullBalance;
+                        document.getElementById('withdrawAmount').value = withdrawAmount;
                     }
                 })
                 .catch(error => {
@@ -455,10 +470,10 @@
                         return;
                     }
                     
-                    var amountInput = document.getElementById('withdrawAmount');
                     var addressInput = document.getElementById('withdrawAddress');
-                    var amount = fullBalance;
                     var address = addressInput ? addressInput.value : '';
+                    
+                    var amount = withdrawAmount;
 
                     if (amount < 1) {
                         window.Telegram.WebApp.showPopup({
@@ -553,6 +568,6 @@
         window.goBack = goBack;
         window.loadFullBalance = loadFullBalance;
     </script>
-    <script src="/js/app.js?v=55"></script>
+    <script src="/js/app.js?v=56"></script>
 </body>
 </html>
