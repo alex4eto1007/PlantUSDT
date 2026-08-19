@@ -5,6 +5,7 @@ import time
 import logging
 import random
 import string
+import math
 from datetime import datetime, timedelta
 from decimal import Decimal
 from functools import wraps
@@ -300,11 +301,11 @@ def withdraw():
                 'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
             }), 400
         
+        # Round amount DOWN to 2 decimal places (floor)
+        amount = math.floor(amount * 100) / 100
+        
         if amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
-        
-        # Round amount to 2 decimal places
-        amount = round(amount, 2)
         
         # Calculate fee (percentage only - no flat fees)
         fee_percent = 0.0
