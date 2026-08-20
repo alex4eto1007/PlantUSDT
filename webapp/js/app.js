@@ -93,14 +93,24 @@ function updateAdResetTimer() {
     const timerEl = document.getElementById('adResetTimer');
     if (!timerEl) return;
     
-    if (timeLeft <= 0) {
-        timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
-        // Refresh data at midnight
-        if (window._lastTimerValue !== null && window._lastTimerValue > 0) {
-            console.log('🔄 UTC Midnight reached — refreshing ad data...');
+    // Check if we've crossed midnight since the last check
+    if (window._lastCheckedDate) {
+        const lastDate = new Date(window._lastCheckedDate);
+        const currentDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        if (lastDate.getTime() !== currentDate.getTime()) {
+            console.log('🔄 New day detected by timer — refreshing...');
             loadUserData();
             loadAdStats();
         }
+    }
+    window._lastCheckedDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    
+    if (timeLeft <= 0) {
+        timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
+        // Also refresh if we hit midnight exactly
+        console.log('🔄 UTC Midnight reached — refreshing ad data...');
+        loadUserData();
+        loadAdStats();
     } else {
         const hours = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
@@ -270,8 +280,7 @@ async function loadUserData(retries = 3) {
                 if (now.getUTCDate() !== lastReset.getUTCDate() || 
                     now.getUTCMonth() !== lastReset.getUTCMonth() || 
                     now.getUTCFullYear() !== lastReset.getUTCFullYear()) {
-                    // It's a new day — reset the display to 0
-                    console.log('🔄 New day detected via last_ad_reset — resetting ad display');
+                    console.log('🔄 New day detected — resetting ad display');
                     resetAdDisplay();
                 }
             }
@@ -1843,7 +1852,8 @@ async function watchRewardedAd() {
                 if (data.success) {
                     // ✅ IMMEDIATE UI UPDATE – use the returned data
                     const dailyCount = data.daily_ad_count || 0;
-                    console.log('📊 Ad count from API:', dailyCount);
+                    const limitReached = data.limit_reached || false;
+                    console.log('📊 Ad count from API:', dailyCount, 'Limit reached:', limitReached);
                     
                     // Update UI immediately using the dedicated function
                     updateAdUI(dailyCount);
@@ -1854,15 +1864,21 @@ async function watchRewardedAd() {
                         adEarningsEl.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
                     }
 
-                    // Show success popup
-                    safePopup({
-                        title: '🎁 Bonus Earned!',
-                        message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/50 today)`,
-                        buttons: [{type: 'ok'}]
-                    });
+                    if (limitReached) {
+                        safePopup({
+                            title: '📊 Daily Limit Reached',
+                            message: 'You have reached the daily ad limit (50/50).\n\nNo reward for this ad. Watch tomorrow for more rewards! 🟣',
+                            buttons: [{type: 'ok'}]
+                        });
+                    } else {
+                        safePopup({
+                            title: '🎁 Bonus Earned!',
+                            message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/50 today)`,
+                            buttons: [{type: 'ok'}]
+                        });
+                    }
 
                     // Refresh other data (balance, earnings, tasks, etc.) after a longer delay
-                    // This prevents the updated count from being overwritten by stale data
                     setTimeout(() => {
                         console.log('📊 Refreshing other data after ad...');
                         loadUserData();
@@ -2716,10 +2732,10 @@ console.log('⏳ Claim buttons now show Processing... state to prevent double-cl
 console.log('🧮 Math captcha simplified to a single prompt after watching ad');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
 console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
-console.log('🔄 UTC reset timer auto-refreshes at midnight');
-console.log('📈 Ad count updates IMMEDIATELY after watching ad with forced UI refresh');
+console.log('🔄 UTC timer detects new day and auto-refreshes');
+console.log('📈 Ad count updates IMMEDIATELY after watching ad');
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
 console.log('🔄 Daily ad count resets properly at UTC midnight');
-console.log('💰 Withdrawal fee display updated: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
-console.log('💳 Withdrawals are now FULL BALANCE ONLY — no partial withdrawals');
+console.log('💰 Withdrawal fee: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
+console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');

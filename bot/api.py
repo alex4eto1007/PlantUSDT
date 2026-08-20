@@ -906,12 +906,29 @@ def credit_ad_reward():
         # Reset daily ad count if new day (this clears cache)
         reset_daily_ad_count(user)
         
-        # ANTI-ABUSE: Max 50 ads per day
+        # ---- DAILY AD LIMIT: 50 ADS PER DAY ----
+        # After 50, user can still watch but gets $0 reward
         if user.daily_ad_count >= 50:
+            # Log the ad with 0 reward
+            ad_log = AdLog(
+                user_id=user.id,
+                watched_at=datetime.utcnow(),
+                reward=0,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', 'unknown'),
+                session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
+            )
+            session_db.add(ad_log)
+            session_db.commit()
             return jsonify({
-                'success': False,
-                'message': 'You have reached the daily ad limit (50 ads per day). Come back tomorrow!'
-            }), 400
+                'success': True,
+                'reward': 0,
+                'balance': float(user.balance),
+                'daily_ad_count': user.daily_ad_count,
+                'daily_ad_limit': 50,
+                'limit_reached': True,
+                'message': 'You have reached the daily limit. No reward for this ad. Watch tomorrow!'
+            }), 200
         
         # ANTI-ABUSE: Device fingerprint tracking
         fingerprint = data.get('device_fingerprint', 'unknown')
@@ -968,6 +985,7 @@ def credit_ad_reward():
             'balance': float(user.balance),
             'daily_ad_count': user.daily_ad_count,
             'daily_ad_limit': 50,
+            'limit_reached': False,
             'total_ad_earnings': float(user.total_ad_earnings)
         })
     except Exception as e:

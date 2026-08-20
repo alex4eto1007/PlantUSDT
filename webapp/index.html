@@ -229,7 +229,7 @@
                 <div id="adProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
             </div>
             
-            <!-- Ad Reset Timer - BIGGER & VISIBLE -->
+            <!-- Ad Reset Timer -->
             <div id="adResetTimer" style="text-align:center;font-size:16px;font-weight:600;color:#a29bfe;background:rgba(130,71,229,0.08);border:1px solid rgba(130,71,229,0.2);border-radius:8px;padding:6px 10px;margin-top:4px;margin-bottom:12px;font-family:'Courier New',monospace;">
                 🔄 Resets in: 00:00:00 UTC
             </div>
@@ -237,6 +237,15 @@
             <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad & Earn $0.001</button>
             
             <div id="adStatus" style="margin-top:10px;font-size:13px;color:#ffd93d;text-align:center;display:none;"></div>
+            
+            <!-- Note about daily counter reset -->
+            <div style="margin-top:12px;padding:10px;background:rgba(255,193,7,0.06);border-radius:8px;border:1px solid rgba(255,193,7,0.1);">
+                <p style="font-size:11px;color:#ffd93d;margin:0;text-align:center;line-height:1.5;">
+                    📊 Daily ad limit: 50 per day.<br>
+                    ⚠️ The counter may show yesterday's data when you first open the app.<br>
+                    🔄 It will automatically reset to today's count after you watch an ad.
+                </p>
+            </div>
             
             <button class="action-btn warning" onclick="disableInterstitialAds()" id="disableAdsBtn" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);color:#ff6b6b;font-weight:600;cursor:pointer;">
                 🔇 Disable Ads ($4)
@@ -332,6 +341,6 @@
         console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=58"></script>
+    <script src="js/app.js?v=59"></script>
 </body>
 </html>
