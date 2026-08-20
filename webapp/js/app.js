@@ -22,7 +22,7 @@ window._adCountTimestamp = null;
 window._lastTimerValue = null;
 
 // ============================================
-// MATH CAPTCHA FOR AD REWARDS - SIMPLIFIED
+// MATH CAPTCHA FOR AD REWARDS - FIXED FOR 0 ANSWERS
 // ============================================
 
 let mathCaptchaAnswer = null;
@@ -36,12 +36,19 @@ function generateMathCaptcha() {
     const op = operators[Math.floor(Math.random() * operators.length)];
     
     let answer;
-    switch(op) {
-        case '+': answer = num1 + num2; break;
-        case '-': answer = num1 - num2; break;
+    let question;
+    if (op === '+') {
+        answer = num1 + num2;
+        question = `${num1} + ${num2} = ?`;
+    } else {
+        // Ensure the result is always positive (no negative answers, supports 0)
+        const bigger = Math.max(num1, num2);
+        const smaller = Math.min(num1, num2);
+        answer = bigger - smaller;
+        question = `${bigger} - ${smaller} = ?`;
     }
     
-    mathCaptchaQuestion = `${num1} ${op} ${num2} = ?`;
+    mathCaptchaQuestion = question;
     mathCaptchaAnswer = answer;
     return { question: mathCaptchaQuestion, answer: mathCaptchaAnswer };
 }
@@ -69,6 +76,7 @@ function showMathCaptcha(callback) {
     }
     
     const parsed = parseInt(userAnswer);
+    // Fix: Properly handle 0 answers (0 is not NaN)
     if (!isNaN(parsed) && parsed === captcha.answer) {
         callback(true, captcha.answer, captcha.question);
     } else {
@@ -1694,7 +1702,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - WITH IMMEDIATE UI UPDATE & DEBUG LOGGING
+// AD REWARD FUNCTIONS - WITH FIXES FOR 0 ANSWERS
 // ============================================
 async function canWatchAd() {
     return true;
@@ -1762,24 +1770,23 @@ function updateAdUI(dailyCount) {
         console.warn('📊 adProgressBar element NOT FOUND!');
     }
 
-    // Update Watch Button state
+    // Update Watch Button state — ALWAYS ENABLED (fix for bug #2)
     const watchBtn = document.getElementById('watchAdBtn');
+    const statusEl = document.getElementById('adStatus');
+    
     if (watchBtn) {
+        watchBtn.disabled = false;
+        watchBtn.style.opacity = '1';
+        
         if (dailyCount >= dailyLimit) {
-            watchBtn.disabled = true;
-            watchBtn.style.opacity = '0.5';
-            watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
-            const statusEl = document.getElementById('adStatus');
+            watchBtn.textContent = '▶️ Watch Ad (No reward after 50/50)';
             if (statusEl) {
                 statusEl.style.display = 'block';
-                statusEl.textContent = '⏳ Come back tomorrow for more ads!';
-                statusEl.style.color = '#ff6b6b';
+                statusEl.textContent = '⚠️ Daily limit reached. You can still watch ads but no reward will be given.';
+                statusEl.style.color = '#ffd93d';
             }
         } else {
-            watchBtn.disabled = false;
-            watchBtn.style.opacity = '1';
             watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-            const statusEl = document.getElementById('adStatus');
             if (statusEl) {
                 statusEl.style.display = 'none';
             }
@@ -1822,6 +1829,7 @@ async function watchRewardedAd() {
             }
             
             const parsed = parseInt(userAnswer);
+            // Fix: Properly handle 0 answers (0 is not NaN)
             if (isNaN(parsed) || parsed !== captcha.answer) {
                 safePopup({
                     title: '❌ Wrong Answer',
@@ -2005,22 +2013,21 @@ async function loadAdStats() {
             }
         }
 
-        // Update Watch Button state
+        // Update Watch Button state — ALWAYS ENABLED
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
+            watchBtn.disabled = false;
+            watchBtn.style.opacity = '1';
+            
             if (finalCount >= dailyLimit) {
-                watchBtn.disabled = true;
-                watchBtn.style.opacity = '0.5';
-                watchBtn.textContent = '⛔ Daily Limit Reached (50/50)';
+                watchBtn.textContent = '▶️ Watch Ad (No reward after 50/50)';
                 if (statusEl) {
                     statusEl.style.display = 'block';
-                    statusEl.textContent = '⏳ Come back tomorrow for more ads!';
-                    statusEl.style.color = '#ff6b6b';
+                    statusEl.textContent = '⚠️ Daily limit reached. You can still watch ads but no reward will be given.';
+                    statusEl.style.color = '#ffd93d';
                 }
             } else {
-                watchBtn.disabled = false;
-                watchBtn.style.opacity = '1';
                 watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
                 if (statusEl) {
                     statusEl.style.display = 'none';
@@ -2729,7 +2736,7 @@ console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
 console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
 console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
-console.log('🧮 Math captcha simplified to a single prompt after watching ad');
+console.log('🧮 Math captcha fixed — now accepts 0 as a valid answer');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
 console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
 console.log('🔄 UTC timer detects new day and auto-refreshes');
@@ -2739,3 +2746,4 @@ console.log('🔄 Daily ad count resets properly at UTC midnight');
 console.log('💰 Withdrawal fee: simplified structure (15% under $50, 20% under $100, 25% over $100)');
 console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
+console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 50/50 (no reward)');
