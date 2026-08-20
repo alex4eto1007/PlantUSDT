@@ -199,15 +199,13 @@
             <h3>Withdrawal Instructions</h3>
             <p><strong>Full Balance Only:</strong> You can only withdraw your entire balance.<br>
             <strong>Max 1 withdrawal per 24 hours</strong><br>
-            <strong>Fee:</strong> Percentage only — no flat fees<br>
+            <strong>Fee:</strong> Simplified percentage structure<br>
             <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
             <strong>Token:</strong> USDT on Polygon<br>
             <strong>Gas Fees:</strong> Covered by us!</p>
             <div class="fee-breakdown">
                 <strong>Fee Structure:</strong><br>
-                • $1 - $9.99: 5%<br>
-                • $10 - $29.99: 10%<br>
-                • $30 - $49.99: 15%<br>
+                • $1 - $49.99: 15%<br>
                 • $50 - $99.99: 20%<br>
                 • $100+: 25%
             </div>
@@ -357,11 +355,7 @@
             document.getElementById('feeSummary').style.display = 'block';
             
             var feePercent = 0;
-            if (amount < 10) {
-                feePercent = 0.05;
-            } else if (amount < 30) {
-                feePercent = 0.10;
-            } else if (amount < 50) {
+            if (amount < 50) {
                 feePercent = 0.15;
             } else if (amount < 100) {
                 feePercent = 0.20;
@@ -564,6 +558,6 @@
         window.goBack = goBack;
         window.loadFullBalance = loadFullBalance;
     </script>
-    <script src="/js/app.js?v=59"></script>
+    <script src="/js/app.js?v=60"></script>
 </body>
 </html>

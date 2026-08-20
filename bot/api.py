@@ -316,14 +316,10 @@ def withdraw():
         # Use withdraw_amount for the rest of the withdrawal process
         amount = withdraw_amount
         
-        # Calculate fee (percentage only - no flat fees)
+        # Calculate fee (simplified: 15% under $50, 20% under $100, 25% over $100)
         fee_percent = 0.0
 
-        if amount < 10:
-            fee_percent = 0.05
-        elif amount < 30:
-            fee_percent = 0.10
-        elif amount < 50:
+        if amount < 50:
             fee_percent = 0.15
         elif amount < 100:
             fee_percent = 0.20

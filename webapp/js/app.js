@@ -2736,6 +2736,6 @@ console.log('🔄 UTC timer detects new day and auto-refreshes');
 console.log('📈 Ad count updates IMMEDIATELY after watching ad');
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
 console.log('🔄 Daily ad count resets properly at UTC midnight');
-console.log('💰 Withdrawal fee: percentage only — no flat fees (5%, 10%, 15%, 20%, 25%)');
+console.log('💰 Withdrawal fee: simplified structure (15% under $50, 20% under $100, 25% over $100)');
 console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
