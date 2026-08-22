@@ -39,16 +39,18 @@ ALLOWED_ORIGINS = [
 
 @app.after_request
 def cors_headers(response):
-    origin = request.headers.get('Origin')
-    allowed_origins = [
-        'https://plant-usdt.vercel.app',
-        'https://web.telegram.org'
-    ]
-    if origin and any(origin.startswith(o.rstrip('*')) for o in allowed_origins):
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    # Only set if not already set by Nginx
+    if 'Access-Control-Allow-Origin' not in response.headers:
+        origin = request.headers.get('Origin')
+        allowed_origins = [
+            'https://plant-usdt.vercel.app',
+            'https://web.telegram.org'
+        ]
+        if origin and any(origin.startswith(o.rstrip('*')) for o in allowed_origins):
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
 # ============================================

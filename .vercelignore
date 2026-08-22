@@ -1,0 +1,15 @@
+# Exclude all Python files and backend folders
+bot/
+database/
+services/
+config/
+*.py
+*.pyc
+__pycache__/
+venv/
+*.env
+.env.local
+run.py
+webapp_server.py
+vercel_app.py
+pyproject.toml
