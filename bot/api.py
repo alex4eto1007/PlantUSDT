@@ -28,6 +28,30 @@ app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
 # ============================================
+# CORS CONFIGURATION - RESTRICTED ORIGINS
+# ============================================
+ALLOWED_ORIGINS = [
+    'https://plant-usdt.vercel.app',
+    'https://web.telegram.org',
+    'https://web.telegram.org',
+    'https://*.telegram.org'
+]
+
+@app.after_request
+def cors_headers(response):
+    origin = request.headers.get('Origin')
+    allowed_origins = [
+        'https://plant-usdt.vercel.app',
+        'https://web.telegram.org'
+    ]
+    if origin and any(origin.startswith(o.rstrip('*')) for o in allowed_origins):
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
+# ============================================
 # SESSION CONFIGURATION
 # ============================================
 app.config['SECRET_KEY'] = os.urandom(24)

@@ -8,10 +8,16 @@
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <title>🌱 PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css?v=47">
-    <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js" crossorigin="anonymous"></script>
+    <!-- External scripts with SRI and crossorigin -->
+    <script src="https://telegram.org/js/telegram-web-app.js" 
+            crossorigin="anonymous">
+    </script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js" 
+            crossorigin="anonymous">
+    </script>
 </head>
 <body>
     <div class="container" id="appContent" style="display: none;">
@@ -341,6 +347,6 @@
         console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=61"></script>
+    <script src="js/app.js?v=62"></script>
 </body>
 </html>
