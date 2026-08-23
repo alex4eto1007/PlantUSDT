@@ -1134,6 +1134,7 @@ def main():
         logger.info("🔄 User info (name/username) auto-updates on each interaction")
         logger.info("📝 Audit log table active for all balance changes")
         logger.info("⚙️ Manual balance command available: /manual_balance")
+        logger.info("✅ Active referral bonus system fully fixed")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

@@ -23,6 +23,7 @@ from flask_session import Session
 from database.db_manager import DatabaseManager
 from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, PendingDepositCheck, AuditLog, AdLog
 from sqlalchemy import func
+from services.referral import check_and_award_active_referrals
 
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
@@ -999,6 +1000,17 @@ def credit_ad_reward():
         )
         session_db.add(audit)
         
+        # ============================================
+        # ✅ CHECK FOR ACTIVE REFERRAL BONUS
+        # When user reaches 30 ads, trigger active referral check
+        # ============================================
+        if user.referred_by and user.total_ads_watched in [30, 31]:
+            try:
+                check_and_award_active_referrals(user.id, session_db)
+                logger.info(f"✅ Active referral check triggered for user {user.telegram_id} (reached {user.total_ads_watched} ads)")
+            except Exception as e:
+                logger.error(f"Error checking active referrals for user {user.telegram_id}: {e}")
+        
         session_db.commit()
         clear_user_cache(telegram_id)
         return jsonify({
@@ -1130,7 +1142,7 @@ def total_withdrawn(telegram_id):
     finally:
         session_db.close()
 
-@app.route('/api/referral_tiers', methods=['GET'])
+@app.route('/api/referral_tiers', methods(['GET'])
 @rate_limit
 def get_referral_tiers():
     from services.referral import REFERRAL_TIERS
@@ -1152,11 +1164,14 @@ def get_referral_stats_full(telegram_id):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
-        from services.referral import get_referral_stats
+        from services.referral import get_referral_stats, get_active_referral_list
         stats = get_referral_stats(user.id, session_db)
+        active_list = get_active_referral_list(user.id, session_db)
+        
         return jsonify({
             'success': True,
-            'stats': stats
+            'stats': stats,
+            'active_list': active_list
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

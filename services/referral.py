@@ -21,6 +21,7 @@ TIER_ORDER = ["free", "bronze", "silver", "gold", "diamond"]
 
 db = DatabaseManager()
 
+
 def is_referral_active(user_id: int, session: Session) -> bool:
     """Check if a user qualifies as an active referral (any investment OR 30 ads)"""
     investments = session.query(Investment).filter(
@@ -36,58 +37,102 @@ def is_referral_active(user_id: int, session: Session) -> bool:
     
     return False
 
+
 def check_and_award_active_referrals(user_id: int, session: Session):
     """Check if any active referrals should be awarded"""
-    pending = session.query(ActiveReferral).filter(
-        ActiveReferral.referred_user_id == user_id,
-        ActiveReferral.status == "pending"
-    ).all()
-    
-    if not pending:
-        return
-    
-    if not is_referral_active(user_id, session):
-        return
-    
-    for referral in pending:
-        award_active_referral_bonus(referral.referrer_id, referral.referred_user_id, session)
+    try:
+        # Get the user to find their referrer
+        user = session.query(User).filter_by(id=user_id).first()
+        if not user or not user.referred_by:
+            return
+        
+        # Check if this user qualifies as active
+        if not is_referral_active(user_id, session):
+            return
+        
+        # Check if already awarded
+        existing = session.query(ActiveReferral).filter(
+            ActiveReferral.referrer_id == user.referred_by,
+            ActiveReferral.referred_user_id == user_id,
+            ActiveReferral.status == "awarded"
+        ).first()
+        
+        if existing:
+            logger.info(f"Active referral already awarded for user {user_id} to referrer {user.referred_by}")
+            return
+        
+        # Award the bonus
+        success, msg = award_active_referral_bonus(user.referred_by, user_id, session)
+        if success:
+            logger.info(f"✅ Active referral bonus awarded: user {user_id} -> referrer {user.referred_by}")
+        else:
+            logger.warning(f"⚠️ Failed to award active referral bonus: {msg}")
+            
+    except Exception as e:
+        logger.error(f"Error checking active referrals: {e}")
+        session.rollback()
+
 
 def award_active_referral_bonus(referrer_id: int, referred_user_id: int, session: Session):
     """Award 0.03 USDT bonus for active referral"""
-    existing = session.query(ActiveReferral).filter(
-        ActiveReferral.referrer_id == referrer_id,
-        ActiveReferral.referred_user_id == referred_user_id,
-        ActiveReferral.status == "awarded"
-    ).first()
-    
-    if existing:
-        return False, "Bonus already awarded"
-    
-    referrer = session.query(User).filter_by(id=referrer_id).first()
-    referred = session.query(User).filter_by(id=referred_user_id).first()
-    
-    if not referrer or not referred:
-        return False, "User not found"
-    
-    bonus = Decimal('0.03')
-    referrer.balance = (referrer.balance or Decimal('0')) + bonus
-    referrer.active_referral_bonus_earned = (referrer.active_referral_bonus_earned or Decimal('0')) + bonus
-    referrer.total_active_referrals = (referrer.total_active_referrals or 0) + 1
-    
-    active_ref = session.query(ActiveReferral).filter(
-        ActiveReferral.referrer_id == referrer_id,
-        ActiveReferral.referred_user_id == referred_user_id
-    ).first()
-    
-    if active_ref:
-        active_ref.status = "awarded"
-        active_ref.awarded_at = datetime.utcnow()
-    
-    session.commit()
-    
-    logger.info(f"✅ Active referral bonus awarded: {referrer.telegram_id} +0.03 USDT from {referred.telegram_id}")
-    
-    return True, f"Awarded 0.03 USDT active referral bonus!"
+    try:
+        # Check if already awarded
+        existing = session.query(ActiveReferral).filter(
+            ActiveReferral.referrer_id == referrer_id,
+            ActiveReferral.referred_user_id == referred_user_id,
+            ActiveReferral.status == "awarded"
+        ).first()
+        
+        if existing:
+            return False, "Bonus already awarded"
+        
+        referrer = session.query(User).filter_by(id=referrer_id).first()
+        referred = session.query(User).filter_by(id=referred_user_id).first()
+        
+        if not referrer or not referred:
+            return False, "User not found"
+        
+        bonus = Decimal('0.03')
+        
+        # Update referrer's balance and all earnings fields
+        referrer.balance = (referrer.balance or Decimal('0')) + bonus
+        referrer.active_referral_bonus_earned = (referrer.active_referral_bonus_earned or Decimal('0')) + bonus
+        referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + bonus
+        referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + bonus
+        referrer.total_active_referrals = (referrer.total_active_referrals or 0) + 1
+        
+        # Check if there's an existing pending record
+        active_ref = session.query(ActiveReferral).filter(
+            ActiveReferral.referrer_id == referrer_id,
+            ActiveReferral.referred_user_id == referred_user_id
+        ).first()
+        
+        if active_ref:
+            active_ref.status = "awarded"
+            active_ref.awarded_at = datetime.utcnow()
+        else:
+            # Create new record
+            new_ref = ActiveReferral(
+                referrer_id=referrer_id,
+                referred_user_id=referred_user_id,
+                bonus_amount=bonus,
+                status='awarded',
+                awarded_at=datetime.utcnow()
+            )
+            session.add(new_ref)
+        
+        session.commit()
+        
+        logger.info(f"✅ Active referral bonus awarded: referrer {referrer.telegram_id} +0.03 USDT from {referred.telegram_id}")
+        logger.info(f"📊 Referrer now has {referrer.total_active_referrals} active referrals")
+        
+        return True, f"Awarded 0.03 USDT active referral bonus!"
+        
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error awarding active referral bonus: {e}")
+        return False, str(e)
+
 
 def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tuple:
     """Upgrade user's referral tier"""
@@ -135,6 +180,7 @@ def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tupl
     
     return True, f"✅ Upgraded to {REFERRAL_TIERS[new_tier]['emoji']} {new_tier.title()} tier! Bonus: {REFERRAL_TIERS[new_tier]['bonus_percent']}%"
 
+
 def get_referral_stats(user_id: int, session: Session) -> dict:
     """Get referral statistics for a user"""
     user = session.query(User).filter_by(id=user_id).first()
@@ -175,6 +221,7 @@ def get_referral_stats(user_id: int, session: Session) -> dict:
         "next_tier_bonus": REFERRAL_TIERS[next_tier]["bonus_percent"] if next_tier else None
     }
 
+
 def get_referral_bonus_percent(user_id: int, session: Session) -> int:
     """Get the referral bonus percentage for a user based on their tier"""
     user = session.query(User).filter_by(id=user_id).first()
@@ -184,14 +231,12 @@ def get_referral_bonus_percent(user_id: int, session: Session) -> int:
     tier = user.referral_tier or "free"
     return REFERRAL_TIERS[tier]["bonus_percent"]
 
+
 def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> float:
     """Calculate referral bonus based on user's tier"""
     bonus_percent = get_referral_bonus_percent(user_id, session)
     return amount * (bonus_percent / 100)
 
-# ============================================
-# WELCOME BONUS - NO REFERRAL REQUIRED (Task 45)
-# ============================================
 
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
     """Award 0.1 USDT welcome bonus using task system (no referral required)"""
@@ -205,11 +250,6 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
         logger.info(f"⚠️ User {user_id} already claimed welcome bonus")
         return False, "Welcome bonus already claimed"
     
-    # No requirements needed - everyone is eligible
-    # if not is_referral_active(user_id, session):
-    #     return False, "You must be active (invest at least once OR watch 30 ads) to claim the welcome bonus."
-    
-    # Check if task 45 is already claimed
     from database.models import UserTaskProgress
     existing = session.query(UserTaskProgress).filter_by(
         user_id=user_id,
@@ -233,7 +273,6 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
         logger.info(f"✅ Welcome bonus claimed by user {user_id} via task 45")
         return True, "Welcome bonus of 0.1 USDT awarded!"
     else:
-        # If the error is that it's already claimed, mark it as received anyway
         if "already claimed" in msg.lower():
             user.has_received_welcome_bonus = True
             user.welcome_bonus_claimed_at = datetime.utcnow()
@@ -241,6 +280,7 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
             logger.info(f"ℹ️ Welcome bonus was already claimed for user {user_id}, marking as received (from error)")
             return True, "Welcome bonus already claimed!"
         return False, msg
+
 
 def get_active_referral_count(user_id: int, session: Session) -> int:
     """Get count of active referrals (users who qualify for 0.03 USDT bonus)"""
@@ -251,6 +291,7 @@ def get_active_referral_count(user_id: int, session: Session) -> int:
             active_count += 1
     return active_count
 
+
 def get_active_referral_list(user_id: int, session: Session) -> list:
     """Get list of active referrals with details"""
     referrals = session.query(User).filter_by(referred_by=user_id).all()
@@ -260,14 +301,21 @@ def get_active_referral_list(user_id: int, session: Session) -> list:
             has_invested = session.query(Investment).filter(
                 Investment.user_id == ref.id
             ).count() > 0
+            awarded = session.query(ActiveReferral).filter(
+                ActiveReferral.referrer_id == user_id,
+                ActiveReferral.referred_user_id == ref.id,
+                ActiveReferral.status == "awarded"
+            ).first() is not None
             active_list.append({
                 'id': ref.id,
                 'username': ref.username or ref.first_name or 'User',
                 'ads_watched': ref.total_ads_watched or 0,
                 'has_invested': has_invested,
-                'is_active': True
+                'is_active': True,
+                'awarded': awarded
             })
     return active_list
+
 
 def get_user_tasks(user_id: int, session: Session) -> dict:
     """Get all tasks for a user with completion status"""

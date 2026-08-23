@@ -50,7 +50,7 @@ class InvestmentService:
             referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + referral_bonus
 
             session.commit()
-            logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} ({bonus_percent}%) from {user.telegram_id}'s deposit of ${investment.amount} on Polygon")
+            logger.info(f"Referrer {referrer.telegram_id} earned ${referral_bonus:.2f} ({bonus_percent}%) from {user.telegram_id}'s deposit of ${investment.amount:.2f} on Polygon")
 
             try:
                 await self.notification_service.send_referral_notification(
@@ -199,8 +199,14 @@ class InvestmentService:
                     session.commit()
                     logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f}")
 
-                    # Check for active referral bonuses
-                    await check_and_award_active_referrals(user.id, session)
+                    # ============================================
+                    # ✅ CHECK FOR ACTIVE REFERRAL BONUS
+                    # ============================================
+                    try:
+                        check_and_award_active_referrals(user.id, session)
+                        logger.info(f"✅ Active referral check completed for user {user.telegram_id}")
+                    except Exception as e:
+                        logger.error(f"Error checking active referrals for user {user.telegram_id}: {e}")
 
                     try:
                         await self.notification_service.send_unlock_notification(
