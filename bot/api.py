@@ -1142,7 +1142,7 @@ def total_withdrawn(telegram_id):
     finally:
         session_db.close()
 
-@app.route('/api/referral_tiers', methods(['GET'])
+@app.route('/api/referral_tiers', methods=['GET'])
 @rate_limit
 def get_referral_tiers():
     from services.referral import REFERRAL_TIERS

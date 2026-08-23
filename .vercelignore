@@ -13,3 +13,8 @@ run.py
 webapp_server.py
 vercel_app.py
 pyproject.toml
+*.py
+bot/
+services/
+database/
+config/
