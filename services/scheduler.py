@@ -2,6 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from services.investment import InvestmentService
 from services.deposit_scanner import DepositScanner
+from services.referral import check_missed_active_referrals
 from datetime import datetime
 import logging
 import asyncio
@@ -43,9 +44,18 @@ class SchedulerService:
             replace_existing=True
         )
 
+        # ✅ NEW: Check for missed active referrals every hour
+        self.scheduler.add_job(
+            self.check_missed_active_referrals,
+            trigger=IntervalTrigger(hours=1),
+            id='check_missed_active_referrals',
+            replace_existing=True
+        )
+
         self.scheduler.start()
         logger.info("Scheduler started - checking for unlocked investments every 5 minutes")
         logger.info("🔍 Polygon deposit scanner running every 5 minutes")
+        logger.info("🔄 Active referral catch-up check scheduled every hour")
 
     async def process_locked_investments(self):
         try:
@@ -78,6 +88,14 @@ class SchedulerService:
             pass
         except Exception as e:
             logger.error(f"Error in timer correction: {e}")
+
+    # ✅ NEW: Check for missed active referrals
+    def check_missed_active_referrals(self):
+        try:
+            logger.info("🔄 Checking for missed active referrals...")
+            check_missed_active_referrals()
+        except Exception as e:
+            logger.error(f"Error checking missed active referrals: {e}")
 
     def stop(self):
         self.scheduler.shutdown()

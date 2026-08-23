@@ -364,3 +364,47 @@ def get_user_tasks(user_id: int, session: Session) -> dict:
     }
     
     return tasks
+
+
+# ============================================
+# ✅ CATCH-UP FUNCTION FOR MISSED ACTIVE REFERRALS
+# ============================================
+
+def check_missed_active_referrals():
+    """Scan all users and award active referral bonuses that were missed"""
+    try:
+        session = db.get_session()
+        
+        # Find all users who are active (invested OR 30+ ads)
+        # and have a referrer, but haven't been awarded yet
+        active_users = session.query(User).filter(
+            User.referred_by.isnot(None),
+            (User.total_invested > 0) | (User.total_ads_watched >= 30)
+        ).all()
+        
+        awarded_count = 0
+        for user in active_users:
+            # Check if already awarded
+            existing = session.query(ActiveReferral).filter(
+                ActiveReferral.referrer_id == user.referred_by,
+                ActiveReferral.referred_user_id == user.id,
+                ActiveReferral.status == "awarded"
+            ).first()
+            
+            if not existing:
+                # Award the bonus
+                success, msg = award_active_referral_bonus(user.referred_by, user.id, session)
+                if success:
+                    awarded_count += 1
+                    logger.info(f"✅ Catch-up: Awarded active referral bonus for user {user.telegram_id} -> referrer {user.referred_by}")
+        
+        if awarded_count > 0:
+            logger.info(f"✅ Catch-up complete: Awarded {awarded_count} missed active referral bonuses")
+        else:
+            logger.info("✅ Catch-up: No missed active referrals found")
+            
+    except Exception as e:
+        logger.error(f"Error in check_missed_active_referrals: {e}")
+        session.rollback()
+    finally:
+        session.close()
