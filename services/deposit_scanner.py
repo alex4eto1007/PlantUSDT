@@ -131,9 +131,7 @@ class DepositScanner:
                     clear_user_cache(fresh_user.telegram_id)
                     await self._send_notifications(fresh_user, amount, tx_hash, bot)
                     
-                    # ============================================
-                    # ✅ CHECK FOR ACTIVE REFERRAL BONUS
-                    # ============================================
+                    # Check for active referral bonus (investment triggers this)
                     if fresh_user.referred_by:
                         try:
                             check_and_award_active_referrals(fresh_user.id, session)
@@ -164,9 +162,7 @@ class DepositScanner:
             clear_user_cache(fresh_user.telegram_id)
             await self._send_notifications(fresh_user, amount, tx_hash, bot)
             
-            # ============================================
-            # ✅ CHECK FOR ACTIVE REFERRAL BONUS
-            # ============================================
+            # Check for active referral bonus (investment triggers this)
             if fresh_user.referred_by:
                 try:
                     check_and_award_active_referrals(fresh_user.id, session)
@@ -360,9 +356,7 @@ class DepositScanner:
                                         clear_user_cache(user.telegram_id)
                                         await self._send_notifications(user, amount, tx.get('hash'), bot)
                                         
-                                        # ============================================
-                                        # ✅ CHECK FOR ACTIVE REFERRAL BONUS
-                                        # ============================================
+                                        # Check for active referral bonus
                                         if user.referred_by:
                                             try:
                                                 check_and_award_active_referrals(user.id, session)

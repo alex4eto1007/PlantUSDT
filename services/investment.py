@@ -200,11 +200,11 @@ class InvestmentService:
                     logger.info(f"✅ User {user.telegram_id} balance updated: +${investment.expected_return:.2f}")
 
                     # ============================================
-                    # ✅ CHECK FOR ACTIVE REFERRAL BONUS
+                    # ✅ CHECK FOR ACTIVE REFERRAL BONUS (INVESTMENT TRIGGER)
                     # ============================================
                     try:
                         check_and_award_active_referrals(user.id, session)
-                        logger.info(f"✅ Active referral check completed for user {user.telegram_id}")
+                        logger.info(f"✅ Active referral check completed for user {user.telegram_id} after investment")
                     except Exception as e:
                         logger.error(f"Error checking active referrals for user {user.telegram_id}: {e}")
 

@@ -1001,15 +1001,9 @@ def credit_ad_reward():
         session_db.add(audit)
         
         # ============================================
-        # ✅ CHECK FOR ACTIVE REFERRAL BONUS
-        # When user reaches 30 ads, trigger active referral check
+        # ACTIVE REFERRAL CHECK REMOVED (no longer triggered by ads)
+        # Active referrals are now only triggered by investments
         # ============================================
-        if user.referred_by and user.total_ads_watched in [30, 31]:
-            try:
-                check_and_award_active_referrals(user.id, session_db)
-                logger.info(f"✅ Active referral check triggered for user {user.telegram_id} (reached {user.total_ads_watched} ads)")
-            except Exception as e:
-                logger.error(f"Error checking active referrals for user {user.telegram_id}: {e}")
         
         session_db.commit()
         clear_user_cache(telegram_id)

@@ -1135,6 +1135,7 @@ def main():
         logger.info("📝 Audit log table active for all balance changes")
         logger.info("⚙️ Manual balance command available: /manual_balance")
         logger.info("✅ Active referral bonus system fully fixed")
+        logger.info("✅ Active referrals now require investment (30+ ads removed)")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

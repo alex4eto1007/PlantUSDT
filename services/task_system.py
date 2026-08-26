@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 db = DatabaseManager()
 
 # ============================================
-# TASK DEFINITIONS - 45 HARDCODED TASKS
+# TASK DEFINITIONS - 37 TASKS (Referral tasks 17-26 removed)
 # ============================================
 
 TASKS = [
@@ -94,118 +94,19 @@ TASKS = [
     # Tasks 8-16 have been completely removed
 
     # ============================================
-    # SECTION 3A: NORMAL REFERRALS (10 tasks)
+    # SECTION 3: REFERRALS (0 tasks) - COMPLETELY REMOVED
     # ============================================
-    {
-        "id": 17,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 1 Friend",
-        "description": "Refer your first friend",
-        "reward": 0.02,
-        "condition_type": "total_referrals",
-        "condition_value": 1
-    },
-    {
-        "id": 18,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 3 Friends",
-        "description": "Refer 3 friends",
-        "reward": 0.01,
-        "condition_type": "total_referrals",
-        "condition_value": 3
-    },
-    {
-        "id": 19,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 5 Friends",
-        "description": "Refer 5 friends",
-        "reward": 0.015,
-        "condition_type": "total_referrals",
-        "condition_value": 5
-    },
-    {
-        "id": 20,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 10 Friends",
-        "description": "Refer 10 friends",
-        "reward": 0.02,
-        "condition_type": "total_referrals",
-        "condition_value": 10
-    },
-    {
-        "id": 21,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 25 Friends",
-        "description": "Refer 25 friends",
-        "reward": 0.025,
-        "condition_type": "total_referrals",
-        "condition_value": 25
-    },
-    {
-        "id": 22,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 50 Friends",
-        "description": "Refer 50 friends",
-        "reward": 0.03,
-        "condition_type": "total_referrals",
-        "condition_value": 50
-    },
-    {
-        "id": 23,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 100 Friends",
-        "description": "Refer 100 friends",
-        "reward": 0.05,
-        "condition_type": "total_referrals",
-        "condition_value": 100
-    },
-    {
-        "id": 24,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 250 Friends",
-        "description": "Refer 250 friends",
-        "reward": 0.10,
-        "condition_type": "total_referrals",
-        "condition_value": 250
-    },
-    {
-        "id": 25,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 500 Friends",
-        "description": "Refer 500 friends",
-        "reward": 0.20,
-        "condition_type": "total_referrals",
-        "condition_value": 500
-    },
-    {
-        "id": 26,
-        "category": "referrals",
-        "icon": "👤",
-        "title": "Refer 1000 Friends",
-        "description": "Refer 1,000 friends",
-        "reward": 1.00,
-        "condition_type": "total_referrals",
-        "condition_value": 1000
-    },
+    # Tasks 17-26 have been completely removed (normal referral tasks)
 
     # ============================================
-    # SECTION 3B: ACTIVE REFERRALS (10 tasks)
+    # SECTION 4: ACTIVE REFERRALS (10 tasks)
     # ============================================
     {
         "id": 27,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "1 Active Referral",
-        "description": "Have 1 friend become active",
+        "description": "Have 1 friend invest (active referral)",
         "reward": 0.05,
         "condition_type": "total_active_referrals",
         "condition_value": 1
@@ -213,9 +114,9 @@ TASKS = [
     {
         "id": 28,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "3 Active Referrals",
-        "description": "Have 3 active referrals",
+        "description": "Have 3 active referrals (investors)",
         "reward": 0.03,
         "condition_type": "total_active_referrals",
         "condition_value": 3
@@ -223,9 +124,9 @@ TASKS = [
     {
         "id": 29,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "5 Active Referrals",
-        "description": "Have 5 active referrals",
+        "description": "Have 5 active referrals (investors)",
         "reward": 0.10,
         "condition_type": "total_active_referrals",
         "condition_value": 5
@@ -233,9 +134,9 @@ TASKS = [
     {
         "id": 30,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "10 Active Referrals",
-        "description": "Have 10 active referrals",
+        "description": "Have 10 active referrals (investors)",
         "reward": 0.14,
         "condition_type": "total_active_referrals",
         "condition_value": 10
@@ -243,9 +144,9 @@ TASKS = [
     {
         "id": 31,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "25 Active Referrals",
-        "description": "Have 25 active referrals",
+        "description": "Have 25 active referrals (investors)",
         "reward": 0.20,
         "condition_type": "total_active_referrals",
         "condition_value": 25
@@ -253,9 +154,9 @@ TASKS = [
     {
         "id": 32,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "50 Active Referrals",
-        "description": "Have 50 active referrals",
+        "description": "Have 50 active referrals (investors)",
         "reward": 0.30,
         "condition_type": "total_active_referrals",
         "condition_value": 50
@@ -263,9 +164,9 @@ TASKS = [
     {
         "id": 33,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "100 Active Referrals",
-        "description": "Have 100 active referrals",
+        "description": "Have 100 active referrals (investors)",
         "reward": 0.50,
         "condition_type": "total_active_referrals",
         "condition_value": 100
@@ -273,9 +174,9 @@ TASKS = [
     {
         "id": 34,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "250 Active Referrals",
-        "description": "Have 250 active referrals",
+        "description": "Have 250 active referrals (investors)",
         "reward": 1.00,
         "condition_type": "total_active_referrals",
         "condition_value": 250
@@ -283,9 +184,9 @@ TASKS = [
     {
         "id": 35,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "500 Active Referrals",
-        "description": "Have 500 active referrals",
+        "description": "Have 500 active referrals (investors)",
         "reward": 2.00,
         "condition_type": "total_active_referrals",
         "condition_value": 500
@@ -293,16 +194,16 @@ TASKS = [
     {
         "id": 36,
         "category": "active_referrals",
-        "icon": "👤",
+        "icon": "🔥",
         "title": "1000 Active Referrals",
-        "description": "Have 1,000 active referrals",
+        "description": "Have 1,000 active referrals (investors)",
         "reward": 10.00,
         "condition_type": "total_active_referrals",
         "condition_value": 1000
     },
 
     # ============================================
-    # SECTION 4: MILESTONES (8 tasks)
+    # SECTION 5: MILESTONES (8 tasks)
     # ============================================
     {
         "id": 37,
@@ -386,7 +287,7 @@ TASKS = [
     },
 
     # ============================================
-    # SECTION 5: WELCOME BONUS (1 task) - HIDDEN
+    # SECTION 6: WELCOME BONUS (1 task) - HIDDEN
     # ============================================
     {
         "id": 45,
@@ -462,7 +363,7 @@ def get_user_task_progress(user_id: int, session: Session, include_hidden=False)
         return []
 
 def get_user_stats(user: User, session: Session) -> dict:
-    from services.referral import is_referral_active, get_active_referral_count
+    from services.referral import get_active_referral_count
     
     total_invested = user.total_invested or 0
     total_ads_watched = user.total_ads_watched or 0
@@ -482,7 +383,7 @@ def get_user_stats(user: User, session: Session) -> dict:
     }
 
 def check_task_conditions(user: User, session: Session) -> list:
-    from services.referral import is_referral_active, get_active_referral_count
+    from services.referral import get_active_referral_count
     
     completed_tasks = []
     
@@ -514,6 +415,7 @@ def check_task_conditions(user: User, session: Session) -> list:
             # Ads tasks have been removed, but keep for backward compatibility
             completed = total_ads_watched >= condition_value
         elif condition_type == "total_referrals":
+            # Referral tasks have been removed, but keep for backward compatibility
             completed = total_referrals >= condition_value
         elif condition_type == "total_active_referrals":
             completed = total_active_referrals >= condition_value
@@ -525,9 +427,7 @@ def check_task_conditions(user: User, session: Session) -> list:
                     Investment.user_id == user.id
                 ).count() > 0
                 
-                has_enough_ads = (user.total_ads_watched or 0) >= 30
-                
-                if has_any_investment or has_enough_ads:
+                if has_any_investment:
                     completed = True
         
         if completed:

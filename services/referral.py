@@ -23,16 +23,12 @@ db = DatabaseManager()
 
 
 def is_referral_active(user_id: int, session: Session) -> bool:
-    """Check if a user qualifies as an active referral (any investment OR 30 ads)"""
+    """Check if a user qualifies as an active referral (must have invested at least once)"""
     investments = session.query(Investment).filter(
         Investment.user_id == user_id
     ).count()
     
     if investments > 0:
-        return True
-    
-    user = session.query(User).filter_by(id=user_id).first()
-    if user and (user.total_ads_watched or 0) >= 30:
         return True
     
     return False
@@ -283,7 +279,7 @@ def award_welcome_bonus(user_id: int, session: Session) -> tuple:
 
 
 def get_active_referral_count(user_id: int, session: Session) -> int:
-    """Get count of active referrals (users who qualify for 0.03 USDT bonus)"""
+    """Get count of active referrals (users who have invested at least once)"""
     referrals = session.query(User).filter_by(referred_by=user_id).all()
     active_count = 0
     for ref in referrals:
@@ -309,7 +305,7 @@ def get_active_referral_list(user_id: int, session: Session) -> list:
             active_list.append({
                 'id': ref.id,
                 'username': ref.username or ref.first_name or 'User',
-                'ads_watched': ref.total_ads_watched or 0,
+                'total_invested': float(ref.total_invested or 0),
                 'has_invested': has_invested,
                 'is_active': True,
                 'awarded': awarded
@@ -336,13 +332,6 @@ def get_user_tasks(user_id: int, session: Session) -> dict:
             'completed': user.total_deposited >= 5,
             'reward': 0
         },
-        'watch_ads': {
-            'title': '📺 Watch Ads',
-            'description': f'Watch 30 ads (currently {user.total_ads_watched or 0}/30)',
-            'completed': (user.total_ads_watched or 0) >= 30,
-            'reward': 0,
-            'progress': min((user.total_ads_watched or 0) / 30 * 100, 100)
-        },
         'first_investment': {
             'title': '🌱 First Investment',
             'description': 'Plant your first field',
@@ -357,7 +346,7 @@ def get_user_tasks(user_id: int, session: Session) -> dict:
         },
         'active_referral_bonus': {
             'title': '🎁 Active Referral Bonus',
-            'description': 'Get 0.03 USDT from an active referral',
+            'description': 'Get 0.03 USDT from an active referral (someone who invested)',
             'completed': (user.active_referral_bonus_earned or 0) > 0,
             'reward': 0
         }
@@ -375,11 +364,11 @@ def check_missed_active_referrals():
     try:
         session = db.get_session()
         
-        # Find all users who are active (invested OR 30+ ads)
+        # Find all users who have invested at least once
         # and have a referrer, but haven't been awarded yet
         active_users = session.query(User).filter(
             User.referred_by.isnot(None),
-            (User.total_invested > 0) | (User.total_ads_watched >= 30)
+            User.total_invested > 0
         ).all()
         
         awarded_count = 0
