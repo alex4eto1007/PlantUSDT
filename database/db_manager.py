@@ -86,8 +86,20 @@ class DatabaseManager:
                 referred_by=referred_by
             )
             session.add(user)
+            session.flush()  # Get the user ID
+            
+            # ✅ AUTO-CREATE WELCOME BONUS TASK (Task 45) FOR NEW USER
+            from database.models import UserTaskProgress
+            welcome_task = UserTaskProgress(
+                user_id=user.id,
+                task_id=45,
+                completed=False,
+                claimed=False
+            )
+            session.add(welcome_task)
+            
             session.commit()
-            logger.info(f"User {telegram_id} created successfully")
+            logger.info(f"User {telegram_id} created successfully with welcome bonus task")
             return user
         except Exception as e:
             session.rollback()
