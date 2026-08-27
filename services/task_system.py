@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 db = DatabaseManager()
 
 # ============================================
-# TASK DEFINITIONS - 37 TASKS (Referral tasks 17-26 removed)
+# TASK DEFINITIONS - 27 TASKS (Referral tasks 17-26 and Ads tasks 8-16 removed)
 # ============================================
 
 TASKS = [
@@ -294,7 +294,7 @@ TASKS = [
         "category": "hidden",
         "icon": "🎁",
         "title": "Welcome Bonus",
-        "description": "Claim your 0.1 USDT welcome bonus (no referral needed)",
+        "description": "Claim your 0.1 USDT welcome bonus (connect wallet required)",
         "reward": 0.10,
         "condition_type": "welcome_bonus",
         "condition_value": None,
@@ -423,11 +423,8 @@ def check_task_conditions(user: User, session: Session) -> list:
             completed = total_earnings >= condition_value
         elif condition_type == "welcome_bonus":
             if not user.has_received_welcome_bonus:
-                has_any_investment = session.query(Investment).filter(
-                    Investment.user_id == user.id
-                ).count() > 0
-                
-                if has_any_investment:
+                # ✅ FIXED: Only requires a connected wallet — no investment needed
+                if user.wallet_address and user.wallet_address != '':
                     completed = True
         
         if completed:
