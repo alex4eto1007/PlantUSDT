@@ -322,8 +322,8 @@ def withdraw():
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
         
         # ---- FULL BALANCE ONLY ----
-        # Allow small tolerance for floating point issues (0.001)
-        if abs(amount - float(user.balance)) > 0.001:
+        # Allow small tolerance for floating point issues (0.01)
+        if abs(amount - float(user.balance)) > 0.01:
             return jsonify({
                 'success': False,
                 'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
@@ -999,11 +999,6 @@ def credit_ad_reward():
             created_at=datetime.utcnow()
         )
         session_db.add(audit)
-        
-        # ============================================
-        # ACTIVE REFERRAL CHECK REMOVED (no longer triggered by ads)
-        # Active referrals are now only triggered by investments
-        # ============================================
         
         session_db.commit()
         clear_user_cache(telegram_id)
