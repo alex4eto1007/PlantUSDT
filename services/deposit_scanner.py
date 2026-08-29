@@ -70,34 +70,68 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Scanner error: {e}")
 
-    async def _check_user_deposit_with_amount(self, user, expected_amount, bot):
-        """Check if a specific user has made a deposit with the expected amount"""
-        try:
-            url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=30) as response:
-                    data = await response.json()
-                    
-                    if data.get('status') == '1':
-                        transactions = data.get('result', [])
-                        for tx in transactions:
-                            if tx.get('to', '').lower() == self.project_wallet:
+    async def _check_user_deposit_with_amount(self, user, expected_amount, bot, retries=3):
+        """Check if a specific user has made a deposit with the expected amount (with retries)"""
+        for attempt in range(retries):
+            try:
+                url = f"{self.api_url}&module=account&action=tokentx&address={user.wallet_address}&contractaddress={self.usdt_contract}&page=1&offset=10&sort=desc&apikey={self.api_key}"
+                
+                logger.info(f"🔍 Checking deposits for user {user.telegram_id} on Polygon (Attempt {attempt + 1}/{retries})")
+                logger.info(f"📡 Wallet: {user.wallet_address}")
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, timeout=30) as response:
+                        data = await response.json()
+                        
+                        logger.info(f"📊 API Response Status: {data.get('status')}")
+                        logger.info(f"📊 API Response Message: {data.get('message')}")
+                        
+                        if data.get('status') == '1':
+                            transactions = data.get('result', [])
+                            logger.info(f"📊 Found {len(transactions)} transactions for user {user.telegram_id}")
+                            
+                            for tx in transactions:
                                 amount = int(tx.get('value', '0')) / 10**self.decimals
-                                if abs(float(amount) - float(expected_amount)) < 0.01:
-                                    await self._process_deposit(
-                                        user=user,
-                                        amount=amount,
-                                        tx_hash=tx.get('hash'),
-                                        from_address=tx.get('from'),
-                                        block_number=int(tx.get('blockNumber', 0)),
-                                        bot=bot
-                                    )
-                                    return True
-            return False
-        except Exception as e:
-            logger.error(f"Error checking user deposit: {e}")
-            return False
+                                logger.info(f"📊 TX: {tx.get('hash')[:16]}... | To: {tx.get('to')[:16]}... | Amount: {amount} USDT")
+                            
+                            for tx in transactions:
+                                if tx.get('to', '').lower() == self.project_wallet:
+                                    amount = int(tx.get('value', '0')) / 10**self.decimals
+                                    if abs(float(amount) - float(expected_amount)) < 0.01:
+                                        logger.info(f"✅ MATCH FOUND on attempt {attempt + 1}! Transaction {tx.get('hash')[:16]}... matches expected amount ${expected_amount}")
+                                        await self._process_deposit(
+                                            user=user,
+                                            amount=amount,
+                                            tx_hash=tx.get('hash'),
+                                            from_address=tx.get('from'),
+                                            block_number=int(tx.get('blockNumber', 0)),
+                                            bot=bot
+                                        )
+                                        return True
+                            logger.info(f"❌ No matching transaction found on attempt {attempt + 1}")
+                        else:
+                            logger.warning(f"⚠️ API Error on attempt {attempt + 1}: {data.get('message')}")
+                            
+                            if attempt < retries - 1:
+                                wait_time = (attempt + 1) * 10
+                                logger.info(f"⏳ Waiting {wait_time}s before retry...")
+                                await asyncio.sleep(wait_time)
+                
+            except asyncio.TimeoutError:
+                logger.error(f"⏰ Timeout on attempt {attempt + 1}")
+                if attempt < retries - 1:
+                    wait_time = (attempt + 1) * 10
+                    logger.info(f"⏳ Waiting {wait_time}s before retry...")
+                    await asyncio.sleep(wait_time)
+            except Exception as e:
+                logger.error(f"Error checking user deposit on attempt {attempt + 1}: {e}")
+                if attempt < retries - 1:
+                    wait_time = (attempt + 1) * 10
+                    logger.info(f"⏳ Waiting {wait_time}s before retry...")
+                    await asyncio.sleep(wait_time)
+        
+        logger.error(f"❌ All {retries} attempts failed for user {user.telegram_id}")
+        return False
 
     async def _process_deposit(self, user, amount, tx_hash, from_address, block_number, bot):
         """Process a verified deposit on Polygon and send to channel"""
@@ -131,7 +165,6 @@ class DepositScanner:
                     clear_user_cache(fresh_user.telegram_id)
                     await self._send_notifications(fresh_user, amount, tx_hash, bot)
                     
-                    # Check for active referral bonus (investment triggers this)
                     if fresh_user.referred_by:
                         try:
                             check_and_award_active_referrals(fresh_user.id, session)
@@ -162,7 +195,6 @@ class DepositScanner:
             clear_user_cache(fresh_user.telegram_id)
             await self._send_notifications(fresh_user, amount, tx_hash, bot)
             
-            # Check for active referral bonus (investment triggers this)
             if fresh_user.referred_by:
                 try:
                     check_and_award_active_referrals(fresh_user.id, session)
@@ -209,7 +241,6 @@ class DepositScanner:
         except Exception as e:
             logger.error(f"Error sending deposit notification: {e}")
         
-        # Send to transaction channel
         try:
             channel_message = (
                 f"💰 **New Deposit!**\n"
@@ -299,7 +330,6 @@ class DepositScanner:
             if not user.wallet_address:
                 return {'success': False, 'message': 'No wallet connected'}
 
-            # Create pending check record
             pending = PendingDepositCheck(
                 user_id=user.id,
                 amount=expected_amount
@@ -307,7 +337,6 @@ class DepositScanner:
             session.add(pending)
             session.commit()
 
-            # Check for existing processed deposit first
             existing_deposit = session.query(Deposit).filter_by(
                 user_id=user.id,
                 processed=True
@@ -356,7 +385,6 @@ class DepositScanner:
                                         clear_user_cache(user.telegram_id)
                                         await self._send_notifications(user, amount, tx.get('hash'), bot)
                                         
-                                        # Check for active referral bonus
                                         if user.referred_by:
                                             try:
                                                 check_and_award_active_referrals(user.id, session)
