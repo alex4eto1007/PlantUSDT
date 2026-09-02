@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 REFERRAL_TIERS = {
     "free": {"bonus_percent": 1, "price": 0, "emoji": "🌱", "description": "Free"},
-    "bronze": {"bonus_percent": 2, "price": 40.00, "emoji": "🥉", "description": "Bronze"},
-    "silver": {"bonus_percent": 3, "price": 78.40, "emoji": "🥈", "description": "Silver", "discount": "2%"},
-    "gold": {"bonus_percent": 4, "price": 114.00, "emoji": "🥇", "description": "Gold", "discount": "5%"},
-    "diamond": {"bonus_percent": 5, "price": 144.00, "emoji": "💎", "description": "Diamond", "discount": "10%"}
+    "bronze": {"bonus_percent": 2, "price": 42.00, "emoji": "🥉", "description": "Bronze"},
+    "silver": {"bonus_percent": 3, "price": 80.00, "emoji": "🥈", "description": "Silver", "discount": "2%"},
+    "gold": {"bonus_percent": 4, "price": 120.00, "emoji": "🥇", "description": "Gold", "discount": "5%"},
+    "diamond": {"bonus_percent": 5, "price": 160.00, "emoji": "💎", "description": "Diamond", "discount": "10%"}
 }
 
 TIER_ORDER = ["free", "bronze", "silver", "gold", "diamond"]

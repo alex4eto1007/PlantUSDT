@@ -791,8 +791,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Available tiers:\n{tier_list}\n\n"
             f"💡 Example: Friend deposits $100 → you earn 5% at Diamond tier\n\n"
             f"Usage: `/upgrade [tier]`\n"
-            f"Example: `/upgrade diamond`\n\n"
-            f"⚠️ **IMPORTANT**: These are the LOWEST prices ever. They will go up!"
+            f"Example: `/upgrade diamond`"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -860,8 +859,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"New tier: {REFERRAL_TIERS[tier]['emoji']} {tier.title()} ({REFERRAL_TIERS[tier]['bonus_percent']}%)\n\n"
             f"💰 Cost: **${cost:.2f}** USDT\n"
             f"💵 Your balance: **${user_obj.balance:.2f}**\n\n"
-            f"⚠️ This is a PERMANENT upgrade. No refunds.\n"
-            f"⚠️ Prices will increase as the project grows!",
+            f"⚠️ This is a PERMANENT upgrade. No refunds.",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
@@ -1136,6 +1134,7 @@ def main():
         logger.info("⚙️ Manual balance command available: /manual_balance")
         logger.info("✅ Active referral bonus system fully fixed")
         logger.info("✅ Active referrals now require investment (30+ ads removed)")
+        logger.info("💰 Referral tier prices updated: Bronze $42, Silver $80, Gold $120, Diamond $160")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
