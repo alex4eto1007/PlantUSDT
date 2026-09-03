@@ -929,9 +929,9 @@ def credit_ad_reward():
         # Reset daily ad count if new day (this clears cache)
         reset_daily_ad_count(user)
         
-        # ---- DAILY AD LIMIT: 50 ADS PER DAY ----
-        # After 50, user can still watch but gets $0 reward
-        if user.daily_ad_count >= 50:
+        # ---- DAILY AD LIMIT: 100 ADS PER DAY ----
+        # After 100, user can still watch but gets $0 reward
+        if user.daily_ad_count >= 100:
             # Log the ad with 0 reward
             ad_log = AdLog(
                 user_id=user.id,
@@ -948,7 +948,7 @@ def credit_ad_reward():
                 'reward': 0,
                 'balance': float(user.balance),
                 'daily_ad_count': user.daily_ad_count,
-                'daily_ad_limit': 50,
+                'daily_ad_limit': 100,
                 'limit_reached': True,
                 'message': 'You have reached the daily limit. No reward for this ad. Watch tomorrow!'
             }), 200
@@ -994,7 +994,7 @@ def credit_ad_reward():
             old_value=float(old_balance),
             new_value=float(user.balance),
             amount=float(reward),
-            description=f'Ad reward #{user.total_ads_watched} (day {user.daily_ad_count}/50)',
+            description=f'Ad reward #{user.total_ads_watched} (day {user.daily_ad_count}/100)',
             source='ad_reward',
             created_at=datetime.utcnow()
         )
@@ -1007,7 +1007,7 @@ def credit_ad_reward():
             'reward': float(reward),
             'balance': float(user.balance),
             'daily_ad_count': user.daily_ad_count,
-            'daily_ad_limit': 50,
+            'daily_ad_limit': 100,
             'limit_reached': False,
             'total_ad_earnings': float(user.total_ad_earnings)
         })

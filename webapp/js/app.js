@@ -41,7 +41,7 @@ function generateMathCaptcha() {
         answer = num1 + num2;
         question = `${num1} + ${num2} = ?`;
     } else {
-        // Ensure the result is always positive (no negative answers, supports 0)
+        // Ensure the result is always positive (supports 0)
         const bigger = Math.max(num1, num2);
         const smaller = Math.min(num1, num2);
         answer = bigger - smaller;
@@ -76,7 +76,6 @@ function showMathCaptcha(callback) {
     }
     
     const parsed = parseInt(userAnswer);
-    // Fix: Properly handle 0 answers (0 is not NaN)
     if (!isNaN(parsed) && parsed === captcha.answer) {
         callback(true, captcha.answer, captcha.question);
     } else {
@@ -325,7 +324,7 @@ async function loadUserData(retries = 3) {
 function resetAdDisplay() {
     const adsTodayEl = document.getElementById('adsToday');
     if (adsTodayEl) {
-        adsTodayEl.textContent = '0 / 50';
+        adsTodayEl.textContent = '0 / 100';
         adsTodayEl.style.color = '#00ff87';
     }
     const progressEl = document.getElementById('adProgressBar');
@@ -1731,7 +1730,7 @@ async function creditAdRewardWithCaptcha(answer, question, fingerprint) {
 }
 
 function updateAdUI(dailyCount) {
-    const dailyLimit = 50;
+    const dailyLimit = 100;
     console.log('📊 updateAdUI called with count:', dailyCount);
     
     // Store globally to prevent overwrites
@@ -1770,7 +1769,7 @@ function updateAdUI(dailyCount) {
         console.warn('📊 adProgressBar element NOT FOUND!');
     }
 
-    // Update Watch Button state — ALWAYS ENABLED (fix for bug #2)
+    // Update Watch Button state — ALWAYS ENABLED
     const watchBtn = document.getElementById('watchAdBtn');
     const statusEl = document.getElementById('adStatus');
     
@@ -1779,7 +1778,7 @@ function updateAdUI(dailyCount) {
         watchBtn.style.opacity = '1';
         
         if (dailyCount >= dailyLimit) {
-            watchBtn.textContent = '▶️ Watch Ad (No reward after 50/50)';
+            watchBtn.textContent = '▶️ Watch Ad (No reward after 100/100)';
             if (statusEl) {
                 statusEl.style.display = 'block';
                 statusEl.textContent = '⚠️ Daily limit reached. You can still watch ads but no reward will be given.';
@@ -1829,7 +1828,6 @@ async function watchRewardedAd() {
             }
             
             const parsed = parseInt(userAnswer);
-            // Fix: Properly handle 0 answers (0 is not NaN)
             if (isNaN(parsed) || parsed !== captcha.answer) {
                 safePopup({
                     title: '❌ Wrong Answer',
@@ -1875,13 +1873,13 @@ async function watchRewardedAd() {
                     if (limitReached) {
                         safePopup({
                             title: '📊 Daily Limit Reached',
-                            message: 'You have reached the daily ad limit (50/50).\n\nNo reward for this ad. Watch tomorrow for more rewards! 🟣',
+                            message: 'You have reached the daily ad limit (100/100).\n\nNo reward for this ad. Watch tomorrow for more rewards! 🟣',
                             buttons: [{type: 'ok'}]
                         });
                     } else {
                         safePopup({
                             title: '🎁 Bonus Earned!',
-                            message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/50 today)`,
+                            message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/100 today)`,
                             buttons: [{type: 'ok'}]
                         });
                     }
@@ -1985,7 +1983,7 @@ async function loadAdStats() {
 
         // Update Ads Today using the final count
         const adsTodayEl = document.getElementById('adsToday');
-        const dailyLimit = 50;
+        const dailyLimit = 100;
         
         if (adsTodayEl) {
             adsTodayEl.textContent = finalCount + ' / ' + dailyLimit;
@@ -2021,7 +2019,7 @@ async function loadAdStats() {
             watchBtn.style.opacity = '1';
             
             if (finalCount >= dailyLimit) {
-                watchBtn.textContent = '▶️ Watch Ad (No reward after 50/50)';
+                watchBtn.textContent = '▶️ Watch Ad (No reward after 100/100)';
                 if (statusEl) {
                     statusEl.style.display = 'block';
                     statusEl.textContent = '⚠️ Daily limit reached. You can still watch ads but no reward will be given.';
@@ -2220,9 +2218,7 @@ async function claimWelcomeBonus() {
                     body: JSON.stringify({ telegram_id: userId })
                 });
                 
-                // Check if response is OK
                 if (!response.ok) {
-                    // Try to parse error message from response
                     const errorData = await response.json().catch(() => ({}));
                     if (errorData.message && errorData.message.toLowerCase().includes('already claimed')) {
                         safePopup({
@@ -2235,7 +2231,6 @@ async function claimWelcomeBonus() {
                         loadTasks();
                         return;
                     }
-                    // Otherwise show a generic error
                     safePopup({
                         title: '❌ Error',
                         message: errorData.message || 'Something went wrong. Please try again.',
@@ -2246,7 +2241,6 @@ async function claimWelcomeBonus() {
                 
                 const data = await response.json();
                 
-                // Check for "already claimed" in success response
                 if (data.success === false && data.message && data.message.toLowerCase().includes('already claimed')) {
                     safePopup({
                         title: '✅ Already Claimed',
@@ -2277,10 +2271,8 @@ async function claimWelcomeBonus() {
                 }
             } catch (error) {
                 console.error('Error claiming bonus:', error);
-                // Network error - try to reload user data to see if the bonus was actually credited
                 try {
                     await loadUserData();
-                    // Check if the user now has the welcome bonus
                     const userData = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`).then(r => r.json());
                     if (userData.success && userData.has_received_welcome_bonus) {
                         safePopup({
@@ -2293,9 +2285,7 @@ async function claimWelcomeBonus() {
                         loadTasks();
                         return;
                     }
-                } catch (e) {
-                    // Ignore
-                }
+                } catch (e) {}
                 
                 safePopup({
                     title: '❌ Error',
@@ -2738,7 +2728,7 @@ console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
 console.log('🧮 Math captcha fixed — now accepts 0 as a valid answer');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
-console.log('📊 Ad daily limit: 50/50 with progress bar and UTC reset timer');
+console.log('📊 Ad daily limit: 100/100 with progress bar and UTC reset timer');
 console.log('🔄 UTC timer detects new day and auto-refreshes');
 console.log('📈 Ad count updates IMMEDIATELY after watching ad');
 console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
@@ -2746,4 +2736,4 @@ console.log('🔄 Daily ad count resets properly at UTC midnight');
 console.log('💰 Withdrawal fee: simplified structure (15% under $50, 20% under $100, 25% over $100)');
 console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
-console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 50/50 (no reward)');
+console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 100/100 (no reward)');
