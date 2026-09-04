@@ -18,7 +18,7 @@ Examples:
 
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 # Add project root to path
@@ -109,7 +109,7 @@ def main():
             description=f"{credit_type}: {description}" if description else credit_type,
             source='admin',
             created_by=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.UTC)
         )
         session.add(audit)
 
@@ -121,10 +121,10 @@ def main():
             deposit = Deposit(
                 user_id=user.id,
                 amount=float(amount),
-                tx_hash=tx_hash or f'manual_{int(datetime.utcnow().timestamp())}',
+                tx_hash=tx_hash or f'manual_{int(datetime.now(timezone.UTC).timestamp())}',
                 from_address='manual_credit',
                 block_number=0,
-                confirmed_at=datetime.utcnow(),
+                confirmed_at=datetime.now(timezone.UTC),
                 processed=True,
                 network='polygon'
             )
@@ -134,7 +134,7 @@ def main():
             if amount >= 5:
                 user.total_invested = (user.total_invested or Decimal('0')) + amount
 
-                now = datetime.utcnow()
+                now = datetime.now(timezone.UTC)
                 unlock_date = now + timedelta(days=30)
 
                 investment = Investment(
