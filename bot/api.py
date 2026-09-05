@@ -537,7 +537,7 @@ def get_user():
         level1_refs = session_db.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         
-        referral_earned = float(user.referral_earnings_all_time or 0)
+        referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
         investment_earnings = float(user.investment_earnings_all_time or 0)
         total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
         
@@ -1551,6 +1551,61 @@ def api_claim_task_reward_old():
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         session_db.close()
+
+# ============================================
+# ADSGRAM BOT AD REWARD ENDPOINT
+# ============================================
+
+@app.route('/api/ad_reward', methods=['GET'])
+@rate_limit
+def ad_reward():
+    """Endpoint for Adsgram to send reward confirmations for bot ads"""
+    from decimal import Decimal
+    
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Missing userId'}), 400
+    
+    try:
+        session_db = db.get_session()
+        user = session_db.query(User).filter_by(telegram_id=int(user_id)).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Credit the user
+        reward = Decimal('0.001')
+        old_balance = Decimal(user.balance or 0)
+        old_ad_earnings = Decimal(user.total_ad_earnings or 0)
+        old_total_earnings = Decimal(user.total_earnings_all_time or 0)
+        
+        user.balance = (user.balance or Decimal('0')) + reward
+        user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
+        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
+        
+        # Log to audit log
+        audit = AuditLog(
+            user_id=user.id,
+            action='ad_earnings',
+            field_changed='balance',
+            old_value=float(old_balance),
+            new_value=float(user.balance),
+            amount=float(reward),
+            description='Ad reward from Telegram bot (Adsgram)',
+            source='ad_reward_bot',
+            created_at=datetime.utcnow()
+        )
+        session_db.add(audit)
+        
+        session_db.commit()
+        session_db.close()
+        
+        logger.info(f"✅ Adsgram bot ad reward: {user_id} +${reward:.3f}")
+        
+        return jsonify({'success': True, 'message': f'Credited {reward} USDT to user {user_id}'})
+        
+    except Exception as e:
+        logger.error(f"Error in ad_reward: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # ============================================
 # SERVE STATIC FILES
