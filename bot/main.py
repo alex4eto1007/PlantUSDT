@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonCommands
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from config.settings import Config
 from database.db_manager import DatabaseManager
@@ -1190,20 +1190,13 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
-# POST_INIT — Sets the menu button and starts the deposit scanner
+# POST_INIT — Sets the commands and starts the deposit scanner
 # ============================================
 
 async def post_init(application: Application):
     """Configure the Telegram menu and start the deposit scanner."""
     try:
-        # This creates the four-square Commands menu button in Telegram.
-        await application.bot.set_chat_menu_button(
-            chat_id=None,
-            menu_button=MenuButtonCommands()
-        )
-        logger.info("✅ Telegram bot menu button set to Commands")
-
-        # Commands shown when the user opens the bot menu.
+        # Set the commands that will appear in the four-square menu
         await application.bot.set_my_commands([
             ("balance", "👛 Check your balance"),
             ("referrals", "👥 View your referrals"),
@@ -1211,9 +1204,8 @@ async def post_init(application: Application):
             ("app", "🌱 Open Mini App")
         ])
         logger.info("✅ Bot commands configured for menu")
-
     except Exception as e:
-        logger.warning(f"⚠️ Could not configure Telegram menu button: {e}")
+        logger.warning(f"⚠️ Could not configure commands: {e}")
 
     async def start_deposit_scanner():
         while True:
@@ -1275,7 +1267,7 @@ def main():
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
-        logger.info("📌 Telegram bot menu set to Commands")
+        logger.info("📌 Bot commands configured for four-square menu")
         logger.info("📢 Community footer added to all messages")
         logger.info("📊 Transaction channel: @PlantUSDTtransactions")
         logger.info("💰 Fee collection system active")
@@ -1289,7 +1281,7 @@ def main():
         logger.info("✅ Active referrals now require investment (30+ ads removed)")
         logger.info("💰 Referral tier prices updated: Bronze $42, Silver $80, Gold $120, Diamond $160")
         logger.info("📊 Daily ad limit increased to 100")
-        logger.info("📱 Bot menu available: /balance, /referrals, /withdraw")
+        logger.info("📱 Bot commands: /balance, /referrals, /withdraw, /app")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
