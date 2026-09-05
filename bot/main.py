@@ -398,30 +398,57 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
         logger.error(f"Error handling web_app_data: {e}")
 
 # ============================================
-# RESET MENU COMMAND
+# RESET MENU ALL COMMAND
 # ============================================
 
-async def reset_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Force reset the menu button for the user (admin only)"""
+async def reset_menu_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Reset menu button for ALL users (admin only)"""
     user = update.effective_user
     
     if not is_admin(user.id):
         await update.message.reply_text("❌ Not authorized.")
         return
     
+    # Confirm before proceeding
+    await update.message.reply_text(
+        "⚠️ This will reset the menu button for ALL users.\n"
+        "This may take a few seconds.\n\n"
+        "Type 'yes' to confirm:"
+    )
+    
+    # Wait for user confirmation
+    def check(update):
+        return update.message.text and update.message.text.lower() == 'yes'
+    
     try:
-        # Reset menu button to default for this specific user
-        await context.bot.set_chat_menu_button(
-            chat_id=user.id,
-            menu_button={"type": "default"}
-        )
+        confirm = await context.bot.wait_for('message', check=check, timeout=30)
+    except:
+        await update.message.reply_text("❌ Timeout or cancelled.")
+        return
+    
+    try:
+        session = db.get_session()
+        all_users = session.query(User).all()
+        session.close()
+        
+        count = 0
+        failed = 0
+        
+        for user_obj in all_users:
+            try:
+                await context.bot.set_chat_menu_button(
+                    chat_id=user_obj.telegram_id,
+                    menu_button={"type": "default"}
+                )
+                count += 1
+                await asyncio.sleep(0.1)  # Prevent rate limiting
+            except Exception as e:
+                failed += 1
+                logger.error(f"Failed to reset menu for {user_obj.telegram_id}: {e}")
+        
         await update.message.reply_text(
-            "✅ Menu button reset!\n\n"
-            "Tap the four-square button again — it should now show:\n"
-            "👛 Balance\n"
-            "👥 Referrals\n"
-            "🏦 Withdraw\n"
-            "🌱 Open Mini App"
+            f"✅ Menu button reset for {count} users.\n"
+            f"❌ Failed: {failed}"
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
@@ -660,7 +687,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /collect_fees <tx_hash> - Collect ALL uncollected fees
 /test_channel - Test channel connection
 /reset_referral <user_id> - Reset a user's referral status
-/reset_menu - Reset the four-square menu button for your account
+/reset_menu_all - Reset the four-square menu button for ALL users
 
 TASK MANAGEMENT:
 /add_task <title> | <description> | <reward> - Create a new task
@@ -675,7 +702,7 @@ Example:
 /collect_fees 0xdef456...
 /test_channel
 /reset_referral 123456789
-/reset_menu
+/reset_menu_all
 
 /add_task Watch 3 Ads | Watch 3 rewarded ads | 0.10
 /list_tasks
@@ -1267,7 +1294,7 @@ def main():
         application.add_handler(CommandHandler("balance", balance_command))
         application.add_handler(CommandHandler("referrals", referrals_command))
         application.add_handler(CommandHandler("withdraw", withdraw_command))
-        application.add_handler(CommandHandler("reset_menu", reset_menu))
+        application.add_handler(CommandHandler("reset_menu_all", reset_menu_all))
 
         # Web App Data handler
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
@@ -1313,7 +1340,7 @@ def main():
         logger.info("✅ Active referrals now require investment (30+ ads removed)")
         logger.info("💰 Referral tier prices updated: Bronze $42, Silver $80, Gold $120, Diamond $160")
         logger.info("📊 Daily ad limit increased to 100")
-        logger.info("📱 Commands: /balance, /referrals, /withdraw, /app, /reset_menu")
+        logger.info("📱 Commands: /balance, /referrals, /withdraw, /app, /reset_menu_all")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
