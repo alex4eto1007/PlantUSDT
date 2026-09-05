@@ -1189,6 +1189,10 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error: {str(e)}")
         session.close()
 
+# ============================================
+# POST_INIT — Sets the menu button and starts the deposit scanner
+# ============================================
+
 async def post_init(application: Application):
     """Configure the Telegram menu and start the deposit scanner."""
     try:
@@ -1197,6 +1201,7 @@ async def post_init(application: Application):
             chat_id=None,
             menu_button=MenuButtonCommands()
         )
+        logger.info("✅ Telegram bot menu button set to Commands")
 
         # Commands shown when the user opens the bot menu.
         await application.bot.set_my_commands([
@@ -1205,8 +1210,8 @@ async def post_init(application: Application):
             ("withdraw", "🏦 Withdraw your USDT"),
             ("app", "🌱 Open Mini App")
         ])
+        logger.info("✅ Bot commands configured for menu")
 
-        logger.info("✅ Telegram bot menu button and commands configured")
     except Exception as e:
         logger.warning(f"⚠️ Could not configure Telegram menu button: {e}")
 
@@ -1218,7 +1223,6 @@ async def post_init(application: Application):
                 logger.error(f"Error in deposit scanner loop: {e}")
             await asyncio.sleep(300)
 
-    # Run the scanner on python-telegram-bot's active asyncio loop.
     application.create_task(start_deposit_scanner())
     logger.info("🔍 Deposit scanner task started")
 
