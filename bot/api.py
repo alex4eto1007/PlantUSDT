@@ -537,7 +537,7 @@ def get_user():
         level1_refs = session_db.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         
-        referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
+        referral_earned = float(user.referral_earnings_all_time or 0)
         investment_earnings = float(user.investment_earnings_all_time or 0)
         total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
         
