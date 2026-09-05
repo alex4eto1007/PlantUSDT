@@ -916,7 +916,8 @@ async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================
 
 async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user    logger.info(f"📊 upgrade command received from user {user.id}")
+    user = update.effective_user
+    logger.info(f"📊 upgrade command received from user {user.id}")
     
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
