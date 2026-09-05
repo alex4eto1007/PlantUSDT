@@ -92,10 +92,10 @@ def is_admin(user_id: int) -> bool:
 async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, message=None):
     """Show the inline keyboard menu"""
     keyboard = [
+        [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
         [InlineKeyboardButton("👛 Balance", callback_data="menu_balance")],
         [InlineKeyboardButton("👥 Referrals", callback_data="menu_referrals")],
-        [InlineKeyboardButton("🏦 Withdraw", callback_data="menu_withdraw")],
-        [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))]
+        [InlineKeyboardButton("🏦 Withdraw", callback_data="menu_withdraw")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1238,6 +1238,7 @@ async def post_init(application: Application):
 
     application.create_task(start_deposit_scanner())
     logger.info("🔍 Deposit scanner task started")
+
 
 # ============================================
 # MAIN FUNCTION
