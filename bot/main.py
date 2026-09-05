@@ -409,49 +409,65 @@ async def reset_menu_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Not authorized.")
         return
     
-    # Confirm before proceeding
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Yes, reset for all", callback_data="reset_menu_confirm"),
+            InlineKeyboardButton("❌ Cancel", callback_data="reset_menu_cancel")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await update.message.reply_text(
         "⚠️ This will reset the menu button for ALL users.\n"
         "This may take a few seconds.\n\n"
-        "Type 'yes' to confirm:"
+        "Are you sure?",
+        reply_markup=reply_markup
     )
+
+async def reset_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle reset menu confirmation"""
+    query = update.callback_query
+    await query.answer()
     
-    # Wait for user confirmation
-    def check(update):
-        return update.message.text and update.message.text.lower() == 'yes'
+    user = query.from_user
     
-    try:
-        confirm = await context.bot.wait_for('message', check=check, timeout=30)
-    except:
-        await update.message.reply_text("❌ Timeout or cancelled.")
+    if not is_admin(user.id):
+        await query.edit_message_text("❌ Not authorized.")
         return
     
-    try:
-        session = db.get_session()
-        all_users = session.query(User).all()
-        session.close()
+    if query.data == "reset_menu_cancel":
+        await query.edit_message_text("❌ Cancelled.")
+        return
+    
+    if query.data == "reset_menu_confirm":
+        await query.edit_message_text("🔄 Resetting menu for all users... This may take a moment.")
         
-        count = 0
-        failed = 0
-        
-        for user_obj in all_users:
-            try:
-                await context.bot.set_chat_menu_button(
-                    chat_id=user_obj.telegram_id,
-                    menu_button={"type": "default"}
-                )
-                count += 1
-                await asyncio.sleep(0.1)  # Prevent rate limiting
-            except Exception as e:
-                failed += 1
-                logger.error(f"Failed to reset menu for {user_obj.telegram_id}: {e}")
-        
-        await update.message.reply_text(
-            f"✅ Menu button reset for {count} users.\n"
-            f"❌ Failed: {failed}"
-        )
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
+        try:
+            session = db.get_session()
+            all_users = session.query(User).all()
+            session.close()
+            
+            count = 0
+            failed = 0
+            
+            for user_obj in all_users:
+                try:
+                    await context.bot.set_chat_menu_button(
+                        chat_id=user_obj.telegram_id,
+                        menu_button={"type": "default"}
+                    )
+                    count += 1
+                    await asyncio.sleep(0.1)
+                except Exception as e:
+                    failed += 1
+                    logger.error(f"Failed to reset menu for {user_obj.telegram_id}: {e}")
+            
+            await query.edit_message_text(
+                f"✅ Menu button reset for {count} users.\n"
+                f"❌ Failed: {failed}"
+            )
+        except Exception as e:
+            await query.edit_message_text(f"❌ Error: {e}")
 
 # ============================================
 # ADMIN COMMANDS
@@ -1301,6 +1317,9 @@ def main():
 
         # Share referral callback
         application.add_handler(CallbackQueryHandler(share_referral_callback, pattern="^share_referral_"))
+
+        # Reset menu callback
+        application.add_handler(CallbackQueryHandler(reset_menu_callback, pattern="^reset_menu_"))
 
         # Admin commands
         application.add_handler(CommandHandler("pending", pending))
