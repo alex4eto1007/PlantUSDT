@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonCommands
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from config.settings import Config
 from database.db_manager import DatabaseManager
@@ -244,18 +244,11 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     balance = user_data.balance or 0
     user_id = user.id
-    
-    keyboard = [
-        [InlineKeyboardButton("🌱 Earn more", web_app=WebAppInfo(url=VERCEL_URL))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await update.message.reply_text(
-        f"👛 **Your Balance**\n\n"
-        f"🆔 User ID: `{user_id}`\n"
-        f"💵 **{balance:.2f} USDT**",
-        reply_markup=reply_markup,
-        parse_mode='Markdown'
+        f"👛 Your Balance\n\n"
+        f"🆔 User ID: {user_id}\n"
+        f"💵 {balance:.2f} USDT"
     )
 
 # ============================================
@@ -1196,6 +1189,40 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error: {str(e)}")
         session.close()
 
+async def post_init(application: Application):
+    """Configure the Telegram menu and start the deposit scanner."""
+    try:
+        # This creates the four-square Commands menu button in Telegram.
+        await application.bot.set_chat_menu_button(
+            chat_id=None,
+            menu_button=MenuButtonCommands()
+        )
+
+        # Commands shown when the user opens the bot menu.
+        await application.bot.set_my_commands([
+            ("balance", "👛 Check your balance"),
+            ("referrals", "👥 View your referrals"),
+            ("withdraw", "🏦 Withdraw your USDT"),
+            ("app", "🌱 Open Mini App")
+        ])
+
+        logger.info("✅ Telegram bot menu button and commands configured")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not configure Telegram menu button: {e}")
+
+    async def start_deposit_scanner():
+        while True:
+            try:
+                await deposit_scanner.scan_for_deposits(application.bot)
+            except Exception as e:
+                logger.error(f"Error in deposit scanner loop: {e}")
+            await asyncio.sleep(300)
+
+    # Run the scanner on python-telegram-bot's active asyncio loop.
+    application.create_task(start_deposit_scanner())
+    logger.info("🔍 Deposit scanner task started")
+
+
 # ============================================
 # MAIN FUNCTION
 # ============================================
@@ -1205,7 +1232,7 @@ def main():
     try:
         scheduler.start()
 
-        application = Application.builder().token(Config.BOT_TOKEN).build()
+        application = Application.builder().token(Config.BOT_TOKEN).post_init(post_init).build()
 
         # User commands
         application.add_handler(CommandHandler("start", start))
@@ -1241,47 +1268,10 @@ def main():
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
 
-        async def start_deposit_scanner():
-            while True:
-                try:
-                    await deposit_scanner.scan_for_deposits(application.bot)
-                except Exception as e:
-                    logger.error(f"Error in deposit scanner loop: {e}")
-                await asyncio.sleep(300)
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.create_task(start_deposit_scanner())
-
-        async def set_menu_button():
-            try:
-                # Set the four-square menu button
-                await application.bot.set_chat_menu_button(
-                    chat_id=None,
-                    menu_button={
-                        "type": "commands",
-                        "text": "☰ Menu"
-                    }
-                )
-                
-                # Add commands so they appear in the menu
-                await application.bot.set_my_commands([
-                    ("balance", "👛 Check your balance"),
-                    ("referrals", "👥 View your referrals"),
-                    ("withdraw", "🏦 Withdraw your USDT"),
-                    ("app", "🌱 Open Mini App")
-                ])
-                
-                logger.info("✅ Menu button set with commands")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not set menu button: {e}")
-
-        loop.create_task(set_menu_button())
-
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
-        logger.info("📌 Menu button set to: ☰ Menu with commands")
+        logger.info("📌 Telegram bot menu set to Commands")
         logger.info("📢 Community footer added to all messages")
         logger.info("📊 Transaction channel: @PlantUSDTtransactions")
         logger.info("💰 Fee collection system active")
