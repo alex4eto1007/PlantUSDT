@@ -227,7 +227,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"💎 **Ambassador Program**\n\n"
             f"📋 **Requirements:**\n"
-            f"• Active Investment: $300+ (locked in fields)\n"
+            f"• Active Investment: $300 (locked in fields)\n"
             f"• Total Referrals: 100+\n"
             f"• Active Referrals: 50+ (must have invested)\n"
             f"• Account Age: 14+ days\n\n"
