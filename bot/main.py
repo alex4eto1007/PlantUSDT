@@ -86,6 +86,196 @@ def is_admin(user_id: int) -> bool:
     return user and user.is_admin
 
 # ============================================
+# MENU COMMAND
+# ============================================
+
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the main menu with inline buttons"""
+    user = update.effective_user
+    
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
+        [InlineKeyboardButton("👛 Balance", callback_data="balance")],
+        [InlineKeyboardButton("👥 Referrals", callback_data="referrals")],
+        [InlineKeyboardButton("🏦 Withdraw", callback_data="withdraw")],
+        [InlineKeyboardButton("📊 Ambassador", callback_data="ambassador")],
+        [InlineKeyboardButton("📢 Announcements", callback_data="announcements")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🌱 **PlantUSDT Menu**\n\n"
+        "Choose an option below:",
+        parse_mode='Markdown',
+        reply_markup=reply_markup
+    )
+
+# ============================================
+# MENU CALLBACKS
+# ============================================
+
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle menu button callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    user = query.from_user
+    user_data = db.get_user(user.id)
+    
+    if query.data == "balance":
+        if not user_data:
+            await query.edit_message_text("❌ User not found. Please /start first.")
+            return
+        
+        await query.edit_message_text(
+            f"👛 **Your Balance**\n\n"
+            f"💵 Balance: **${user_data.balance:.2f}** USDT\n"
+            f"📊 Total Earnings: **${user_data.total_earnings_all_time or 0:.2f}** USDT\n"
+            f"📈 Total Invested: **${user_data.total_invested or 0:.2f}** USDT\n\n"
+            f"Use /menu to go back.",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🌱 Earn More", web_app=WebAppInfo(url=VERCEL_URL))],
+                [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            ])
+        )
+    
+    elif query.data == "referrals":
+        if not user_data:
+            await query.edit_message_text("❌ User not found. Please /start first.")
+            return
+        
+        # Check if user has a connected wallet
+        if not user_data.wallet_address:
+            await query.edit_message_text(
+                "🔗 **Connect your wallet first!**\n\n"
+                "You need to connect your Polygon wallet to get a referral link and join the referral program.\n\n"
+                "📱 Open the Mini App and save your wallet:\n"
+                "👉 [Open Mini App]",
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
+                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+                ])
+            )
+            return
+        
+        referral_link = f"https://t.me/PlantUSDT_bot?start={user_data.referral_code}"
+        total_refs = db.get_referral_count(user_data.id)
+        
+        await query.edit_message_text(
+            f"👥 **Your Referrals**\n\n"
+            f"🔗 Your referral link:\n"
+            f"`{referral_link}`\n\n"
+            f"📊 **Stats:**\n"
+            f"Total Referrals: {total_refs}\n"
+            f"Active Referrals: {user_data.total_active_referrals or 0}\n"
+            f"Earned: ${user_data.referral_earnings_all_time or 0:.2f}\n\n"
+            f"💰 Earn up to 5% of their deposits based on your tier!",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📤 Share Link", callback_data="share_referral")],
+                [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            ])
+        )
+    
+    elif query.data == "share_referral":
+        if not user_data or not user_data.wallet_address:
+            await query.edit_message_text("❌ Connect your wallet first.")
+            return
+        
+        referral_link = f"https://t.me/PlantUSDT_bot?start={user_data.referral_code}"
+        await query.edit_message_text(
+            f"📤 **Share your referral link**\n\n"
+            f"Copy this link and share it:\n"
+            f"`{referral_link}`\n\n"
+            f"💰 Earn up to 5% of their deposits based on your tier!",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back to Referrals", callback_data="referrals")],
+                [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            ])
+        )
+    
+    elif query.data == "withdraw":
+        if not user_data:
+            await query.edit_message_text("❌ User not found. Please /start first.")
+            return
+        
+        await query.edit_message_text(
+            f"🏦 **Withdraw**\n\n"
+            f"Withdraw your USDT on Polygon network 🟣\n\n"
+            f"⛓️ Network: Polygon\n"
+            f"💵 Token: USDT\n"
+            f"💰 Your balance: **${user_data.balance:.2f}**\n"
+            f"💸 Min withdrawal: $1.00\n\n"
+            f"Fee structure:\n"
+            f"• $1 — $49.99 → 15% fee\n"
+            f"• $50 — $99.99 → 20% fee\n"
+            f"• $100+ → 25% fee\n\n"
+            f"⏳ Processing: Up to 24 hours\n"
+            f"🔄 Cooldown: 1 withdrawal per 24 hours",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💲 Withdraw Now", web_app=WebAppInfo(url=VERCEL_URL + "&page=withdraw"))],
+                [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            ])
+        )
+    
+    elif query.data == "ambassador":
+        await query.edit_message_text(
+            f"💎 **Ambassador Program**\n\n"
+            f"📋 **Requirements:**\n"
+            f"• Active Investment: $300+ (locked in fields)\n"
+            f"• Total Referrals: 100+\n"
+            f"• Active Referrals: 50+ (must have invested)\n"
+            f"• Account Age: 14+ days\n\n"
+            f"🎯 **Benefits:**\n"
+            f"• Diamond Tier — 5% referral bonus\n"
+            f"• Special 'Ambassador' role in Telegram group\n"
+            f"• Priority support — direct contact with admin\n\n"
+            f"📊 Only 3 ambassadors at any time.",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            ])
+        )
+    
+    elif query.data == "announcements":
+        await query.edit_message_text(
+            f"📢 **Announcements**\n\n"
+            f"📌 Join our channels for updates:\n\n"
+            f"📢 Channel: @PlantUSDTchannel\n"
+            f"💬 Group: @PlantUSDT\n"
+            f"📊 Transactions: @PlantUSDTtransactions\n\n"
+            f"Stay tuned for news, giveaways, and updates! 🌱",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            ])
+        )
+    
+    elif query.data == "back_to_menu":
+        keyboard = [
+            [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
+            [InlineKeyboardButton("👛 Balance", callback_data="balance")],
+            [InlineKeyboardButton("👥 Referrals", callback_data="referrals")],
+            [InlineKeyboardButton("🏦 Withdraw", callback_data="withdraw")],
+            [InlineKeyboardButton("📊 Ambassador", callback_data="ambassador")],
+            [InlineKeyboardButton("📢 Announcements", callback_data="announcements")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            "🌱 **PlantUSDT Menu**\n\nChoose an option below:",
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+
+# ============================================
 # START COMMAND
 # ============================================
 
@@ -136,8 +326,11 @@ Share your referral link and earn up to 5% from your friends' deposits based on 
 
 📊 Live Transactions: @PlantUSDTtransactions
 
-Use /app to open the Mini App!"""
-        keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
+Use /menu to open the menu!"""
+        keyboard = [
+            [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
+            [InlineKeyboardButton("📋 Open Menu", callback_data="back_to_menu")]
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
             welcome_text + get_community_footer(),
@@ -185,10 +378,13 @@ Use /app to open the Mini App!"""
                     session.close()
 
     # Send the welcome back message
-    keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
+    keyboard = [
+        [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
+        [InlineKeyboardButton("📋 Open Menu", callback_data="back_to_menu")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:"
+        f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below or use the menu:"
         + get_community_footer(),
         reply_markup=reply_markup,
         parse_mode='Markdown'
@@ -1066,6 +1262,7 @@ def main():
         # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
+        application.add_handler(CommandHandler("menu", menu))
 
         # Web App Data handler
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
@@ -1090,6 +1287,7 @@ def main():
         application.add_handler(CommandHandler("upgrade", upgrade))
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
+        application.add_handler(CallbackQueryHandler(menu_callback, pattern="^(balance|referrals|withdraw|ambassador|announcements|share_referral|back_to_menu)$"))
 
         async def start_deposit_scanner():
             while True:
