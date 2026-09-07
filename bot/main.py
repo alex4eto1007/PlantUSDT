@@ -135,8 +135,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👛 **Your Balance**\n\n"
             f"💵 Balance: **${user_data.balance:.2f}** USDT\n"
             f"📊 Total Earnings: **${user_data.total_earnings_all_time or 0:.2f}** USDT\n"
-            f"📈 Total Invested: **${user_data.total_invested or 0:.2f}** USDT\n\n"
-            f"Use /menu to go back.",
+            f"📈 Total Invested: **${user_data.total_invested or 0:.2f}** USDT",
             parse_mode='Markdown',
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🌱 Earn More", web_app=WebAppInfo(url=VERCEL_URL))],
@@ -154,11 +153,9 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(
                 "🔗 **Connect your wallet first!**\n\n"
                 "You need to connect your Polygon wallet to get a referral link and join the referral program.\n\n"
-                "📱 Open the Mini App and save your wallet:\n"
-                "👉 [Open Mini App]",
+                "📱 Open the Mini App and save your wallet.",
                 parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
                     [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
                 ])
             )
