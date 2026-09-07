@@ -86,27 +86,6 @@ def is_admin(user_id: int) -> bool:
     return user and user.is_admin
 
 # ============================================
-# MENU FUNCTION
-# ============================================
-
-async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, message=None):
-    """Show the inline keyboard menu"""
-    keyboard = [
-        [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
-        [InlineKeyboardButton("👛 Balance", callback_data="menu_balance")],
-        [InlineKeyboardButton("👥 Referrals", callback_data="menu_referrals")],
-        [InlineKeyboardButton("🏦 Withdraw", callback_data="menu_withdraw")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    text = "🌱 **PlantUSDT Menu**\n\nChoose an option below:"
-    
-    if message:
-        await message.edit_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-    else:
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-
-# ============================================
 # START COMMAND
 # ============================================
 
@@ -157,9 +136,14 @@ Share your referral link and earn up to 5% from your friends' deposits based on 
 
 📊 Live Transactions: @PlantUSDTtransactions
 
-Use /menu to open the menu!"""
-        
-        await show_menu(update, context)
+Use /app to open the Mini App!"""
+        keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            welcome_text + get_community_footer(),
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
         return
 
     # Existing user - handle referral first
@@ -200,155 +184,15 @@ Use /menu to open the menu!"""
                         return
                     session.close()
 
-    # Send the welcome back message with menu
-    await show_menu(update, context)
-
-# ============================================
-# MENU COMMAND
-# ============================================
-
-async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show the menu"""
-    user = update.effective_user
-    
-    if not check_rate_limit(user.id):
-        await update.message.reply_text("⏳ Too many requests. Please wait.")
-        return
-    
-    await show_menu(update, context)
-
-# ============================================
-# MENU CALLBACK HANDLER
-# ============================================
-
-async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle menu button presses"""
-    query = update.callback_query
-    await query.answer()
-    
-    user = query.from_user
-    data = query.data
-    
-    session = db.get_session()
-    user_data = session.query(User).filter_by(telegram_id=user.id).first()
-    session.close()
-    
-    if not user_data:
-        await query.edit_message_text("❌ User not found. Please use /start first.")
-        return
-    
-    # ============================================
-    # 👛 BALANCE
-    # ============================================
-    if data == "menu_balance":
-        balance = user_data.balance or 0
-        user_id = user.id
-        
-        keyboard = [
-            [InlineKeyboardButton("🌱 Earn more", web_app=WebAppInfo(url=VERCEL_URL))],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu_back")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            f"👛 **Your Balance**\n\n"
-            f"🆔 User ID: `{user_id}`\n"
-            f"💵 **{balance:.2f} USDT**",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-    
-    # ============================================
-    # 👥 REFERRALS
-    # ============================================
-    elif data == "menu_referrals":
-        referral_count = session.query(User).filter_by(referred_by=user_data.id).count()
-        active_count = user_data.total_active_referrals or 0
-        referral_earnings = user_data.referral_earnings_all_time or 0
-        referral_code = user_data.referral_code
-        referral_link = f"https://t.me/PlantUSDT_bot?start={referral_code}"
-        
-        keyboard = [
-            [InlineKeyboardButton("📤 Share Link", callback_data=f"share_referral_{referral_code}")],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu_back")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            f"👥 **Your Referrals**\n\n"
-            f"Total: **{referral_count}**\n"
-            f"Active: **{active_count}**\n"
-            f"Earned: **${referral_earnings:.2f}**\n\n"
-            f"🔗 `{referral_link}`",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-    
-    # ============================================
-    # 🏦 WITHDRAW
-    # ============================================
-    elif data == "menu_withdraw":
-        keyboard = [
-            [InlineKeyboardButton("💲 Withdraw now", web_app=WebAppInfo(url=VERCEL_URL))],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu_back")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            f"🏦 **Withdraw**\n\n"
-            f"Withdraw your USDT on Polygon network 🟣\n\n"
-            f"⛓️ **Network:** Polygon\n"
-            f"💵 **Token:** USDT\n"
-            f"💰 **Min withdrawal:** $1.00\n"
-            f"💸 **Fees:** 15% — 25% (based on amount)\n\n"
-            f"**Amount breakdown:**\n"
-            f"• $1 — $49.99 → 15% fee\n"
-            f"• $50 — $99.99 → 20% fee\n"
-            f"• $100+ → 25% fee",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-    
-    # ============================================
-    # 🔙 BACK TO MENU
-    # ============================================
-    elif data == "menu_back":
-        await show_menu(update, context, message=query.message)
-
-# ============================================
-# SHARE REFERRAL CALLBACK
-# ============================================
-
-async def share_referral_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle share referral button press"""
-    query = update.callback_query
-    await query.answer()
-    
-    data = query.data
-    referral_code = data.replace("share_referral_", "")
-    referral_link = f"https://t.me/PlantUSDT_bot?start={referral_code}"
-    
-    try:
-        await query.message.reply_text(
-            f"📤 **Share your referral link!**\n\n"
-            f"Send this link to your friends:\n\n"
-            f"`{referral_link}`\n\n"
-            f"Use the forward button below to share it! 📤",
-            parse_mode='Markdown'
-        )
-        await query.edit_message_text(
-            f"✅ Link copied! Share it with your friends:\n\n"
-            f"`{referral_link}`",
-            parse_mode='Markdown'
-        )
-    except Exception as e:
-        logger.error(f"Error sharing referral: {e}")
-        await query.edit_message_text(
-            f"📤 **Share your referral link**\n\n"
-            f"Copy this link and send it to your friends:\n\n"
-            f"`{referral_link}`",
-            parse_mode='Markdown'
-        )
+    # Send the welcome back message
+    keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        f"Welcome back, {user.first_name}! 🌱\n\nOpen the PlantUSDT App below:"
+        + get_community_footer(),
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
 
 # ============================================
 # APP COMMAND
@@ -1209,38 +1053,6 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
-# POST_INIT
-# ============================================
-
-async def post_init(application: Application):
-    """Configure the Telegram menu and start the deposit scanner."""
-    try:
-        # Set the four-square menu button to open the Mini App
-        await application.bot.set_chat_menu_button(
-            chat_id=None,
-            menu_button={
-                "type": "web_app",
-                "text": "🌱 PlantUSDT",
-                "web_app": {"url": VERCEL_URL}
-            }
-        )
-        logger.info("✅ Menu button set to Mini App")
-    except Exception as e:
-        logger.warning(f"⚠️ Could not set menu button: {e}")
-
-    async def start_deposit_scanner():
-        while True:
-            try:
-                await deposit_scanner.scan_for_deposits(application.bot)
-            except Exception as e:
-                logger.error(f"Error in deposit scanner loop: {e}")
-            await asyncio.sleep(300)
-
-    application.create_task(start_deposit_scanner())
-    logger.info("🔍 Deposit scanner task started")
-
-
-# ============================================
 # MAIN FUNCTION
 # ============================================
 
@@ -1249,19 +1061,14 @@ def main():
     try:
         scheduler.start()
 
-        application = Application.builder().token(Config.BOT_TOKEN).post_init(post_init).build()
+        application = Application.builder().token(Config.BOT_TOKEN).build()
 
         # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
-        application.add_handler(CommandHandler("menu", menu_command))
 
         # Web App Data handler
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-
-        # Menu callbacks
-        application.add_handler(CallbackQueryHandler(menu_callback, pattern="^menu_"))
-        application.add_handler(CallbackQueryHandler(share_referral_callback, pattern="^share_referral_"))
 
         # Admin commands
         application.add_handler(CommandHandler("pending", pending))
@@ -1284,11 +1091,39 @@ def main():
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))
 
+        async def start_deposit_scanner():
+            while True:
+                try:
+                    await deposit_scanner.scan_for_deposits(application.bot)
+                except Exception as e:
+                    logger.error(f"Error in deposit scanner loop: {e}")
+                await asyncio.sleep(300)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(start_deposit_scanner())
+
+        async def set_menu_button():
+            try:
+                await application.bot.set_chat_menu_button(
+                    chat_id=None,
+                    menu_button={
+                        "type": "web_app",
+                        "text": "🌱 PlantUSDT",
+                        "web_app": {"url": VERCEL_URL}
+                    }
+                )
+                logger.info("✅ Menu button set to Mini App")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not set menu button: {e} (non-critical)")
+
+        loop.create_task(set_menu_button())
+
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
-        logger.info("📌 Menu button set to: 🌱 PlantUSDT (Mini App)")
-        logger.info("📱 Inline keyboard menu available with /menu or /start")
+        logger.info("📌 Menu button set to: 🌱 PlantUSDT")
+        logger.info("📢 Community footer added to all messages")
         logger.info("📊 Transaction channel: @PlantUSDTtransactions")
         logger.info("💰 Fee collection system active")
         logger.info("📈 Referral system with tier upgrades active")
@@ -1300,7 +1135,8 @@ def main():
         logger.info("✅ Active referral bonus system fully fixed")
         logger.info("✅ Active referrals now require investment (30+ ads removed)")
         logger.info("💰 Referral tier prices updated: Bronze $42, Silver $80, Gold $120, Diamond $160")
-        logger.info("📊 Daily ad limit increased to 100")
+        logger.info("🔗 Referral link only shows for users with connected wallet")
+        logger.info("🗑️ Adsgram bot ad code removed (bot rejected)")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 
