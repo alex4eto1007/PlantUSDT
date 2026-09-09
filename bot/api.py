@@ -425,13 +425,14 @@ def get_referral_stats(telegram_id):
         level1_refs = session_db.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         level1_earnings = user.referral_deposit_earnings or 0
+        total_referral_earnings = (user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0)
         
         return jsonify({
             'success': True,
             'level1_count': level1_count,
             'level1_earnings': level1_earnings,
             'total_referrals': level1_count,
-            'total_earnings': level1_earnings
+            'total_earnings': float(total_referral_earnings)
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
