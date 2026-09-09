@@ -1000,6 +1000,43 @@ def credit_ad_reward():
         )
         session_db.add(audit)
         
+        # ============================================
+        # 🆕 REFERRAL REWARD CREDIT LOGIC
+        # ============================================
+        if user.referred_by:
+            referrer = session_db.query(User).filter_by(id=user.referred_by).first()
+            if referrer:
+                # Check if the referral has met all conditions
+                if user.wallet_address and user.total_ads_watched >= 3:
+                    # Check if reward hasn't been given yet
+                    existing = session_db.query(AuditLog).filter(
+                        AuditLog.user_id == referrer.id,
+                        AuditLog.action == 'referral_reward',
+                        AuditLog.description.like(f'%{user.telegram_id}%')
+                    ).first()
+                    
+                    if not existing:
+                        # Credit $0.002 to referrer
+                        referrer.balance = (referrer.balance or Decimal('0')) + Decimal('0.002')
+                        referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + Decimal('0.002')
+                        referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + Decimal('0.002')
+                        
+                        # Log the reward
+                        reward_audit = AuditLog(
+                            user_id=referrer.id,
+                            action='referral_reward',
+                            field_changed='balance',
+                            old_value=float(referrer.balance - Decimal('0.002')),
+                            new_value=float(referrer.balance),
+                            amount=0.002,
+                            description=f'Referral reward for {user.telegram_id} (wallet + 3 ads)',
+                            source='referral_reward',
+                            created_at=datetime.utcnow()
+                        )
+                        session_db.add(reward_audit)
+                        session_db.commit()
+                        logger.info(f"✅ Referral reward $0.002 credited to {referrer.telegram_id} for {user.telegram_id}")
+        
         session_db.commit()
         clear_user_cache(telegram_id)
         return jsonify({

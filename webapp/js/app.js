@@ -2661,7 +2661,7 @@ async function claimTaskReward(taskId) {
 }
 
 // ============================================
-// REFERRAL PROGRESS LIST (NEW)
+// REFERRAL PROGRESS LIST (TABLE UI)
 // ============================================
 
 let referralListExpanded = false;
@@ -2673,16 +2673,16 @@ async function loadReferralProgress() {
         const data = await response.json();
         
         if (!data.success) {
-            document.getElementById('referralProgressList').textContent = 'No referrals yet.';
+            document.getElementById('referralProgressTable').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet.</td></tr>';
             return;
         }
         
         const referrals = data.referrals || [];
-        const container = document.getElementById('referralProgressList');
+        const container = document.getElementById('referralProgressTable');
         const showMoreBtn = document.getElementById('showMoreReferralsBtn');
         
         if (referrals.length === 0) {
-            container.innerHTML = '<p style="color:#8892b0;font-size:13px;">No referrals yet. Share your link!</p>';
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet. Share your link!</td></tr>';
             return;
         }
         
@@ -2692,17 +2692,18 @@ async function loadReferralProgress() {
         
         let html = '';
         visible.forEach(ref => {
-            const walletStatus = ref.wallet_connected ? '✅ Wallet' : '⏳ No wallet yet';
-            const adsStatus = ref.ads_watched >= 3 ? '✅ 3/3 ads' : `⏳ ${ref.ads_watched}/3 ads`;
-            const rewardStatus = ref.reward_claimed ? '✅ $0.002' : '⏳ Pending';
+            const walletStatus = ref.wallet_connected ? '✅' : '❌';
+            const adsStatus = ref.ads_watched >= 3 ? '✅ 3/3' : `${ref.ads_watched}/3`;
+            const rewardStatus = ref.reward_claimed ? '✅ Claimed' : '⏳ Pending';
+            const statusColor = ref.reward_claimed ? '#00ff87' : '#ffd93d';
             
             html += `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px;">
-                    <span style="color:#ccd6f0;">${ref.username}</span>
-                    <span style="color:#8892b0;font-size:12px;">
-                        ${walletStatus} • ${adsStatus} • ${rewardStatus}
-                    </span>
-                </div>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                    <td style="padding:6px 4px;color:#ccd6f0;">${ref.username}</td>
+                    <td style="text-align:center;padding:6px 4px;">${walletStatus}</td>
+                    <td style="text-align:center;padding:6px 4px;color:#8892b0;">${adsStatus}</td>
+                    <td style="text-align:right;padding:6px 4px;color:${statusColor};">${rewardStatus}</td>
+                </tr>
             `;
         });
         
@@ -2717,7 +2718,7 @@ async function loadReferralProgress() {
         
     } catch (error) {
         console.error('Error loading referral progress:', error);
-        document.getElementById('referralProgressList').textContent = 'Error loading referral progress.';
+        document.getElementById('referralProgressTable').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#ff6b6b;">Error loading referral progress.</td></tr>';
     }
 }
 
@@ -2778,4 +2779,4 @@ console.log('💰 Withdrawal fee: simplified structure (15% under $50, 20% under
 console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
 console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 100/100 (no reward)');
-console.log('🎁 Referral reward progress UI added ($0.002 per referral)');
+console.log('🎁 Referral reward progress UI added (table layout) — $0.002 per referral');

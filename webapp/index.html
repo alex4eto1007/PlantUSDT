@@ -132,16 +132,28 @@
             </div>
 
             <!-- ============================================ -->
-            <!-- 🆕 REFERRAL REWARD SECTION (NEW) -->
+            <!-- 🆕 REFERRAL REWARD SECTION (TABLE UI) -->
             <!-- ============================================ -->
             <div class="referral-reward-section" style="margin-top:12px;padding:12px;background:rgba(0,255,135,0.05);border-radius:8px;border:1px solid rgba(0,255,135,0.1);">
-                <p style="font-size:13px;color:#ffd93d;margin:0 0 8px 0;">
+                <p style="font-size:13px;color:#ffd93d;margin:0 0 10px 0;">
                     🎁 <strong>$0.002</strong> when a friend connects wallet + watches 3 ads
                 </p>
-                <div id="referralProgressList" style="font-size:13px;color:#ccd6f0;">
-                    Loading referral progress...
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+                        <thead>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                                <th style="text-align:left;padding:6px 4px;color:#8892b0;">User</th>
+                                <th style="text-align:center;padding:6px 4px;color:#8892b0;">Wallet</th>
+                                <th style="text-align:center;padding:6px 4px;color:#8892b0;">Ads</th>
+                                <th style="text-align:right;padding:6px 4px;color:#8892b0;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="referralProgressTable">
+                            <tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">Loading...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-                <button id="showMoreReferralsBtn" onclick="toggleReferralList()" style="display:none;margin-top:8px;padding:6px 12px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
+                <button id="showMoreReferralsBtn" onclick="toggleReferralList()" style="display:none;margin-top:8px;padding:6px 12px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;width:100%;">
                     📋 Show more →
                 </button>
             </div>
