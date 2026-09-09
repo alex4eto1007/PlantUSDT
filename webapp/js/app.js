@@ -41,7 +41,6 @@ function generateMathCaptcha() {
         answer = num1 + num2;
         question = `${num1} + ${num2} = ?`;
     } else {
-        // Ensure the result is always positive (supports 0)
         const bigger = Math.max(num1, num2);
         const smaller = Math.min(num1, num2);
         answer = bigger - smaller;
@@ -100,7 +99,6 @@ function updateAdResetTimer() {
     const timerEl = document.getElementById('adResetTimer');
     if (!timerEl) return;
     
-    // Check if we've crossed midnight since the last check
     if (window._lastCheckedDate) {
         const lastDate = new Date(window._lastCheckedDate);
         const currentDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -114,7 +112,6 @@ function updateAdResetTimer() {
     
     if (timeLeft <= 0) {
         timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
-        // Also refresh if we hit midnight exactly
         console.log('🔄 UTC Midnight reached — refreshing ad data...');
         loadUserData();
         loadAdStats();
@@ -204,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadAdStats();
                 loadActiveReferrals();
                 loadTasks();
+                loadReferralProgress();
                 
                 // Start UTC reset timer
                 updateAdResetTimer();
@@ -280,7 +278,6 @@ async function loadUserData(retries = 3) {
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
             
-            // ---- CHECK IF IT'S A NEW DAY USING last_ad_reset ----
             if (data.last_ad_reset) {
                 const lastReset = new Date(data.last_ad_reset);
                 const now = new Date();
@@ -292,7 +289,6 @@ async function loadUserData(retries = 3) {
                 }
             }
             
-            // Hide loading state
             var loadingEl = document.getElementById('loadingMessage');
             var appContent = document.getElementById('appContent');
             if (loadingEl) loadingEl.style.display = 'none';
@@ -307,8 +303,8 @@ async function loadUserData(retries = 3) {
                 }
             }
             
-            // Refresh ad stats after user data loads
             loadAdStats();
+            loadReferralProgress();
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -364,6 +360,7 @@ function refreshData() {
         loadAdStats();
         loadActiveReferrals();
         loadTasks();
+        loadReferralProgress();
     }, 300);
 }
 
@@ -634,7 +631,6 @@ async function claimInvestment(fieldNumber) {
         return;
     }
 
-    // Update button to show processing
     const btn = document.getElementById('field' + fieldNumber + 'Btn');
     const originalText = btn ? btn.textContent : '';
     if (btn) {
@@ -684,6 +680,7 @@ async function claimInvestment(fieldNumber) {
                             loadAdStats();
                             loadActiveReferrals();
                             loadTasks();
+                            loadReferralProgress();
                             claimInProgress = false;
                             if (btn) {
                                 btn.textContent = originalText;
@@ -911,7 +908,7 @@ async function updateReferral(data) {
 }
 
 // ============================================
-// COPY REFERRAL FUNCTION - FIXED WITH TELEGRAM SHARE
+// COPY REFERRAL FUNCTION
 // ============================================
 async function copyReferral() {
     showInterstitialIfNeeded();
@@ -929,7 +926,6 @@ async function copyReferral() {
                 referralLinkEl.style.color = '#ccd6f0';
             }
             
-            // TRY CLIPBOARD API FIRST
             var copied = false;
             try {
                 await navigator.clipboard.writeText(referralLink);
@@ -938,7 +934,6 @@ async function copyReferral() {
                 console.log('Clipboard API failed, using fallback...');
             }
             
-            // FALLBACK 1: execCommand (works on older devices)
             if (!copied) {
                 var textArea = document.createElement('textarea');
                 textArea.value = referralLink;
@@ -963,7 +958,6 @@ async function copyReferral() {
                 document.body.removeChild(textArea);
             }
             
-            // FALLBACK 2: Telegram native popup with Share + Copy options
             if (!copied) {
                 try {
                     tg.showPopup({
@@ -976,14 +970,12 @@ async function copyReferral() {
                         ]
                     }, function(buttonId) {
                         if (buttonId === 'share') {
-                            // Try to share via Telegram
                             try {
                                 tg.sendData(JSON.stringify({
                                     type: 'share_referral',
                                     link: referralLink
                                 }));
                             } catch (e) {
-                                // If sendData fails, show manual copy
                                 safePopup({
                                     title: '📋 Copy Referral Link',
                                     message: 'Please copy this link manually:\n\n' + referralLink,
@@ -991,7 +983,6 @@ async function copyReferral() {
                                 });
                             }
                         } else if (buttonId === 'copy') {
-                            // Try copy one more time with user interaction
                             var tempInput = document.createElement('input');
                             tempInput.value = referralLink;
                             tempInput.style.position = 'fixed';
@@ -1031,7 +1022,6 @@ async function copyReferral() {
                         }
                     });
                 } catch (e) {
-                    // Final fallback: show manual copy
                     safePopup({
                         title: '📋 Copy Referral Link',
                         message: 'Please copy this link manually:\n\n' + referralLink,
@@ -1041,7 +1031,6 @@ async function copyReferral() {
                 return;
             }
             
-            // Success message if copied
             safePopup({
                 title: '✅ Copied!',
                 message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉',
@@ -1701,7 +1690,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// AD REWARD FUNCTIONS - WITH FIXES FOR 0 ANSWERS
+// AD REWARD FUNCTIONS
 // ============================================
 async function canWatchAd() {
     return true;
@@ -1733,11 +1722,9 @@ function updateAdUI(dailyCount) {
     const dailyLimit = 100;
     console.log('📊 updateAdUI called with count:', dailyCount);
     
-    // Store globally to prevent overwrites
     window._latestAdCount = dailyCount;
     window._adCountTimestamp = Date.now();
     
-    // Update Ads Today
     const adsTodayEl = document.getElementById('adsToday');
     if (adsTodayEl) {
         console.log('📊 Found adsToday element, setting to:', dailyCount + ' / ' + dailyLimit);
@@ -1753,7 +1740,6 @@ function updateAdUI(dailyCount) {
         console.warn('📊 adsToday element NOT FOUND!');
     }
 
-    // Update Progress Bar
     const progressEl = document.getElementById('adProgressBar');
     if (progressEl) {
         const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
@@ -1769,7 +1755,6 @@ function updateAdUI(dailyCount) {
         console.warn('📊 adProgressBar element NOT FOUND!');
     }
 
-    // Update Watch Button state — ALWAYS ENABLED
     const watchBtn = document.getElementById('watchAdBtn');
     const statusEl = document.getElementById('adStatus');
     
@@ -1813,7 +1798,6 @@ async function watchRewardedAd() {
         console.log('📢 Ad result:', result);
 
         if (result.done && !result.error && result.state === 'destroy') {
-            // Show math captcha AFTER ad is watched - simplified with prompt
             const captcha = generateMathCaptcha();
             const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question to claim your ad reward:\n\n${captcha.question}\n\nEnter your answer:`);
             
@@ -1856,15 +1840,12 @@ async function watchRewardedAd() {
                 console.log('📊 API Response from credit_ad_reward:', data);
                 
                 if (data.success) {
-                    // ✅ IMMEDIATE UI UPDATE – use the returned data
                     const dailyCount = data.daily_ad_count || 0;
                     const limitReached = data.limit_reached || false;
                     console.log('📊 Ad count from API:', dailyCount, 'Limit reached:', limitReached);
                     
-                    // Update UI immediately using the dedicated function
                     updateAdUI(dailyCount);
 
-                    // Update Total Ad Earnings
                     const adEarningsEl = document.getElementById('adEarnings');
                     if (adEarningsEl && data.total_ad_earnings !== undefined) {
                         adEarningsEl.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
@@ -1884,12 +1865,12 @@ async function watchRewardedAd() {
                         });
                     }
 
-                    // Refresh other data (balance, earnings, tasks, etc.) after a longer delay
                     setTimeout(() => {
                         console.log('📊 Refreshing other data after ad...');
                         loadUserData();
                         loadActiveReferrals();
                         loadTasks();
+                        loadReferralProgress();
                     }, 2000);
 
                     return true;
@@ -1944,12 +1925,11 @@ async function watchRewardedAd() {
 }
 
 // ============================================
-// LOAD AD STATS - WITH PREVENTION OF STALE OVERWRITES
+// LOAD AD STATS
 // ============================================
 async function loadAdStats() {
     const userId = tgUser ? tgUser.id : '0';
     try {
-        // Fetch fresh user data directly with cache-buster
         const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
         const userData = await response.json();
         console.log('📊 loadAdStats fetched user data:', userData);
@@ -1959,11 +1939,8 @@ async function loadAdStats() {
             return;
         }
 
-        // Get daily count from server
         const serverDailyCount = userData.daily_ad_count || 0;
         
-        // Check if we have a newer count stored from immediate update
-        // If the stored count is newer (timestamp within last 10 seconds) and higher, use it
         let finalCount = serverDailyCount;
         if (window._latestAdCount !== null && window._adCountTimestamp !== null) {
             const timeSinceUpdate = Date.now() - window._adCountTimestamp;
@@ -1975,19 +1952,16 @@ async function loadAdStats() {
         
         console.log('📊 loadAdStats final count:', finalCount);
 
-        // Update Total Ad Earnings
         const adEarningsEl = document.getElementById('adEarnings');
         if (adEarningsEl) {
             adEarningsEl.textContent = '$' + Number(userData.total_ad_earnings || 0).toFixed(3);
         }
 
-        // Update Ads Today using the final count
         const adsTodayEl = document.getElementById('adsToday');
         const dailyLimit = 100;
         
         if (adsTodayEl) {
             adsTodayEl.textContent = finalCount + ' / ' + dailyLimit;
-            // Color based on progress
             if (finalCount >= dailyLimit) {
                 adsTodayEl.style.color = '#ff6b6b';
             } else if (finalCount >= dailyLimit * 0.8) {
@@ -1997,7 +1971,6 @@ async function loadAdStats() {
             }
         }
 
-        // Update progress bar
         const progressEl = document.getElementById('adProgressBar');
         if (progressEl) {
             const progress = Math.min((finalCount / dailyLimit) * 100, 100);
@@ -2011,7 +1984,6 @@ async function loadAdStats() {
             }
         }
 
-        // Update Watch Button state — ALWAYS ENABLED
         const watchBtn = document.getElementById('watchAdBtn');
         const statusEl = document.getElementById('adStatus');
         if (watchBtn) {
@@ -2143,7 +2115,6 @@ async function loadActiveReferrals() {
                         html += `
                             <div id="hiddenActiveRefs" style="display:none;">
                         `;
-                        // Add the rest
                         data.active_list.slice(showCount).forEach(ref => {
                             const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
                             html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
@@ -2229,6 +2200,7 @@ async function claimWelcomeBonus() {
                         loadUserData();
                         loadActiveReferrals();
                         loadTasks();
+                        loadReferralProgress();
                         return;
                     }
                     safePopup({
@@ -2250,6 +2222,7 @@ async function claimWelcomeBonus() {
                     loadUserData();
                     loadActiveReferrals();
                     loadTasks();
+                    loadReferralProgress();
                     return;
                 }
                 
@@ -2262,6 +2235,7 @@ async function claimWelcomeBonus() {
                     loadUserData();
                     loadActiveReferrals();
                     loadTasks();
+                    loadReferralProgress();
                 } else {
                     safePopup({
                         title: '❌ Error',
@@ -2283,6 +2257,7 @@ async function claimWelcomeBonus() {
                         loadUserData();
                         loadActiveReferrals();
                         loadTasks();
+                        loadReferralProgress();
                         return;
                     }
                 } catch (e) {}
@@ -2298,7 +2273,7 @@ async function claimWelcomeBonus() {
 }
 
 // ============================================
-// DISABLE INTERSTITIAL ADS - HARDCODED $4
+// DISABLE INTERSTITIAL ADS
 // ============================================
 async function disableInterstitialAds() {
     const userId = tgUser ? tgUser.id : '0';
@@ -2354,7 +2329,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASK SYSTEM - VISIBLE TASKS (ADS TASKS REMOVED)
+// TASK SYSTEM
 // ============================================
 
 async function loadTasks() {
@@ -2388,9 +2363,7 @@ async function loadTasks() {
                     }
                 }
                 
-                // Filter out ads tasks (8-16) and claimed tasks
                 const visibleTasks = data.tasks.filter(task => {
-                    // Completely remove ads tasks (8-16)
                     if (task.task_id >= 8 && task.task_id <= 16) {
                         return false;
                     }
@@ -2538,7 +2511,7 @@ async function loadTasks() {
 }
 
 // ============================================
-// SHOW MORE TASKS - Toggle collapsed tasks
+// SHOW MORE TASKS
 // ============================================
 function showMoreTasks(category) {
     console.log('📋 Showing more tasks for category:', category);
@@ -2688,6 +2661,72 @@ async function claimTaskReward(taskId) {
 }
 
 // ============================================
+// REFERRAL PROGRESS LIST (NEW)
+// ============================================
+
+let referralListExpanded = false;
+
+async function loadReferralProgress() {
+    const userId = tgUser ? tgUser.id : '0';
+    try {
+        const response = await fetch(`${API_BASE}/api/get_referral_progress/${userId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            document.getElementById('referralProgressList').textContent = 'No referrals yet.';
+            return;
+        }
+        
+        const referrals = data.referrals || [];
+        const container = document.getElementById('referralProgressList');
+        const showMoreBtn = document.getElementById('showMoreReferralsBtn');
+        
+        if (referrals.length === 0) {
+            container.innerHTML = '<p style="color:#8892b0;font-size:13px;">No referrals yet. Share your link!</p>';
+            return;
+        }
+        
+        const showCount = referralListExpanded ? referrals.length : 5;
+        const visible = referrals.slice(0, showCount);
+        const hasMore = referrals.length > 5;
+        
+        let html = '';
+        visible.forEach(ref => {
+            const walletStatus = ref.wallet_connected ? '✅ Wallet' : '⏳ No wallet yet';
+            const adsStatus = ref.ads_watched >= 3 ? '✅ 3/3 ads' : `⏳ ${ref.ads_watched}/3 ads`;
+            const rewardStatus = ref.reward_claimed ? '✅ $0.002' : '⏳ Pending';
+            
+            html += `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px;">
+                    <span style="color:#ccd6f0;">${ref.username}</span>
+                    <span style="color:#8892b0;font-size:12px;">
+                        ${walletStatus} • ${adsStatus} • ${rewardStatus}
+                    </span>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        if (hasMore) {
+            showMoreBtn.style.display = 'block';
+            showMoreBtn.textContent = referralListExpanded ? '🔼 Show less' : `📋 Show all ${referrals.length} →`;
+        } else {
+            showMoreBtn.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error loading referral progress:', error);
+        document.getElementById('referralProgressList').textContent = 'Error loading referral progress.';
+    }
+}
+
+function toggleReferralList() {
+    referralListExpanded = !referralListExpanded;
+    loadReferralProgress();
+}
+
+// ============================================
 // EXPOSE FUNCTIONS
 // ============================================
 window.navigateTo = navigateTo;
@@ -2716,6 +2755,8 @@ window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
 window.claimTaskReward = claimTaskReward;
 window.showMoreTasks = showMoreTasks;
+window.loadReferralProgress = loadReferralProgress;
+window.toggleReferralList = toggleReferralList;
 
 console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: No requirements — everyone can claim!');
@@ -2737,3 +2778,4 @@ console.log('💰 Withdrawal fee: simplified structure (15% under $50, 20% under
 console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
 console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 100/100 (no reward)');
+console.log('🎁 Referral reward progress UI added ($0.002 per referral)');

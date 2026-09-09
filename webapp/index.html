@@ -119,27 +119,43 @@
         <div class="referral-section">
             <h3>👥 Referral Program</h3>
             <p>Earn up to 5% of your referrals' deposits based on your tier!</p>
-            
+
             <div class="referral-link-box">
                 <span id="referralLinkText">Loading referral link...</span>
                 <button class="copy-btn" onclick="showInterstitialIfNeeded(); copyReferral()" title="Copy referral link">📋</button>
             </div>
-            
+
             <div class="referral-stats">
                 <span>Total Referrals: <strong id="referralCount">0</strong></span>
                 <span>Active: <strong id="activeReferralsCount">0 / 0</strong></span>
                 <span>Earned: <strong id="referralEarned">$0.000</strong></span>
             </div>
-            
+
+            <!-- ============================================ -->
+            <!-- 🆕 REFERRAL REWARD SECTION (NEW) -->
+            <!-- ============================================ -->
+            <div class="referral-reward-section" style="margin-top:12px;padding:12px;background:rgba(0,255,135,0.05);border-radius:8px;border:1px solid rgba(0,255,135,0.1);">
+                <p style="font-size:13px;color:#ffd93d;margin:0 0 8px 0;">
+                    🎁 <strong>$0.002</strong> when a friend connects wallet + watches 3 ads
+                </p>
+                <div id="referralProgressList" style="font-size:13px;color:#ccd6f0;">
+                    Loading referral progress...
+                </div>
+                <button id="showMoreReferralsBtn" onclick="toggleReferralList()" style="display:none;margin-top:8px;padding:6px 12px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
+                    📋 Show more →
+                </button>
+            </div>
+            <!-- ============================================ -->
+
             <div id="activeReferralList" style="margin-top:10px;display:none;"></div>
-            
+
             <div class="referral-details">
                 <div class="referral-detail-row"><span>👤 Referrals:</span><strong id="level1Count">0</strong></div>
                 <div class="referral-detail-row"><span>💰 Earnings from deposits:</span><strong id="level1Earnings">$0.000</strong></div>
                 <div class="referral-detail-row" style="color:#ffd93d;"><span>🎁 Active Referral Bonus:</span><strong style="color:#ffd93d;">0.03 USDT each</strong></div>
                 <div class="referral-detail-row" style="color:#00d4ff;"><span>🎉 Welcome Bonus:</span><strong style="color:#00d4ff;">0.1 USDT</strong></div>
             </div>
-            
+
             <button id="claimWelcomeBtn" onclick="claimWelcomeBonus()" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;color:#0a0e17;font-weight:700;cursor:pointer;">
                 🎁 Claim Welcome Bonus (0.1 USDT)
             </button>

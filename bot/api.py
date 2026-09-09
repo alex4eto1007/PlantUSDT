@@ -1553,6 +1553,53 @@ def api_claim_task_reward_old():
         session_db.close()
 
 # ============================================
+# REFERRAL PROGRESS ENDPOINT (NEW)
+# ============================================
+
+@app.route('/api/get_referral_progress/<int:telegram_id>', methods=['GET'])
+@rate_limit
+def get_referral_progress(telegram_id):
+    """Get referral progress for the user (wallet, ads, reward status)"""
+    user, err_response, status = get_authenticated_user(str(telegram_id))
+    if err_response:
+        return err_response, status
+    
+    session_db = db.get_session()
+    try:
+        user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Get all referrals
+        referrals = session_db.query(User).filter_by(referred_by=user.id).all()
+        
+        result = []
+        for ref in referrals:
+            # Check if reward was already given
+            reward_given = session_db.query(AuditLog).filter(
+                AuditLog.user_id == user.id,
+                AuditLog.action == 'referral_reward',
+                AuditLog.description.like(f'%{ref.telegram_id}%')
+            ).first() is not None
+            
+            result.append({
+                'username': ref.username or ref.first_name or 'User',
+                'wallet_connected': bool(ref.wallet_address and ref.wallet_address != ''),
+                'ads_watched': ref.total_ads_watched or 0,
+                'reward_claimed': reward_given
+            })
+        
+        return jsonify({
+            'success': True,
+            'referrals': result
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        session_db.close()
+
+# ============================================
 # SERVE STATIC FILES
 # ============================================
 
