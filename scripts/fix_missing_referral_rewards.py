@@ -85,8 +85,8 @@ def fix_missing_referral_rewards():
                 old_value=float(old_balance),
                 new_value=float(referrer.balance),
                 amount=float(reward),
-                description=f'Referral reward for {referred_user.telegram_id} (wallet + 3 ads) - AUTO',
-                source='referral_reward_scheduler',
+                description=f'Referral reward for {referred_user.telegram_id} (wallet + 3 ads) - FIXED',
+                source='referral_reward_fix',
                 created_at=datetime.utcnow()
             )
             session.add(audit)
@@ -101,12 +101,9 @@ def fix_missing_referral_rewards():
         print(f"⏭️ Total skipped: {skipped_count}")
         print("="*50)
         
-        return credited_count
-        
     except Exception as e:
         session.rollback()
         print(f"❌ Error: {e}")
-        return 0
     finally:
         session.close()
 
