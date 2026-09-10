@@ -313,13 +313,20 @@
     </div>
 
     <script>
+        // ✅ Declare API_BASE first — needed because app.js loads AFTER this inline script
+        const API_BASE = 'https://plantusdt.ddns.net';
+        window.API_BASE = API_BASE;
+        
+        // ✅ Use var + window fallback so app.js can share it without conflict
+        var selectedCurrency = window.selectedCurrency || 'usdt';
+        window.selectedCurrency = selectedCurrency;
+        
         let userId = null;
         let cooldownInterval = null;
         let lastWithdrawalAt = null;
         let fullBalance = 0;
         let dustAmount = 0;
         let withdrawAmount = 0;
-        let selectedCurrency = 'usdt';
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
@@ -342,8 +349,8 @@
                     if (typeof window.setWallet === 'function') {
                         window.setWallet();
                     } else {
-                        var userId = tg.initDataUnsafe?.user?.id || '0';
-                        fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + userId)
+                        var uid = tg.initDataUnsafe?.user?.id || '0';
+                        fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + uid)
                             .then(function(response) { return response.json(); })
                             .then(function(data) {
                                 if (data.success && data.wallet_address) {
@@ -376,6 +383,7 @@
 
         function selectCurrency(currency) {
             selectedCurrency = currency;
+            window.selectedCurrency = currency;
             
             var usdtBtn = document.getElementById('usdtBtn');
             var gramBtn = document.getElementById('gramBtn');
@@ -530,7 +538,6 @@
 
         function isValidTonAddress(address) {
             if (!address) return false;
-            // UQ or EQ (48 chars) or raw format
             return /^(UQ|EQ)[A-Za-z0-9_-]{46}$/.test(address) ||
                    /^-?\d+:[a-fA-F0-9]{64}$/.test(address);
         }
@@ -586,7 +593,7 @@
                         }
                     }
 
-                    var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
+                    var uid = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
                     
                     if (submitBtn) {
                         submitBtn.disabled = true;
@@ -597,7 +604,7 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            telegram_id: userId,
+                            telegram_id: uid,
                             amount: amount,
                             address: address,
                             currency: selectedCurrency
@@ -664,7 +671,8 @@
         window.goBack = goBack;
         window.loadFullBalance = loadFullBalance;
         window.selectCurrency = selectCurrency;
+        window.isValidTonAddress = isValidTonAddress;
     </script>
-    <script src="/js/app.js?v=65"></script>
+    <script src="/js/app.js?v=66"></script>
 </body>
 </html>

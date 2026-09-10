@@ -15,8 +15,7 @@ const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
 let isLoading = false;
 let isDataLoaded = false;
-let selectedCurrency = 'usdt';
-window.selectedCurrency = 'usdt';
+window.selectedCurrency = window.selectedCurrency || 'usdt';
 
 // Global variable to store latest ad count to prevent overwrites
 window._latestAdCount = null;
@@ -269,7 +268,6 @@ function goBack() {
 // CURRENCY SELECTION FOR WITHDRAWALS - NEW
 // ============================================
 function selectCurrency(currency) {
-    selectedCurrency = currency;
     window.selectedCurrency = currency;
     
     var usdtBtn = document.getElementById('usdtBtn');
@@ -1690,7 +1688,6 @@ function setupEventListeners() {
             var addressInput = document.getElementById('withdrawAddress');
             var gramInput = document.getElementById('gramAddress');
             
-            // Get the withdraw amount - either from window.withdrawAmount or from the input
             var amount = 0;
             if (window.withdrawAmount !== undefined && window.withdrawAmount > 0) {
                 amount = window.withdrawAmount;
@@ -2756,14 +2753,20 @@ async function loadReferralProgress() {
         const response = await fetch(`${API_BASE}/api/get_referral_progress/${userId}`);
         const data = await response.json();
         
+        const container = document.getElementById('referralProgressTable');
+        const showMoreBtn = document.getElementById('showMoreReferralsBtn');
+        
+        // ✅ Guard: Only run on pages that have the referral table
+        if (!container) {
+            return;
+        }
+        
         if (!data.success) {
-            document.getElementById('referralProgressTable').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet.</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet.</td></tr>';
             return;
         }
         
         const referrals = data.referrals || [];
-        const container = document.getElementById('referralProgressTable');
-        const showMoreBtn = document.getElementById('showMoreReferralsBtn');
         
         if (referrals.length === 0) {
             container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet. Share your link!</td></tr>';
@@ -2793,16 +2796,21 @@ async function loadReferralProgress() {
         
         container.innerHTML = html;
         
-        if (hasMore) {
-            showMoreBtn.style.display = 'block';
-            showMoreBtn.textContent = referralListExpanded ? '🔼 Show less' : `📋 Show all ${referrals.length} →`;
-        } else {
-            showMoreBtn.style.display = 'none';
+        if (showMoreBtn) {
+            if (hasMore) {
+                showMoreBtn.style.display = 'block';
+                showMoreBtn.textContent = referralListExpanded ? '🔼 Show less' : `📋 Show all ${referrals.length} →`;
+            } else {
+                showMoreBtn.style.display = 'none';
+            }
         }
         
     } catch (error) {
         console.error('Error loading referral progress:', error);
-        document.getElementById('referralProgressTable').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#ff6b6b;">Error loading referral progress.</td></tr>';
+        const container = document.getElementById('referralProgressTable');
+        if (container) {
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#ff6b6b;">Error loading referral progress.</td></tr>';
+        }
     }
 }
 
