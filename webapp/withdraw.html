@@ -313,9 +313,8 @@
     </div>
 
     <script>
-        // ✅ Declare API_BASE first — needed because app.js loads AFTER this inline script
-        const API_BASE = 'https://plantusdt.ddns.net';
-        window.API_BASE = API_BASE;
+        // ✅ Only set window.API_BASE — no const, so no conflict with app.js
+        window.API_BASE = window.API_BASE || 'https://plantusdt.ddns.net';
         
         // ✅ Use var + window fallback so app.js can share it without conflict
         var selectedCurrency = window.selectedCurrency || 'usdt';
@@ -673,6 +672,6 @@
         window.selectCurrency = selectCurrency;
         window.isValidTonAddress = isValidTonAddress;
     </script>
-    <script src="/js/app.js?v=66"></script>
+    <script src="/js/app.js?v=67"></script>
 </body>
 </html>
