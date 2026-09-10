@@ -185,6 +185,41 @@
             display: block;
             margin-top: 4px;
         }
+        /* Currency toggle */
+        .currency-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .currency-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.3);
+            color: #8892b0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .currency-btn.active {
+            border-color: #8247E5;
+            background: rgba(130,71,229,0.15);
+            color: #fff;
+        }
+        .currency-btn:hover {
+            border-color: rgba(130,71,229,0.4);
+        }
+        .gram-note {
+            font-size: 11px;
+            color: #a29bfe;
+            margin-top: 6px;
+            padding: 8px 10px;
+            background: rgba(130,71,229,0.08);
+            border-radius: 6px;
+            border: 1px solid rgba(130,71,229,0.15);
+        }
     </style>
 </head>
 <body>
@@ -192,16 +227,15 @@
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; gap: 12px;">
             <button class="back-btn" onclick="goBack()">←</button>
             <h1 style="color:#6c5ce7;font-size:20px; margin: 0; flex: 1; text-align: center;">🏦 Withdraw</h1>
-            <span class="network-badge-small"><span class="dot"></span> Polygon</span>
+            <span class="network-badge-small"><span class="dot"></span> <span id="networkLabel">Polygon</span></span>
         </div>
 
         <div class="info-card">
             <h3>Withdrawal Instructions</h3>
             <p><strong>Full Balance Only:</strong> You can only withdraw your entire balance.<br>
             <strong>Max 1 withdrawal per 24 hours</strong><br>
-            <strong>Fee:</strong> Simplified percentage structure<br>
-            <strong>Network:</strong> Polygon (MATIC) ⛓️<br>
-            <strong>Token:</strong> USDT on Polygon<br>
+            <strong>Network:</strong> Polygon (USDT) or TON (GRAM)<br>
+            <strong>Token:</strong> USDT or GRAM<br>
             <strong>Gas Fees:</strong> Covered by us!</p>
             <div class="fee-breakdown">
                 <strong>Fee Structure:</strong><br>
@@ -221,7 +255,6 @@
                 </div>
             </div>
             <div class="warning-text">⏳ Withdrawals are processed manually by admin. Please allow up to 24 hours.</div>
-            <p style="font-size:12px;color:#8892b0;margin-top:8px;">🔒 Your funds will be sent to your Polygon wallet address.</p>
         </div>
 
         <form id="withdrawForm">
@@ -233,22 +266,44 @@
                 <span class="sub">Full balance only — no partial withdrawals</span>
             </div>
 
+            <!-- Currency Selection -->
+            <div style="margin-bottom: 8px;">
+                <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">Choose withdrawal method:</label>
+                <div class="currency-toggle">
+                    <button type="button" class="currency-btn active" id="usdtBtn" onclick="selectCurrency('usdt')">
+                        🟣 USDT<br><span style="font-size:11px;font-weight:400;">(Polygon)</span>
+                    </button>
+                    <button type="button" class="currency-btn" id="gramBtn" onclick="selectCurrency('gram')">
+                        💎 GRAM<br><span style="font-size:11px;font-weight:400;">(TON)</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="form-group" style="display:none;">
                 <label>💰 Amount (USDT on Polygon)</label>
                 <input type="number" id="withdrawAmount" placeholder="Full balance only" min="1" step="0.01" disabled>
             </div>
 
-            <div class="form-group">
+            <!-- USDT Address Field -->
+            <div class="form-group" id="usdtAddressGroup">
                 <label>📤 Withdraw to (Polygon Wallet)</label>
                 <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)">
                 <button type="button" class="set-wallet-btn" id="setWalletBtn">📂 Use Connected Wallet</button>
                 <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Must be a Polygon network wallet address</p>
             </div>
 
+            <!-- GRAM Address Field -->
+            <div class="form-group" id="gramAddressGroup" style="display:none;">
+                <label>📤 TON Address</label>
+                <input type="text" id="gramAddress" placeholder="UQ... or EQ...">
+                <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Paste your TON wallet address (UQ or EQ format)</p>
+                <div class="gram-note">ⓘ Rate applied at processing time</div>
+            </div>
+
             <div class="fee-summary" id="feeSummary">
                 <div class="fee-row"><span>Amount:</span><span class="amount" id="feeAmount">$0.00</span></div>
                 <div class="fee-row"><span>Fee:</span><span class="fee-amount" id="feeAmountFee">$0.00</span></div>
-                <div class="fee-row total"><span>You will receive on Polygon:</span><span class="net" id="feeNet">$0.00</span></div>
+                <div class="fee-row total"><span>You will receive:</span><span class="net" id="feeNet">$0.00</span></div>
             </div>
 
             <button type="submit" class="withdraw-btn" id="withdrawBtn">🌱 Withdraw Full Balance</button>
@@ -264,6 +319,7 @@
         let fullBalance = 0;
         let dustAmount = 0;
         let withdrawAmount = 0;
+        let selectedCurrency = 'usdt';
 
         document.addEventListener('DOMContentLoaded', function() {
             var tg = window.Telegram.WebApp;
@@ -286,7 +342,6 @@
                     if (typeof window.setWallet === 'function') {
                         window.setWallet();
                     } else {
-                        console.warn('setWallet not loaded, using fallback');
                         var userId = tg.initDataUnsafe?.user?.id || '0';
                         fetch(window.API_BASE + '/api/get_wallet?telegram_id=' + userId)
                             .then(function(response) { return response.json(); })
@@ -319,6 +374,32 @@
             }
         });
 
+        function selectCurrency(currency) {
+            selectedCurrency = currency;
+            
+            var usdtBtn = document.getElementById('usdtBtn');
+            var gramBtn = document.getElementById('gramBtn');
+            var usdtGroup = document.getElementById('usdtAddressGroup');
+            var gramGroup = document.getElementById('gramAddressGroup');
+            var networkLabel = document.getElementById('networkLabel');
+            
+            if (currency === 'usdt') {
+                usdtBtn.classList.add('active');
+                gramBtn.classList.remove('active');
+                usdtGroup.style.display = 'block';
+                gramGroup.style.display = 'none';
+                networkLabel.textContent = 'Polygon';
+            } else {
+                gramBtn.classList.add('active');
+                usdtBtn.classList.remove('active');
+                gramGroup.style.display = 'block';
+                usdtGroup.style.display = 'none';
+                networkLabel.textContent = 'TON';
+            }
+            
+            updateFeeSummary(withdrawAmount);
+        }
+
         function loadFullBalance() {
             if (!userId || userId === '0') return;
             
@@ -328,16 +409,13 @@
                     if (data.success) {
                         fullBalance = data.balance || 0;
                         
-                        // Truncate (floor) to 2 decimal places
                         withdrawAmount = Math.floor(fullBalance * 100) / 100;
                         dustAmount = fullBalance - withdrawAmount;
                         
                         document.getElementById('fullBalanceDisplay').textContent = '$' + withdrawAmount.toFixed(2);
                         
-                        // Update fee summary with the withdrawable amount
                         updateFeeSummary(withdrawAmount);
                         
-                        // Set the hidden amount input
                         document.getElementById('withdrawAmount').value = withdrawAmount;
                     }
                 })
@@ -368,7 +446,12 @@
             
             document.getElementById('feeAmount').textContent = '$' + amount.toFixed(2);
             document.getElementById('feeAmountFee').textContent = '$' + totalFee.toFixed(2);
-            document.getElementById('feeNet').textContent = '$' + net.toFixed(2);
+            
+            if (selectedCurrency === 'gram') {
+                document.getElementById('feeNet').textContent = '~$' + net.toFixed(2) + ' in GRAM';
+            } else {
+                document.getElementById('feeNet').textContent = '$' + net.toFixed(2);
+            }
         }
 
         function fetchUserData() {
@@ -445,6 +528,13 @@
             }, 1000);
         }
 
+        function isValidTonAddress(address) {
+            if (!address) return false;
+            // UQ or EQ (48 chars) or raw format
+            return /^(UQ|EQ)[A-Za-z0-9_-]{46}$/.test(address) ||
+                   /^-?\d+:[a-fA-F0-9]{64}$/.test(address);
+        }
+
         function goBack() {
             window.location.href = 'index.html';
         }
@@ -460,9 +550,6 @@
                         return;
                     }
                     
-                    var addressInput = document.getElementById('withdrawAddress');
-                    var address = addressInput ? addressInput.value : '';
-                    
                     var amount = withdrawAmount;
 
                     if (amount < 1) {
@@ -473,13 +560,30 @@
                         });
                         return;
                     }
-                    if (!address || !address.startsWith('0x')) {
-                        window.Telegram.WebApp.showPopup({
-                            title: 'Error',
-                            message: 'Please enter a valid Polygon wallet address.',
-                            buttons: [{type: 'ok'}]
-                        });
-                        return;
+
+                    var address = '';
+                    if (selectedCurrency === 'usdt') {
+                        var addressInput = document.getElementById('withdrawAddress');
+                        address = addressInput ? addressInput.value : '';
+                        if (!address || !address.startsWith('0x') || address.length !== 42) {
+                            window.Telegram.WebApp.showPopup({
+                                title: 'Error',
+                                message: 'Please enter a valid Polygon wallet address.',
+                                buttons: [{type: 'ok'}]
+                            });
+                            return;
+                        }
+                    } else {
+                        var gramInput = document.getElementById('gramAddress');
+                        address = gramInput ? gramInput.value.trim() : '';
+                        if (!isValidTonAddress(address)) {
+                            window.Telegram.WebApp.showPopup({
+                                title: 'Error',
+                                message: 'Please enter a valid TON wallet address (UQ or EQ format).',
+                                buttons: [{type: 'ok'}]
+                            });
+                            return;
+                        }
                     }
 
                     var userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || '0';
@@ -495,7 +599,8 @@
                         body: JSON.stringify({
                             telegram_id: userId,
                             amount: amount,
-                            address: address
+                            address: address,
+                            currency: selectedCurrency
                         })
                     })
                     .then(function(response) { return response.json(); })
@@ -507,10 +612,11 @@
                         if (data.success) {
                             window.Telegram.WebApp.showPopup({
                                 title: 'Success!',
-                                message: data.message || 'Withdrawal submitted on Polygon!',
+                                message: data.message || 'Withdrawal submitted!',
                                 buttons: [{type: 'ok'}]
                             });
-                            if (addressInput) addressInput.value = '';
+                            document.getElementById('withdrawAddress').value = '';
+                            document.getElementById('gramAddress').value = '';
                             fetchUserData();
                             loadFullBalance();
                         } else {
@@ -557,6 +663,7 @@
 
         window.goBack = goBack;
         window.loadFullBalance = loadFullBalance;
+        window.selectCurrency = selectCurrency;
     </script>
     <script src="/js/app.js?v=64"></script>
 </body>

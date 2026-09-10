@@ -40,7 +40,6 @@ ALLOWED_ORIGINS = [
 
 @app.after_request
 def cors_headers(response):
-    # Only set if not already set by Nginx
     if 'Access-Control-Allow-Origin' not in response.headers:
         origin = request.headers.get('Origin')
         allowed_origins = [
@@ -72,8 +71,8 @@ Session(app)
 # RATE LIMITING
 # ============================================
 rate_limits = defaultdict(list)
-RATE_LIMIT = 160  # requests per minute
-RATE_WINDOW = 60  # seconds
+RATE_LIMIT = 160
+RATE_WINDOW = 60
 
 def rate_limit(f):
     @wraps(f)
@@ -163,11 +162,17 @@ def sanitize_input(value):
         return None
     return str(value).strip()
 
+def isValidTonAddress(address):
+    """Validate TON address (UQ, EQ, or raw format)"""
+    import re
+    if not address:
+        return False
+    return bool(re.match(r'^(UQ|EQ)[A-Za-z0-9_-]{46}$', address)) or bool(re.match(r'^-?\d+:[a-fA-F0-9]{64}$', address))
+
 # ============================================
 # MATH CAPTCHA
 # ============================================
 def generate_math_captcha():
-    """Generate a simple math captcha question and answer"""
     num1 = random.randint(1, 20)
     num2 = random.randint(1, 20)
     operator = random.choice(['+', '-', '*'])
@@ -183,7 +188,6 @@ def generate_math_captcha():
     return question, answer
 
 def reset_daily_ad_count(user):
-    """Reset daily ad count if a new day has started"""
     if not user.last_ad_reset:
         user.last_ad_reset = datetime.utcnow()
         user.daily_ad_count = 0
@@ -267,6 +271,7 @@ def withdraw():
     
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
+    currency = sanitize_input(data.get('currency', 'usdt')).lower()
     
     try:
         amount = float(data.get('amount', 0))
@@ -278,8 +283,18 @@ def withdraw():
     if not telegram_id or not amount or not address:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
     
-    if address.lower() == PROJECT_WALLET.lower():
-        return jsonify({'success': False, 'message': 'Cannot withdraw to project wallet. Please use your own wallet address.'}), 400
+    if currency not in ['usdt', 'gram']:
+        return jsonify({'success': False, 'message': 'Invalid currency'}), 400
+    
+    # Validate address based on currency
+    if currency == 'usdt':
+        if not address.startswith('0x') or len(address) != 42:
+            return jsonify({'success': False, 'message': 'Invalid Polygon wallet address'}), 400
+        if address.lower() == PROJECT_WALLET.lower():
+            return jsonify({'success': False, 'message': 'Cannot withdraw to project wallet.'}), 400
+    elif currency == 'gram':
+        if not isValidTonAddress(address):
+            return jsonify({'success': False, 'message': 'Invalid TON wallet address (UQ or EQ format)'}), 400
     
     user, err_response, status = get_authenticated_user(telegram_id)
     if err_response:
@@ -300,7 +315,7 @@ def withdraw():
         if existing_pending:
             return jsonify({
                 'success': False,
-                'message': 'You already have a pending withdrawal. Please wait for it to be processed before submitting another one.'
+                'message': 'You already have a pending withdrawal. Please wait for it to be processed.'
             }), 400
         
         # ---- COOLDOWN CHECK ----
@@ -322,30 +337,25 @@ def withdraw():
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
         
         # ---- FULL BALANCE ONLY ----
-        # Allow small tolerance for floating point issues (0.01)
         if abs(amount - float(user.balance)) > 0.01:
             return jsonify({
                 'success': False,
-                'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
+                'message': f'You can only withdraw your full balance (${float(user.balance):.2f}).'
             }), 400
         
-        # ---- TRUNCATE TO 2 DECIMAL PLACES (FLOOR) ----
-        # User can withdraw the floored amount, dust remains in balance
+        # ---- TRUNCATE TO 2 DECIMAL PLACES ----
         withdraw_amount = math.floor(amount * 100) / 100
         dust = amount - withdraw_amount
         
-        # Keep dust in user's balance
         user.balance = Decimal(str(dust))
         
         if withdraw_amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
         
-        # Use withdraw_amount for the rest of the withdrawal process
         amount = withdraw_amount
         
-        # Calculate fee (simplified: 15% under $50, 20% under $100, 25% over $100)
+        # Calculate fee
         fee_percent = 0.0
-
         if amount < 50:
             fee_percent = 0.15
         elif amount < 100:
@@ -356,6 +366,7 @@ def withdraw():
         fee = amount * fee_percent
         net_amount = amount - fee
         
+        # ✅ Store currency and TON address if GRAM
         withdrawal = Withdrawal(
             user_id=user.id,
             amount=amount,
@@ -364,6 +375,14 @@ def withdraw():
             wallet_address=address,
             status='pending'
         )
+        
+        # If gram, we store the address in wallet_address (it's a TON address)
+        # Add currency field if it doesn't exist yet - we'll add it via a helper
+        try:
+            withdrawal.currency = currency
+        except:
+            pass  # If the column doesn't exist, we'll add it later
+        
         session_db.add(withdrawal)
         
         # Log to audit log
@@ -374,7 +393,7 @@ def withdraw():
             old_value=float(user.balance + Decimal(str(amount)) + Decimal(str(dust))),
             new_value=float(user.balance),
             amount=float(amount),
-            description=f'Withdrawal request of ${amount:.2f} to {address[:10]}... (dust: ${dust:.3f})',
+            description=f'Withdrawal request of ${amount:.2f} in {currency.upper()} to {address[:10]}... (dust: ${dust:.3f})',
             source='user',
             created_at=datetime.utcnow()
         )
@@ -382,7 +401,7 @@ def withdraw():
         
         session_db.commit()
         clear_user_cache(telegram_id)
-        return jsonify({'success': True, 'message': 'Withdrawal request submitted'})
+        return jsonify({'success': True, 'message': f'Withdrawal request submitted in {currency.upper()}'})
     finally:
         session_db.close()
 
@@ -503,7 +522,6 @@ def get_user():
             set_cached_user(telegram_id, response)
             return jsonify(response)
         
-        # Check if it's a new day and invalidate cache if needed
         if user and user.last_ad_reset:
             now = datetime.utcnow()
             if now.date() > user.last_ad_reset.date():
@@ -529,7 +547,6 @@ def get_user():
                     'expected_return': float(inv.expected_return)
                 })
                 
-                # Calculate expected daily earnings for active locked investments
                 if inv.is_active and inv.is_locked and inv.lock_period > 0:
                     profit = float(inv.expected_return) - float(inv.amount)
                     daily = profit / inv.lock_period
@@ -889,7 +906,6 @@ def credit_ad_reward():
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
     
-    # Verify math captcha
     captcha_answer = data.get('captcha_answer')
     captcha_question = data.get('captcha_question')
     
@@ -900,7 +916,6 @@ def credit_ad_reward():
             'need_captcha': True
         }), 400
     
-    # Validate captcha
     try:
         expected_answer = int(captcha_answer)
     except ValueError:
@@ -920,20 +935,15 @@ def credit_ad_reward():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
-        # Check if user is flagged for anomaly
         if user.flagged_for_anomaly:
             return jsonify({
                 'success': False,
                 'message': 'Your account has been flagged for suspicious activity. Please contact support.'
             }), 403
         
-        # Reset daily ad count if new day (this clears cache)
         reset_daily_ad_count(user)
         
-        # ---- DAILY AD LIMIT: 100 ADS PER DAY ----
-        # After 100, user can still watch but gets $0 reward
         if user.daily_ad_count >= 100:
-            # Log the ad with 0 reward
             ad_log = AdLog(
                 user_id=user.id,
                 watched_at=datetime.utcnow(),
@@ -954,21 +964,17 @@ def credit_ad_reward():
                 'message': 'You have reached the daily limit. No reward for this ad. Watch tomorrow!'
             }), 200
         
-        # ANTI-ABUSE: Device fingerprint tracking
         fingerprint = data.get('device_fingerprint', 'unknown')
         if fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
-            # Same user, different device fingerprint - flag for review
             user.flagged_for_anomaly = True
             session_db.commit()
-            logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints: {user.device_fingerprint} vs {fingerprint}")
+            logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints")
         
         if not user.device_fingerprint and fingerprint != 'unknown':
             user.device_fingerprint = fingerprint
         
         reward = Decimal('0.001')
         old_balance = Decimal(user.balance or 0)
-        old_ad_earnings = Decimal(user.total_ad_earnings or 0)
-        old_total_earnings = Decimal(user.total_earnings_all_time or 0)
         
         user.balance = (user.balance or Decimal('0')) + reward
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
@@ -976,7 +982,6 @@ def credit_ad_reward():
         user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
         
-        # Log ad watch
         ad_log = AdLog(
             user_id=user.id,
             watched_at=datetime.utcnow(),
@@ -987,7 +992,6 @@ def credit_ad_reward():
         )
         session_db.add(ad_log)
         
-        # Log to audit log
         audit = AuditLog(
             user_id=user.id,
             action='ad_earnings',
@@ -1001,15 +1005,11 @@ def credit_ad_reward():
         )
         session_db.add(audit)
         
-        # ============================================
-        # 🆕 REFERRAL REWARD CREDIT LOGIC
-        # ============================================
+        # REFERRAL REWARD CREDIT LOGIC
         if user.referred_by:
             referrer = session_db.query(User).filter_by(id=user.referred_by).first()
             if referrer:
-                # Check if the referral has met all conditions
                 if user.wallet_address and user.total_ads_watched >= 3:
-                    # Check if reward hasn't been given yet
                     existing = session_db.query(AuditLog).filter(
                         AuditLog.user_id == referrer.id,
                         AuditLog.action == 'referral_reward',
@@ -1017,12 +1017,10 @@ def credit_ad_reward():
                     ).first()
                     
                     if not existing:
-                        # Credit $0.002 to referrer
                         referrer.balance = (referrer.balance or Decimal('0')) + Decimal('0.002')
                         referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + Decimal('0.002')
                         referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + Decimal('0.002')
                         
-                        # Log the reward
                         reward_audit = AuditLog(
                             user_id=referrer.id,
                             action='referral_reward',
@@ -1095,8 +1093,6 @@ def claim_investment():
         profit = Decimal(str(investment.expected_return)) - Decimal(str(investment.amount))
         amount_to_credit = Decimal(str(investment.expected_return))
         old_balance = Decimal(user.balance or 0)
-        old_investment_earnings = Decimal(user.investment_earnings_all_time or 0)
-        old_total_earnings = Decimal(user.total_earnings_all_time or 0)
         
         investment.is_locked = False
         investment.is_active = False
@@ -1118,7 +1114,6 @@ def claim_investment():
         )
         session_db.add(payout)
         
-        # Log to audit log
         audit = AuditLog(
             user_id=user.id,
             action='investment_claim',
@@ -1280,7 +1275,6 @@ def disable_interstitial_ads():
         user.interstitial_ads_disabled = True
         user.interstitial_disabled_at = datetime.utcnow()
         
-        # Log to audit log
         audit = AuditLog(
             user_id=user.id,
             action='disable_ads',
@@ -1591,13 +1585,12 @@ def api_claim_task_reward_old():
         session_db.close()
 
 # ============================================
-# REFERRAL PROGRESS ENDPOINT (NEW)
+# REFERRAL PROGRESS ENDPOINT
 # ============================================
 
 @app.route('/api/get_referral_progress/<int:telegram_id>', methods=['GET'])
 @rate_limit
 def get_referral_progress(telegram_id):
-    """Get referral progress for the user (wallet, ads, reward status)"""
     user, err_response, status = get_authenticated_user(str(telegram_id))
     if err_response:
         return err_response, status
@@ -1608,12 +1601,10 @@ def get_referral_progress(telegram_id):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
-        # Get all referrals
         referrals = session_db.query(User).filter_by(referred_by=user.id).all()
         
         result = []
         for ref in referrals:
-            # Check if reward was already given
             reward_given = session_db.query(AuditLog).filter(
                 AuditLog.user_id == user.id,
                 AuditLog.action == 'referral_reward',

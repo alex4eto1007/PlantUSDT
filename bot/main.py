@@ -148,7 +148,6 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("❌ User not found. Please /start first.")
             return
         
-        # Check if user has a connected wallet
         if not user_data.wallet_address:
             await query.edit_message_text(
                 "🔗 **Connect your wallet first!**\n\n"
@@ -205,12 +204,13 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await query.edit_message_text(
             f"🏦 **Withdraw**\n\n"
-            f"Withdraw your USDT on Polygon network 🟣\n\n"
-            f"⛓️ Network: Polygon\n"
-            f"💵 Token: USDT\n"
+            f"Withdraw your earnings on Polygon or TON 🟣💎\n\n"
             f"💰 Your balance: **${user_data.balance:.2f}**\n"
             f"💸 Min withdrawal: $1.00\n\n"
-            f"Fee structure:\n"
+            f"**Networks:**\n"
+            f"🟣 USDT (Polygon)\n"
+            f"💎 GRAM (TON)\n\n"
+            f"**Fee structure:**\n"
             f"• $1 — $49.99 → 15% fee\n"
             f"• $50 — $99.99 → 20% fee\n"
             f"• $100+ → 25% fee\n\n"
@@ -286,9 +286,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.utcnow()
     existing_user = db.get_user(user.id)
 
-    # ============================================
-    # UPDATE USER INFO (NAME & USERNAME) ON EVERY START
-    # ============================================
     db.update_user_info(user.id, user.username, user.first_name)
 
     if not existing_user:
@@ -336,7 +333,6 @@ Use /menu to open the menu!"""
         )
         return
 
-    # Existing user - handle referral first
     if context.args and len(context.args) > 0:
         referral_code = context.args[0]
         if existing_user.can_be_referred and existing_user.referred_by is None:
@@ -374,7 +370,6 @@ Use /menu to open the menu!"""
                         return
                     session.close()
 
-    # Send the welcome back message
     keyboard = [
         [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
         [InlineKeyboardButton("📋 Open Menu", callback_data="back_to_menu")]
@@ -397,7 +392,6 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
     
-    # Update user info on /app command too
     db.update_user_info(user.id, user.username, user.first_name)
     
     keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
@@ -420,7 +414,6 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle data sent from the Mini App via tg.sendData()"""
     try:
         data = json.loads(update.message.web_app_data.data)
         logger.info(f"📩 WebApp data received: {data}")
@@ -479,12 +472,18 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for w in pending_w:
         user_obj = db.get_user_by_id(w.user_id)
         username = user_obj.username if user_obj else "Unknown"
+        
+        # Detect currency based on address format
+        is_gram = w.wallet_address and (w.wallet_address.startswith('UQ') or w.wallet_address.startswith('EQ'))
+        currency_label = "💎 GRAM (TON)" if is_gram else "🟣 USDT (Polygon)"
+        
         text += f"ID: {w.id}\n"
         text += f"👤 User: @{username}\n"
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
-        text += f"🔒 Fee (5%): ${w.fee:.2f} USDT\n"
+        text += f"🔒 Fee (15-25%): ${w.fee:.2f} USDT\n"
         text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
-        text += f"🏦 Wallet: <code>{w.wallet_address}</code>\n"
+        text += f"💎 Withdraw in: {currency_label}\n"
+        text += f"🏦 Address: <code>{w.wallet_address}</code>\n"
         text += f"📅 Requested: {w.created_at.strftime('%d/%m/%Y %H:%M')}\n"
         text += f"Status: ⏳ Pending\n"
         text += f"To complete: /complete_payout {w.id} TX_HASH\n\n"
@@ -530,6 +529,10 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Withdrawal {withdrawal_id} is already {withdrawal.status}.")
         return
 
+    # Detect currency
+    is_gram = withdrawal.wallet_address and (withdrawal.wallet_address.startswith('UQ') or withdrawal.wallet_address.startswith('EQ'))
+    currency_label = "GRAM (TON)" if is_gram else "USDT (Polygon)"
+
     updated = db.update_withdrawal_status(withdrawal_id, "completed", tx_hash)
     if updated:
         await update.message.reply_text(
@@ -537,8 +540,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
             f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
             f"🔒 Fee Collected: ${withdrawal.fee:.2f} USDT\n"
+            f"💎 Currency: {currency_label}\n"
             f"🔗 TX: {tx_hash}\n"
-            f"⛓️ Network: Polygon"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -548,7 +551,7 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📤 **Withdrawal Completed!**\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"💵 Amount: **${withdrawal.net_amount:.2f} USDT**\n"
-                f"⛓️ Network: Polygon\n"
+                f"💎 Currency: **{currency_label}**\n"
                 f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🏦 Project Wallet: `{PROJECT_WALLET}`"
@@ -565,8 +568,8 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"✅ Your withdrawal request has been processed!\n\n"
                          f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
                          f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
-                         f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
-                         f"⛓️ Network: Polygon\n\n"
+                         f"💎 Currency: {currency_label}\n"
+                         f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n\n"
                          f"Check your wallet!"
                          + get_community_footer(),
                     parse_mode='Markdown'
@@ -687,6 +690,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /collect_fees <tx_hash> - Collect ALL uncollected fees
 /test_channel - Test channel connection
 /reset_referral <user_id> - Reset a user's referral status
+/manual_balance <user_id> <amount> <description> - Manually update balance
 
 TASK MANAGEMENT:
 /add_task <title> | <description> | <reward> - Create a new task
@@ -694,26 +698,12 @@ TASK MANAGEMENT:
 /delete_task <task_id> - Delete a task
 /complete_task <user_id> <task_id> - Mark task as completed for a user
 
-Example:
-/pending
-/complete_payout 1 0xabc123...
-/pending_fees
-/collect_fees 0xdef456...
-/test_channel
-/reset_referral 123456789
-
-/add_task Watch 3 Ads | Watch 3 rewarded ads | 0.10
-/list_tasks
-/delete_task 1
-/complete_task 123456789 1
-
-Transactions are on Polygon (MATIC) network using USDT on Polygon
+Transactions on Polygon (USDT) and TON (GRAM)
 
 Fee Collection System:
 - Fees are automatically tracked when withdrawals are completed
 - Use /pending_fees to see how much is uncollected
-- Use /collect_fees TX_HASH to mark all fees as collected
-- Send the total fees to your personal wallet in one transaction"""
+- Use /collect_fees TX_HASH to mark all fees as collected"""
 
     await update.message.reply_text(help_text + get_community_footer())
 
@@ -729,8 +719,7 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 1:
         await update.message.reply_text(
             "❌ Usage: /reset_referral <user_id>\n\n"
-            "Example: /reset_referral 123456789\n\n"
-            "This will allow the user to accept a new referral."
+            "Example: /reset_referral 123456789"
             + get_community_footer()
         )
         return
@@ -758,7 +747,6 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================
 
 async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin command to add a new task"""
     user = update.effective_user
     
     if not check_rate_limit(user.id):
@@ -772,9 +760,7 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if len(args) < 3:
         await update.message.reply_text(
-            "❌ Usage: /add_task <title> | <description> | <reward>\n\n"
-            "Example: /add_task Watch 3 Ads | Watch 3 rewarded ads | 0.10\n\n"
-            "Note: Use | as separator between title, description, and reward."
+            "❌ Usage: /add_task <title> | <description> | <reward>"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -810,8 +796,7 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📌 Title: {title}\n"
                 f"📝 Description: {description}\n"
                 f"💰 Reward: ${reward:.2f} USDT\n"
-                f"🆔 Task ID: {result.id}\n\n"
-                f"Users can see this task in the Mini App!"
+                f"🆔 Task ID: {result.id}"
                 + get_community_footer(),
                 parse_mode='Markdown'
             )
@@ -829,7 +814,6 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error: {str(e)}")
 
 async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin command to list all tasks"""
     user = update.effective_user
     
     if not check_rate_limit(user.id):
@@ -858,7 +842,6 @@ async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"📌 Title: {task.title}\n"
         text += f"📝 Description: {task.description}\n"
         text += f"💰 Reward: ${task.reward:.2f} USDT\n"
-        text += f"📅 Created: {task.created_at.strftime('%Y-%m-%d %H:%M')}\n"
         text += f"━━━━━━━━━━━━━━━━━━━━\n"
 
     await update.message.reply_text(
@@ -867,7 +850,6 @@ async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def delete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin command to delete a task"""
     user = update.effective_user
     
     if not check_rate_limit(user.id):
@@ -880,8 +862,7 @@ async def delete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "❌ Usage: /delete_task <task_id>\n\n"
-            "Example: /delete_task 1"
+            "❌ Usage: /delete_task <task_id>"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -907,13 +888,12 @@ async def delete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     except ValueError:
         await update.message.reply_text(
-            "❌ Invalid task ID. Please enter a valid number."
+            "❌ Invalid task ID."
             + get_community_footer(),
             parse_mode='Markdown'
         )
 
 async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin command to mark a task as completed for a user"""
     user = update.effective_user
     
     if not check_rate_limit(user.id):
@@ -926,8 +906,7 @@ async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "❌ Usage: /complete_task <user_id> <task_id>\n\n"
-            "Example: /complete_task 123456789 1"
+            "❌ Usage: /complete_task <user_id> <task_id>"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -955,7 +934,7 @@ async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     except ValueError:
         await update.message.reply_text(
-            "❌ Invalid IDs. Please enter valid numbers."
+            "❌ Invalid IDs."
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -972,7 +951,6 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
     
-    # Update user info
     db.update_user_info(user.id, user.username, user.first_name)
     
     args = context.args
@@ -982,9 +960,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📊 **Upgrade Your Referral Tier**\n\n"
             f"Permanently increase your referral bonus!\n\n"
             f"Available tiers:\n{tier_list}\n\n"
-            f"💡 Example: Friend deposits $100 → you earn 5% at Diamond tier\n\n"
-            f"Usage: `/upgrade [tier]`\n"
-            f"Example: `/upgrade diamond`"
+            f"Usage: `/upgrade [tier]`"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -1001,9 +977,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if tier == "free":
         await update.message.reply_text(
-            "🌱 You're already on the Free tier (1%).\n\n"
-            "Upgrade to earn more from your referrals!\n"
-            "Use `/upgrade` to see available tiers."
+            "🌱 You're already on the Free tier (1%)."
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -1021,8 +995,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if current_tier == tier:
             await update.message.reply_text(
-                f"✅ You're already on the {REFERRAL_TIERS[tier]['emoji']} {tier.title()} tier!\n"
-                f"Bonus: {REFERRAL_TIERS[tier]['bonus_percent']}%"
+                f"✅ You're already on the {REFERRAL_TIERS[tier]['emoji']} {tier.title()} tier!"
                 + get_community_footer(),
                 parse_mode='Markdown'
             )
@@ -1091,9 +1064,7 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.edit_message_text(
                     f"{msg}\n\n"
                     f"💰 New balance: **${user_obj.balance:.2f}**\n"
-                    f"📊 New bonus: **{REFERRAL_TIERS[tier]['bonus_percent']}%**\n\n"
-                    f"💡 Your referrals will now earn you more!\n"
-                    f"Share your referral link to start earning."
+                    f"📊 New bonus: **{REFERRAL_TIERS[tier]['bonus_percent']}%**"
                     + get_community_footer(),
                     parse_mode='Markdown'
                 )
@@ -1114,7 +1085,6 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
     
-    # Update user info
     db.update_user_info(user.id, user.username, user.first_name)
     
     session = db.get_session()
@@ -1126,7 +1096,6 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         stats = get_referral_stats(user_obj.id, session)
-        logger.info(f"📊 Stats retrieved: {stats}")
         
         if not stats:
             await update.message.reply_text("❌ Error loading stats.")
@@ -1139,24 +1108,19 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response += f"━━━━━━━━━━━━━━━━━━━━\n"
         response += f"👥 **Total Referrals:** {stats['total_referred']}\n"
         response += f"✅ **Active Referrals:** {stats['active_referrals']}\n"
-        response += f"⏳ **Pending Active:** {stats['pending_active']}\n"
         response += f"💰 **Active Bonus Earned:** ${stats['active_bonus_earned']:.3f}\n"
         response += f"💎 **Spent on Upgrades:** ${stats['upgrade_spent']:.2f}\n\n"
         
         if stats['next_tier']:
             response += f"⬆️ **Next Tier:** {REFERRAL_TIERS[stats['next_tier']]['emoji']} {stats['next_tier'].title()}\n"
-            response += f"📈 **Next Bonus:** {stats['next_tier_bonus']}%\n"
             response += f"💰 **Upgrade Cost:** ${stats['next_tier_price']:.2f}\n\n"
             response += f"Upgrade with: `/upgrade {stats['next_tier']}`"
         else:
-            response += f"🏆 **You're at the highest tier!**\n"
-            response += f"💎 Maximum bonus: {stats['tier_bonus']}%\n\n"
-            response += f"Share your referral link to earn more!"
+            response += f"🏆 **You're at the highest tier!**"
         
         response += get_community_footer()
         
         await update.message.reply_text(response, parse_mode='Markdown')
-        logger.info(f"✅ referral_stats response sent to user {user.id}")
         
     except Exception as e:
         logger.error(f"Referral stats error: {e}")
@@ -1165,11 +1129,10 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
-# MANUAL BALANCE UPDATE WITH AUDIT LOG
+# MANUAL BALANCE UPDATE
 # ============================================
 
 async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin command to manually update a user's balance with audit logging"""
     user = update.effective_user
     
     if not check_rate_limit(user.id):
@@ -1182,9 +1145,7 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 3:
         await update.message.reply_text(
-            "❌ Usage: /manual_balance <user_id> <amount> <description>\n\n"
-            "Example: /manual_balance 123456789 0.50 'Bonus for testing'\n\n"
-            "Use negative amount to deduct: /manual_balance 123456789 -0.50 'Fee adjustment'"
+            "❌ Usage: /manual_balance <user_id> <amount> <description>"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -1209,7 +1170,6 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_user.balance = new_balance
         target_user.total_earnings_all_time = (target_user.total_earnings_all_time or Decimal('0')) + amount
         
-        # Log to audit log
         audit = AuditLog(
             user_id=target_user.id,
             action='manual_update',
@@ -1227,11 +1187,9 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await update.message.reply_text(
             f"✅ Balance updated for @{target_user.username or 'User'}!\n\n"
-            f"📊 Old balance: ${old_balance:.2f}\n"
-            f"📊 New balance: ${new_balance:.2f}\n"
+            f"📊 Old: ${old_balance:.2f} → New: ${new_balance:.2f}\n"
             f"💰 Amount: ${amount:.2f}\n"
-            f"📝 Description: {description}\n"
-            f"🆔 User ID: {target_user_id}"
+            f"📝 {description}"
             + get_community_footer(),
             parse_mode='Markdown'
         )
@@ -1317,21 +1275,9 @@ def main():
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
-        logger.info("📌 Menu button set to: 🌱 PlantUSDT")
-        logger.info("📢 Community footer added to all messages")
-        logger.info("📊 Transaction channel: @PlantUSDTtransactions")
-        logger.info("💰 Fee collection system active")
-        logger.info("📈 Referral system with tier upgrades active")
-        logger.info("📋 Task management system active")
-        logger.info("📩 Web App Data handler active for referral sharing")
-        logger.info("🔄 User info (name/username) auto-updates on each interaction")
-        logger.info("📝 Audit log table active for all balance changes")
-        logger.info("⚙️ Manual balance command available: /manual_balance")
-        logger.info("✅ Active referral bonus system fully fixed")
-        logger.info("✅ Active referrals now require investment (30+ ads removed)")
-        logger.info("💰 Referral tier prices updated: Bronze $42, Silver $80, Gold $120, Diamond $160")
-        logger.info("🔗 Referral link only shows for users with connected wallet")
-        logger.info("🗑️ Adsgram bot ad code removed (bot rejected)")
+        logger.info("💎 GRAM (TON) withdrawal option active")
+        logger.info("🎁 Referral rewards: $0.002 per qualified referral")
+        logger.info("🔄 Daily midnight referral rewards check scheduled")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

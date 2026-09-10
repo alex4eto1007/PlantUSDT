@@ -15,11 +15,22 @@ const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
 let isLoading = false;
 let isDataLoaded = false;
+let selectedCurrency = 'usdt';
+window.selectedCurrency = 'usdt';
 
 // Global variable to store latest ad count to prevent overwrites
 window._latestAdCount = null;
 window._adCountTimestamp = null;
 window._lastTimerValue = null;
+
+// ============================================
+// GRAM (TON) ADDRESS VALIDATION - NEW
+// ============================================
+function isValidTonAddress(address) {
+    if (!address) return false;
+    return /^(UQ|EQ)[A-Za-z0-9_-]{46}$/.test(address) ||
+           /^-?\d+:[a-fA-F0-9]{64}$/.test(address);
+}
 
 // ============================================
 // MATH CAPTCHA FOR AD REWARDS - FIXED FOR 0 ANSWERS
@@ -223,7 +234,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (target.classList.contains('back-btn') || 
             target.classList.contains('no-ad') || 
-            target.id === 'watchAdBtn') {
+            target.id === 'watchAdBtn' ||
+            target.classList.contains('currency-btn')) {
             return;
         }
 
@@ -251,6 +263,44 @@ function navigateTo(page) {
 
 function goBack() {
     window.history.back();
+}
+
+// ============================================
+// CURRENCY SELECTION FOR WITHDRAWALS - NEW
+// ============================================
+function selectCurrency(currency) {
+    selectedCurrency = currency;
+    window.selectedCurrency = currency;
+    
+    var usdtBtn = document.getElementById('usdtBtn');
+    var gramBtn = document.getElementById('gramBtn');
+    var usdtGroup = document.getElementById('usdtAddressGroup');
+    var gramGroup = document.getElementById('gramAddressGroup');
+    var networkLabel = document.getElementById('networkLabel');
+    
+    if (currency === 'usdt') {
+        if (usdtBtn) usdtBtn.classList.add('active');
+        if (gramBtn) gramBtn.classList.remove('active');
+        if (usdtGroup) usdtGroup.style.display = 'block';
+        if (gramGroup) gramGroup.style.display = 'none';
+        if (networkLabel) networkLabel.textContent = 'Polygon';
+    } else {
+        if (gramBtn) gramBtn.classList.add('active');
+        if (usdtBtn) usdtBtn.classList.remove('active');
+        if (gramGroup) gramGroup.style.display = 'block';
+        if (usdtGroup) usdtGroup.style.display = 'none';
+        if (networkLabel) networkLabel.textContent = 'TON';
+    }
+    
+    var feeNetEl = document.getElementById('feeNet');
+    if (feeNetEl) {
+        var currentText = feeNetEl.textContent.replace('~', '').replace(' in GRAM', '');
+        if (currency === 'gram') {
+            feeNetEl.textContent = '~' + currentText + ' in GRAM';
+        } else {
+            feeNetEl.textContent = currentText;
+        }
+    }
 }
 
 // ============================================
@@ -1633,25 +1683,49 @@ function setupEventListeners() {
             }
             
             showInterstitialIfNeeded();
-            var amountInput = document.getElementById('withdrawAmount');
-            var addressInput = document.getElementById('withdrawAddress');
-            var amount = amountInput ? amountInput.value : '';
-            var address = addressInput ? addressInput.value : '';
-            
-            if (!amount || parseFloat(amount) < 1) {
-                safePopup({title:'❌ Error', message:'Please enter at least $1 USDT for withdrawal on Polygon.', buttons:[{type:'ok'}]});
-                return;
-            }
-            if (!address || !address.startsWith('0x')) {
-                safePopup({title:'❌ Error', message:'Please enter a valid Polygon wallet address.', buttons:[{type:'ok'}]});
-                return;
-            }
-            if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
-                safePopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet on Polygon.', buttons:[{type:'ok'}]});
-                return;
-            }
             
             var userId = tgUser ? tgUser.id : '0';
+            var currency = window.selectedCurrency || 'usdt';
+            var amountInput = document.getElementById('withdrawAmount');
+            var addressInput = document.getElementById('withdrawAddress');
+            var gramInput = document.getElementById('gramAddress');
+            
+            // Get the withdraw amount - either from window.withdrawAmount or from the input
+            var amount = 0;
+            if (window.withdrawAmount !== undefined && window.withdrawAmount > 0) {
+                amount = window.withdrawAmount;
+            } else if (amountInput && amountInput.value) {
+                amount = parseFloat(amountInput.value);
+            } else {
+                var fullBalanceEl = document.getElementById('fullBalanceDisplay');
+                if (fullBalanceEl) {
+                    amount = parseFloat(fullBalanceEl.textContent.replace('$', ''));
+                }
+            }
+            
+            var address = '';
+            if (currency === 'usdt') {
+                address = addressInput ? addressInput.value : '';
+                if (!address || !address.startsWith('0x') || address.length !== 42) {
+                    safePopup({title:'❌ Error', message:'Please enter a valid Polygon wallet address.', buttons:[{type:'ok'}]});
+                    return;
+                }
+                if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
+                    safePopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet on Polygon.', buttons:[{type:'ok'}]});
+                    return;
+                }
+            } else {
+                address = gramInput ? gramInput.value.trim() : '';
+                if (!isValidTonAddress(address)) {
+                    safePopup({title:'❌ Error', message:'Please enter a valid TON wallet address (UQ or EQ format).', buttons:[{type:'ok'}]});
+                    return;
+                }
+            }
+            
+            if (!amount || amount < 1) {
+                safePopup({title:'❌ Error', message:'Please enter at least $1 USDT for withdrawal.', buttons:[{type:'ok'}]});
+                return;
+            }
             
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -1661,16 +1735,26 @@ function setupEventListeners() {
             fetch(API_BASE + '/api/withdraw', {
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({telegram_id:userId, amount:parseFloat(amount), address:address})
+                body:JSON.stringify({
+                    telegram_id: userId,
+                    amount: parseFloat(amount),
+                    address: address,
+                    currency: currency
+                })
             })
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 if (data.success) {
-                    safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted on Polygon!', buttons:[{type:'ok'}]});
+                    safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted!', buttons:[{type:'ok'}]});
                     if (amountInput) amountInput.value = '';
                     if (addressInput) addressInput.value = '';
+                    if (gramInput) gramInput.value = '';
                 } else {
-                    safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
+                    if (data.cooldown_remaining) {
+                        safePopup({title:'⏳ Cooldown Active', message:data.message, buttons:[{type:'ok'}]});
+                    } else {
+                        safePopup({title:'❌ Error', message:data.message || 'Withdrawal failed.', buttons:[{type:'ok'}]});
+                    }
                 }
             })
             .catch(function(error) {
@@ -1681,7 +1765,7 @@ function setupEventListeners() {
                 setTimeout(function() {
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.textContent = '🌱 Request Withdrawal';
+                        submitBtn.textContent = 'Withdraw Full Balance';
                     }
                 }, 3000);
             });
@@ -2758,6 +2842,8 @@ window.claimTaskReward = claimTaskReward;
 window.showMoreTasks = showMoreTasks;
 window.loadReferralProgress = loadReferralProgress;
 window.toggleReferralList = toggleReferralList;
+window.selectCurrency = selectCurrency;
+window.isValidTonAddress = isValidTonAddress;
 
 console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: No requirements — everyone can claim!');
@@ -2780,3 +2866,5 @@ console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
 console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 100/100 (no reward)');
 console.log('🎁 Referral reward progress UI added (table layout) — $0.002 per referral');
+console.log('💎 GRAM (TON) withdrawal option active — UQ or EQ address format');
+console.log('🟣 USDT withdrawal continues to work with connected wallet button');
