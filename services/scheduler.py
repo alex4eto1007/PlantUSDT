@@ -1,114 +1,116 @@
-#!/usr/bin/env python3
-"""
-Fix Missing Referral Rewards Script
-
-This script checks for referrals that have met the conditions:
-1. Referred user has connected wallet
-2. Referred user has watched at least 3 ads
-3. Reward hasn't been credited yet
-
-Then credits $0.002 to the referrer and logs it.
-"""
-
-import sys
-import os
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
+from services.investment import InvestmentService
+from services.deposit_scanner import DepositScanner
+from services.referral import check_missed_active_referrals
+from scripts.fix_missing_referral_rewards import fix_missing_referral_rewards
 from datetime import datetime
-from decimal import Decimal
+import logging
+import asyncio
 
-# Add project root to path
-sys.path.insert(0, '/root/PlantUSDT')
+logger = logging.getLogger(__name__)
 
-from database.db_manager import DatabaseManager
-from database.models import User, AuditLog
+class SchedulerService:
+    def __init__(self):
+        self.scheduler = BackgroundScheduler()
+        self.investment_service = InvestmentService()
+        self.deposit_scanner = DepositScanner()
 
-db = DatabaseManager()
+    def start(self):
+        self.scheduler.add_job(
+            self.process_locked_investments,
+            trigger=IntervalTrigger(minutes=5),
+            id='locked_check',
+            replace_existing=True
+        )
 
-def fix_missing_referral_rewards():
-    """Check and fix missing referral rewards"""
-    session = db.get_session()
-    
-    try:
-        print("🔍 Checking for missing referral rewards...")
-        
-        # Find all users who:
-        # 1. Have a referrer
-        # 2. Have a connected wallet
-        # 3. Have watched at least 3 ads
-        # 4. Haven't been rewarded yet
-        eligible_referrals = session.query(User).filter(
-            User.referred_by.isnot(None),
-            User.wallet_address.isnot(None),
-            User.wallet_address != '',
-            User.total_ads_watched >= 3
-        ).all()
-        
-        print(f"📊 Found {len(eligible_referrals)} referrals that meet the conditions")
-        
-        credited_count = 0
-        skipped_count = 0
-        
-        for referred_user in eligible_referrals:
-            referrer = session.query(User).filter_by(id=referred_user.referred_by).first()
-            
-            if not referrer:
-                print(f"⚠️ Referrer not found for user {referred_user.telegram_id}")
-                skipped_count += 1
-                continue
-            
-            # Check if reward was already given
-            existing = session.query(AuditLog).filter(
-                AuditLog.user_id == referrer.id,
-                AuditLog.action == 'referral_reward',
-                AuditLog.description.like(f'%{referred_user.telegram_id}%')
-            ).first()
-            
-            if existing:
-                print(f"⏭️ Reward already given for {referred_user.telegram_id} -> {referrer.telegram_id}")
-                skipped_count += 1
-                continue
-            
-            # Credit $0.002 to referrer
-            reward = Decimal('0.002')
-            old_balance = Decimal(referrer.balance or 0)
-            old_referral_earnings = Decimal(referrer.referral_earnings_all_time or 0)
-            old_total_earnings = Decimal(referrer.total_earnings_all_time or 0)
-            
-            referrer.balance = old_balance + reward
-            referrer.referral_earnings_all_time = old_referral_earnings + reward
-            referrer.total_earnings_all_time = old_total_earnings + reward
-            
-            # Log the reward
-            audit = AuditLog(
-                user_id=referrer.id,
-                action='referral_reward',
-                field_changed='balance',
-                old_value=float(old_balance),
-                new_value=float(referrer.balance),
-                amount=float(reward),
-                description=f'Referral reward for {referred_user.telegram_id} (wallet + 3 ads) - AUTO',
-                source='referral_reward_scheduler',
-                created_at=datetime.utcnow()
-            )
-            session.add(audit)
-            
-            credited_count += 1
-            print(f"✅ Credited $0.002 to {referrer.telegram_id} for referral {referred_user.telegram_id}")
-        
-        session.commit()
-        
-        print("\n" + "="*50)
-        print(f"✅ Total credited: {credited_count}")
-        print(f"⏭️ Total skipped: {skipped_count}")
-        print("="*50)
-        
-        return credited_count
-        
-    except Exception as e:
-        session.rollback()
-        print(f"❌ Error: {e}")
-        return 0
-    finally:
-        session.close()
+        self.scheduler.add_job(
+            self.scan_deposits,
+            trigger=IntervalTrigger(minutes=5),
+            id='deposit_scanner',
+            replace_existing=True
+        )
 
-if __name__ == "__main__":
-    fix_missing_referral_rewards()
+        self.scheduler.add_job(
+            self.process_expired_investments,
+            trigger=IntervalTrigger(hours=1),
+            id='expired_investments',
+            replace_existing=True
+        )
+
+        self.scheduler.add_job(
+            self.correct_timers,
+            trigger=IntervalTrigger(hours=1),
+            id='timer_correction',
+            replace_existing=True
+        )
+
+        # Daily check for missed active referrals at midnight UTC
+        self.scheduler.add_job(
+            self.check_missed_active_referrals,
+            trigger=CronTrigger(hour=0, minute=0),
+            id='check_missed_active_referrals',
+            replace_existing=True
+        )
+
+        # ✅ NEW: Daily check for missing referral rewards at midnight UTC
+        self.scheduler.add_job(
+            self.check_missing_referral_rewards,
+            trigger=CronTrigger(hour=0, minute=0),
+            id='check_missing_referral_rewards',
+            replace_existing=True
+        )
+
+        self.scheduler.start()
+        logger.info("Scheduler started - checking for unlocked investments every 5 minutes")
+        logger.info("🔍 Polygon deposit scanner running every 5 minutes")
+        logger.info("🔄 Active referral catch-up check scheduled daily at 00:00 UTC")
+        logger.info("🎁 Referral rewards check scheduled daily at 00:00 UTC")
+
+    async def process_locked_investments(self):
+        try:
+            logger.info("Checking for unlocked investments on Polygon...")
+            await self.investment_service.process_locked_investments()
+        except Exception as e:
+            logger.error(f"Error processing locked investments: {e}")
+
+    async def scan_deposits(self):
+        try:
+            logger.info("🔍 Scanning for Polygon deposits...")
+            pass
+        except Exception as e:
+            logger.error(f"Error scanning Polygon deposits: {e}")
+
+    def process_expired_investments(self):
+        try:
+            logger.info("Checking for expired investments on Polygon...")
+            pass
+        except Exception as e:
+            logger.error(f"Error processing expired investments: {e}")
+
+    def correct_timers(self):
+        try:
+            logger.info("🔄 Running timer correction job on Polygon...")
+            pass
+        except Exception as e:
+            logger.error(f"Error in timer correction: {e}")
+
+    def check_missed_active_referrals(self):
+        try:
+            logger.info("🔄 Running daily catch-up for missed active referrals...")
+            check_missed_active_referrals()
+        except Exception as e:
+            logger.error(f"Error checking missed active referrals: {e}")
+
+    def check_missing_referral_rewards(self):
+        try:
+            logger.info("🎁 Running daily check for missing referral rewards...")
+            fix_missing_referral_rewards()
+            logger.info("✅ Referral rewards check completed")
+        except Exception as e:
+            logger.error(f"Error checking missing referral rewards: {e}")
+
+    def stop(self):
+        self.scheduler.shutdown()
+        logger.info("Scheduler stopped")
