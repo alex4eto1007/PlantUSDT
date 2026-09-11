@@ -21,9 +21,79 @@ window.selectedCurrency = window.selectedCurrency || 'usdt';
 window._latestAdCount = null;
 window._adCountTimestamp = null;
 window._lastTimerValue = null;
+window._isBanned = false;
 
 // ============================================
-// GRAM (TON) ADDRESS VALIDATION - NEW
+// BAN SCREEN
+// ============================================
+function showBanScreen(reason) {
+    if (window._isBanned) return; // only once
+    window._isBanned = true;
+
+    // Stop all polling
+    try {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        if (resetTimerInterval) { clearInterval(resetTimerInterval); resetInterval = null; }
+    } catch (e) {}
+
+    // Hide everything else
+    var appContent = document.getElementById('appContent');
+    var loadingMessage = document.getElementById('loadingMessage');
+    var fieldsContainer = document.getElementById('fieldsContainer');
+    var dashboardStats = document.getElementById('dashboardStats');
+    var historyList = document.getElementById('historyList');
+
+    if (appContent) appContent.style.display = 'none';
+    if (loadingMessage) loadingMessage.style.display = 'none';
+    if (fieldsContainer) fieldsContainer.style.display = 'none';
+    if (dashboardStats) dashboardStats.style.display = 'none';
+    if (historyList) historyList.style.display = 'none';
+
+    // Build the ban overlay
+    var banOverlay = document.createElement('div');
+    banOverlay.id = 'banScreen';
+    banOverlay.style.cssText = [
+        'position: fixed',
+        'top: 0', 'left: 0', 'right: 0', 'bottom: 0',
+        'background: #0a0e17',
+        'display: flex',
+        'flex-direction: column',
+        'align-items: center',
+        'justify-content: center',
+        'padding: 32px 24px',
+        'text-align: center',
+        'z-index: 999999',
+        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        'color: #ccd6f0'
+    ].join(';');
+
+    banOverlay.innerHTML = `
+        <div style="font-size: 72px; margin-bottom: 16px; line-height: 1;">🚫</div>
+        <div style="font-size: 24px; font-weight: 800; color: #ff6b6b; margin-bottom: 12px; letter-spacing: 0.5px;">
+            Account Suspended
+        </div>
+        <div style="font-size: 15px; color: #8892b0; line-height: 1.7; max-width: 360px; margin-bottom: 28px;">
+            Your PlantUSDT account has been suspended.
+            <br><br>
+            ${reason ? '<em style="color:#ffd93d;">' + reason + '</em><br><br>' : ''}
+            If you believe this is a mistake, please contact support.
+        </div>
+        <a href="https://t.me/Alex_PlantUSDT"
+           target="_blank"
+           style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #00d4ff, #0088ff); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 20px rgba(0,136,255,0.3);">
+            💬 Contact Support
+        </a>
+        <div style="margin-top: 32px; font-size: 12px; color: #495670;">
+            🟣 PlantUSDT · Polygon Network
+        </div>
+    `;
+
+    document.body.appendChild(banOverlay);
+    console.log('🚫 Ban screen displayed');
+}
+
+// ============================================
+// GRAM (TON) ADDRESS VALIDATION
 // ============================================
 function isValidTonAddress(address) {
     if (!address) return false;
@@ -32,7 +102,7 @@ function isValidTonAddress(address) {
 }
 
 // ============================================
-// MATH CAPTCHA FOR AD REWARDS - FIXED FOR 0 ANSWERS
+// MATH CAPTCHA FOR AD REWARDS
 // ============================================
 
 let mathCaptchaAnswer = null;
@@ -102,6 +172,8 @@ function showMathCaptcha(callback) {
 // ============================================
 
 function updateAdResetTimer() {
+    if (window._isBanned) return;
+
     const now = new Date();
     const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
     const timeLeft = utcMidnight - now;
@@ -135,7 +207,7 @@ function updateAdResetTimer() {
 }
 
 // ============================================
-// SAFE POPUP – Works on both Web & Mobile
+// SAFE POPUP
 // ============================================
 function safePopup(options) {
     try {
@@ -174,6 +246,8 @@ function safePopupWithCallback(options, callback) {
 // SHOW INTERSTITIAL AD ON BUTTON CLICKS
 // ============================================
 function showInterstitialIfNeeded() {
+    if (window._isBanned) return;
+
     if (interstitialAdsDisabled) {
         console.log("Interstitial ads disabled by user");
         return;
@@ -228,6 +302,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('click', function(e) {
+        if (window._isBanned) return;
+
         var target = e.target.closest('button');
         if (!target) return;
 
@@ -247,6 +323,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function navigateTo(page) {
+    if (window._isBanned) return;
+
     const pages = {
         'dashboard': 'dashboard.html',
         'deposit': 'deposit.html',
@@ -265,7 +343,7 @@ function goBack() {
 }
 
 // ============================================
-// CURRENCY SELECTION FOR WITHDRAWALS - NEW
+// CURRENCY SELECTION FOR WITHDRAWALS
 // ============================================
 function selectCurrency(currency) {
     window.selectedCurrency = currency;
@@ -305,12 +383,29 @@ function selectCurrency(currency) {
 // USER DATA
 // ============================================
 async function loadUserData(retries = 3) {
+    if (window._isBanned) return;
     if (isLoading) return;
     isLoading = true;
     
     try {
         const userId = tgUser ? tgUser.id : '0';
         const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
+
+        // ============================================
+        // BAN DETECTION (HTTP 403 + suspended message)
+        // ============================================
+        if (response.status === 403) {
+            let bannedData = null;
+            try { bannedData = await response.json(); } catch (e) {}
+            const msg = (bannedData && bannedData.message) ? bannedData.message : '';
+            if (msg.toLowerCase().includes('suspended') || msg.toLowerCase().includes('banned')) {
+                isLoading = false;
+                showBanScreen(msg);
+                return;
+            }
+        }
+        // ============================================
+
         const data = await response.json();
         if (data.success) {
             interstitialAdsDisabled = data.interstitial_ads_disabled || false;
@@ -356,7 +451,7 @@ async function loadUserData(retries = 3) {
         }
     } catch (error) {
         console.error('Error loading user data:', error);
-        if (retries > 0) {
+        if (retries > 0 && !window._isBanned) {
             console.log('Retrying user data load... (' + retries + ' attempts left)');
             setTimeout(() => loadUserData(retries - 1), 1000);
         }
@@ -391,6 +486,8 @@ function resetAdDisplay() {
 }
 
 function refreshData() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     var balanceEl = document.getElementById('balance');
     var totalEarningsEl = document.getElementById('totalEarnings');
@@ -413,6 +510,7 @@ function refreshData() {
 }
 
 async function updateReferralStats(userId) {
+    if (window._isBanned) return;
     try {
         const response = await fetch(`${API_BASE}/api/referral_stats/${userId}`);
         const data = await response.json();
@@ -483,7 +581,7 @@ function updateDashboardUI(data) {
 }
 
 // ============================================
-// EXPECTED DAILY EARNINGS - NEW FUNCTION
+// EXPECTED DAILY EARNINGS
 // ============================================
 function updateDailyEarnings(data) {
     var dailyEl = document.getElementById('dailyEarnings');
@@ -655,11 +753,13 @@ function updateFields(data) {
 }
 
 // ============================================
-// CLAIM INVESTMENT - WITH PROCESSING STATE
+// CLAIM INVESTMENT
 // ============================================
 let claimInProgress = false;
 
 async function claimInvestment(fieldNumber) {
+    if (window._isBanned) return;
+
     console.log('🔍 Claim button clicked for Field #' + fieldNumber);
 
     if (claimInProgress) {
@@ -780,6 +880,7 @@ async function claimInvestment(fieldNumber) {
 // TIMERS
 // ============================================
 function updateFieldTimers() {
+    if (window._isBanned) return;
     if (document.getElementById('historyList')) {
         return;
     }
@@ -927,6 +1028,8 @@ function stopCountdownTimer() {
 // REFERRAL
 // ============================================
 async function updateReferral(data) {
+    if (window._isBanned) return;
+
     var referralLink = document.getElementById('referralLinkText');
     var walletText = document.getElementById('walletText');
     var isConnected = walletText ? walletText.textContent.includes('Connected') : false;
@@ -956,9 +1059,11 @@ async function updateReferral(data) {
 }
 
 // ============================================
-// COPY REFERRAL FUNCTION
+// COPY REFERRAL
 // ============================================
 async function copyReferral() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     
     var userId = tgUser ? tgUser.id : '0';
@@ -1105,6 +1210,8 @@ async function copyReferral() {
 // WALLET FUNCTIONS
 // ============================================
 async function saveWallet() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
     var walletInput = document.getElementById('walletInput');
@@ -1193,6 +1300,8 @@ function resetWalletUI() {
 }
 
 async function disconnectWallet() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
     safePopupWithCallback({
@@ -1226,6 +1335,8 @@ async function disconnectWallet() {
 }
 
 async function loadSavedWallet() {
+    if (window._isBanned) return;
+
     var userId = tgUser ? tgUser.id : '0';
     try {
         var response = await fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId);
@@ -1239,6 +1350,8 @@ async function loadSavedWallet() {
 }
 
 async function setWallet() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     var userId = tgUser ? tgUser.id : '0';
     try {
@@ -1289,6 +1402,8 @@ function getLockOptions() {
 }
 
 async function investFieldWithLock(fieldNumber) {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
 
@@ -1400,6 +1515,8 @@ async function investField(fieldNumber) {
 // COPY FUNCTIONS
 // ============================================
 function copyAddress() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     var addressElement = document.getElementById('addressText');
     var address = addressElement ? addressElement.textContent.trim() : '';
@@ -1460,6 +1577,8 @@ function copyAddress() {
 // DEPOSIT FUNCTIONS
 // ============================================
 async function checkDeposit() {
+    if (window._isBanned) return;
+
     var statusDiv = document.getElementById('depositStatus');
     if (statusDiv) {
         statusDiv.textContent = '🔍 Checking Polygon for deposits...';
@@ -1480,6 +1599,8 @@ async function checkDeposit() {
 }
 
 async function checkDepositWithAmount() {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     const userId = tgUser?.id || '0';
     const amountInput = document.getElementById('depositAmount');
@@ -1523,6 +1644,8 @@ async function checkDepositWithAmount() {
 // HISTORY FUNCTIONS
 // ============================================
 function filterHistory(type) {
+    if (window._isBanned) return;
+
     var activeButton = null;
     var buttons = document.querySelectorAll('.filter-btn');
     
@@ -1674,6 +1797,8 @@ function setupEventListeners() {
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
             e.preventDefault();
+
+            if (window._isBanned) return;
             
             var submitBtn = document.querySelector('.withdraw-btn');
             if (submitBtn && submitBtn.disabled) {
@@ -1778,6 +1903,8 @@ async function canWatchAd() {
 }
 
 async function creditAdRewardWithCaptcha(answer, question, fingerprint) {
+    if (window._isBanned) return { success: false, message: 'Account suspended' };
+
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(API_BASE + '/api/credit_ad_reward', {
@@ -1862,6 +1989,8 @@ function updateAdUI(dailyCount) {
 }
 
 async function watchRewardedAd() {
+    if (window._isBanned) return false;
+
     console.log('📢 watchRewardedAd called');
 
     if (!window.showRewardedAd) {
@@ -2009,6 +2138,8 @@ async function watchRewardedAd() {
 // LOAD AD STATS
 // ============================================
 async function loadAdStats() {
+    if (window._isBanned) return;
+
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
@@ -2094,6 +2225,8 @@ async function loadAdStats() {
 // REFERRAL UPGRADE FUNCTIONS
 // ============================================
 async function upgradeReferralTier(tier) {
+    if (window._isBanned) return;
+
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
 
@@ -2161,6 +2294,8 @@ async function upgradeReferralTier(tier) {
 // ============================================
 
 async function loadActiveReferrals() {
+    if (window._isBanned) return;
+
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(`${API_BASE}/api/get_active_referrals/${userId}`);
@@ -2252,6 +2387,8 @@ function toggleActiveReferrals() {
 }
 
 async function claimWelcomeBonus() {
+    if (window._isBanned) return;
+
     const userId = tgUser ? tgUser.id : '0';
     
     safePopupWithCallback({
@@ -2357,6 +2494,8 @@ async function claimWelcomeBonus() {
 // DISABLE INTERSTITIAL ADS
 // ============================================
 async function disableInterstitialAds() {
+    if (window._isBanned) return;
+
     const userId = tgUser ? tgUser.id : '0';
     
     safePopupWithCallback({
@@ -2414,6 +2553,8 @@ async function disableInterstitialAds() {
 // ============================================
 
 async function loadTasks() {
+    if (window._isBanned) return;
+
     console.log('🔄 Loading tasks...');
     const userId = tgUser ? tgUser.id : '0';
     try {
@@ -2595,6 +2736,8 @@ async function loadTasks() {
 // SHOW MORE TASKS
 // ============================================
 function showMoreTasks(category) {
+    if (window._isBanned) return;
+
     console.log('📋 Showing more tasks for category:', category);
     const taskItems = document.querySelectorAll(`.task-item[data-category="${category}"]`);
     const button = document.querySelector(`button[onclick*="showMoreTasks('${category}')"]`);
@@ -2665,6 +2808,8 @@ function getTaskCurrentValue(taskId, userStats) {
 }
 
 async function claimTaskReward(taskId) {
+    if (window._isBanned) return;
+
     const userId = tgUser ? tgUser.id : '0';
     
     if (window.claimingInProgress) {
@@ -2748,6 +2893,8 @@ async function claimTaskReward(taskId) {
 let referralListExpanded = false;
 
 async function loadReferralProgress() {
+    if (window._isBanned) return;
+
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(`${API_BASE}/api/get_referral_progress/${userId}`);
@@ -2852,6 +2999,7 @@ window.loadReferralProgress = loadReferralProgress;
 window.toggleReferralList = toggleReferralList;
 window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
+window.showBanScreen = showBanScreen;
 
 console.log('✅ PlantUSDT app loaded successfully');
 console.log('📢 Welcome bonus: No requirements — everyone can claim!');
@@ -2880,3 +3028,4 @@ console.log('🔄 Referral progress table only shows on index page (null-guarded
 console.log('🛡️ API_BASE uses window fallback to avoid duplicate const conflicts');
 console.log('📋 selectedCurrency uses window fallback to avoid duplicate let conflicts');
 console.log('🎯 All null-guards in place for dashboard/history/withdraw pages');
+console.log('🚫 Ban screen active — banned users see a clean suspension notice');
