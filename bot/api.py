@@ -26,6 +26,8 @@ from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, 
 from sqlalchemy import func
 from services.referral import check_and_award_active_referrals
 
+import requests as http_requests
+
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
@@ -172,6 +174,52 @@ def isValidTonAddress(address):
     if not address:
         return False
     return bool(re.match(r'^(UQ|EQ)[A-Za-z0-9_-]{46}$', address)) or bool(re.match(r'^-?\d+:[a-fA-F0-9]{64}$', address))
+
+# ============================================
+# ADMIN NOTIFICATIONS
+# ============================================
+def notify_admins_new_withdrawal(withdrawal_id, user_username, user_telegram_id,
+                                  amount, fee, net_amount, currency, wallet_address):
+    """
+    Send an instant notification to all admins when a withdrawal request is created.
+    Best-effort — failures are logged but never block the withdrawal.
+    """
+    try:
+        currency_label = "💎 GRAM (TON)" if currency == 'gram' else "🟣 USDT (Polygon)"
+
+        message = (
+            f"🔔 **New Withdrawal Request!**\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"🆔 ID: `{withdrawal_id}`\n"
+            f"👤 User: @{user_username or 'User'} (`{user_telegram_id}`)\n"
+            f"💰 Amount: **${amount:.2f} USDT**\n"
+            f"🔒 Fee: ${fee:.2f} USDT\n"
+            f"💵 Net: **${net_amount:.2f} USDT**\n"
+            f"💎 Currency: {currency_label}\n"
+            f"🏦 Address: `{wallet_address}`\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"✅ Process with:\n"
+            f"`/complete_payout {withdrawal_id} TX_HASH`\n"
+            f"📋 Or view all: /pending"
+        )
+
+        for admin_id in Config.ADMIN_IDS:
+            try:
+                url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/sendMessage"
+                payload = {
+                    "chat_id": admin_id,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                }
+                resp = http_requests.post(url, json=payload, timeout=5)
+                if resp.status_code == 200:
+                    logger.info(f"✅ Withdrawal notification sent to admin {admin_id}")
+                else:
+                    logger.warning(f"⚠️ Admin notification failed for {admin_id}: {resp.status_code} {resp.text[:200]}")
+            except Exception as e:
+                logger.error(f"❌ Failed to notify admin {admin_id}: {e}")
+    except Exception as e:
+        logger.error(f"❌ notify_admins_new_withdrawal error: {e}")
 
 # ============================================
 # MATH CAPTCHA
@@ -421,6 +469,19 @@ def withdraw():
         
         session_db.commit()
         clear_user_cache(telegram_id)
+
+        # 🔔 Notify admins instantly (after commit, so withdrawal.id exists)
+        notify_admins_new_withdrawal(
+            withdrawal_id=withdrawal.id,
+            user_username=user.username,
+            user_telegram_id=user.telegram_id,
+            amount=amount,
+            fee=fee,
+            net_amount=net_amount,
+            currency=currency,
+            wallet_address=address
+        )
+
         return jsonify({'success': True, 'message': f'Withdrawal request submitted in {currency.upper()}'})
     finally:
         session_db.close()
