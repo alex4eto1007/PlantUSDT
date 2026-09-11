@@ -64,6 +64,11 @@ class User(Base):
     device_fingerprint = Column(Text, nullable=True)
     flagged_for_anomaly = Column(Boolean, default=False)
 
+    # BAN SYSTEM FIELDS
+    is_banned = Column(Boolean, default=False)
+    banned_at = Column(DateTime, nullable=True)
+    ban_reason = Column(Text, nullable=True)
+
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")

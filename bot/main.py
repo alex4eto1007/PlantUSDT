@@ -286,6 +286,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.utcnow()
     existing_user = db.get_user(user.id)
 
+    # ============================================
+    # BAN CHECK
+    # ============================================
+    if existing_user and existing_user.is_banned:
+        await update.message.reply_text(
+            "🚫 **Your account has been suspended.**\n\n"
+            "If you believe this is a mistake, please contact @Alex_PlantUSDT.",
+            parse_mode='Markdown'
+        )
+        return
+    # ============================================
+
     db.update_user_info(user.id, user.username, user.first_name)
 
     if not existing_user:
@@ -690,6 +702,11 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /reset_referral <user_id> - Reset a user's referral status
 /manual_balance <user_id> <amount> <description> - Manually update balance
 
+BAN MANAGEMENT:
+/ban_user <user_id> [reason] - Ban a user (full lockout)
+/unban_user <user_id> - Unban a user
+/list_banned - List all banned users
+
 TASK MANAGEMENT:
 /add_task <title> | <description> | <reward> - Create a new task
 /list_tasks - List all active tasks
@@ -739,6 +756,205 @@ async def reset_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID.")
+
+# ============================================
+# BAN MANAGEMENT COMMANDS
+# ============================================
+
+async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "❌ Usage: /ban_user <user_id> [reason]\n\n"
+            "Example: /ban_user 123456789 Shared wallet with project admin"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        target_telegram_id = int(context.args[0])
+        reason = ' '.join(context.args[1:]) if len(context.args) > 1 else 'No reason provided'
+
+        session = db.get_session()
+        try:
+            target = session.query(User).filter_by(telegram_id=target_telegram_id).first()
+            if not target:
+                await update.message.reply_text(f"❌ User {target_telegram_id} not found.")
+                return
+
+            if target.telegram_id == user.id:
+                await update.message.reply_text("❌ You cannot ban yourself.")
+                return
+
+            if target.is_banned:
+                await update.message.reply_text(
+                    f"ℹ️ User @{target.username or 'User'} is already banned.\n\n"
+                    f"Reason: {target.ban_reason or 'N/A'}\n"
+                    f"Banned at: {target.banned_at.strftime('%Y-%m-%d %H:%M') if target.banned_at else 'N/A'}"
+                    + get_community_footer()
+                )
+                return
+
+            target.is_banned = True
+            target.banned_at = datetime.utcnow()
+            target.ban_reason = reason
+
+            audit = AuditLog(
+                user_id=target.id,
+                action='ban_user',
+                field_changed='is_banned',
+                old_value=0,
+                new_value=1,
+                amount=None,
+                description=f'Banned by admin {user.id}. Reason: {reason}',
+                source='admin',
+                created_by=user.id,
+                created_at=datetime.utcnow()
+            )
+            session.add(audit)
+            session.commit()
+
+            await update.message.reply_text(
+                f"🚫 User BANNED!\n\n"
+                f"👤 @{target.username or 'User'} ({target.telegram_id})\n"
+                f"📝 Reason: {reason}\n"
+                f"🕐 Banned at: {target.banned_at.strftime('%Y-%m-%d %H:%M')} UTC"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            logger.warning(f"🚫 User {target.telegram_id} banned by admin {user.id}. Reason: {reason}")
+
+            # Notify the banned user (best-effort)
+            try:
+                await context.bot.send_message(
+                    chat_id=target.telegram_id,
+                    text=(
+                        "🚫 **Your PlantUSDT account has been suspended.**\n\n"
+                        f"Reason: {reason}\n\n"
+                        "If you believe this is a mistake, please contact @Alex_PlantUSDT."
+                    ),
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.warning(f"Could not notify banned user {target.telegram_id}: {e}")
+
+        finally:
+            session.close()
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID.")
+
+async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "❌ Usage: /unban_user <user_id>\n\n"
+            "Example: /unban_user 123456789"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        target_telegram_id = int(context.args[0])
+
+        session = db.get_session()
+        try:
+            target = session.query(User).filter_by(telegram_id=target_telegram_id).first()
+            if not target:
+                await update.message.reply_text(f"❌ User {target_telegram_id} not found.")
+                return
+
+            if not target.is_banned:
+                await update.message.reply_text(
+                    f"ℹ️ User @{target.username or 'User'} is not banned."
+                    + get_community_footer()
+                )
+                return
+
+            target.is_banned = False
+            target.banned_at = None
+            target.ban_reason = None
+
+            audit = AuditLog(
+                user_id=target.id,
+                action='unban_user',
+                field_changed='is_banned',
+                old_value=1,
+                new_value=0,
+                amount=None,
+                description=f'Unbanned by admin {user.id}',
+                source='admin',
+                created_by=user.id,
+                created_at=datetime.utcnow()
+            )
+            session.add(audit)
+            session.commit()
+
+            await update.message.reply_text(
+                f"✅ User UNBANNED!\n\n"
+                f"👤 @{target.username or 'User'} ({target.telegram_id})"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            logger.info(f"✅ User {target.telegram_id} unbanned by admin {user.id}")
+
+        finally:
+            session.close()
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID.")
+
+async def list_banned(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    session = db.get_session()
+    try:
+        banned = session.query(User).filter_by(is_banned=True).order_by(User.banned_at.desc()).all()
+
+        if not banned:
+            await update.message.reply_text(
+                "📋 No banned users." + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            return
+
+        text = f"🚫 **BANNED USERS** ({len(banned)})\n\n"
+        for u in banned:
+            banned_at = u.banned_at.strftime('%Y-%m-%d %H:%M') if u.banned_at else 'N/A'
+            reason = u.ban_reason or 'N/A'
+            text += f"👤 @{u.username or u.first_name or 'User'} (`{u.telegram_id}`)\n"
+            text += f"📝 Reason: {reason}\n"
+            text += f"🕐 {banned_at} UTC\n"
+            text += f"━━━━━━━━━━━━━━━━━━━━\n"
+
+        await update.message.reply_text(
+            text + get_community_footer(),
+            parse_mode='Markdown'
+        )
+    finally:
+        session.close()
 
 # ============================================
 # ADMIN TASK COMMANDS
@@ -1227,6 +1443,11 @@ def main():
         application.add_handler(CommandHandler("reset_referral", reset_referral))
         application.add_handler(CommandHandler("manual_balance", manual_balance))
 
+        # BAN MANAGEMENT
+        application.add_handler(CommandHandler("ban_user", ban_user))
+        application.add_handler(CommandHandler("unban_user", unban_user))
+        application.add_handler(CommandHandler("list_banned", list_banned))
+
         application.add_handler(CommandHandler("add_task", add_task))
         application.add_handler(CommandHandler("list_tasks", list_tasks))
         application.add_handler(CommandHandler("delete_task", delete_task_cmd))
@@ -1271,6 +1492,7 @@ def main():
         logger.info("💎 GRAM (TON) withdrawal option active")
         logger.info("🎁 Referral rewards: $0.002 per qualified referral")
         logger.info("🔄 Daily midnight referral rewards check scheduled")
+        logger.info("🚫 Ban system active (is_banned field)")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

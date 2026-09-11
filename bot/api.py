@@ -153,6 +153,11 @@ def get_authenticated_user(telegram_id):
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return None, jsonify({'success': False, 'message': 'User not found'}), 404
+        if user.is_banned:
+            return None, jsonify({
+                'success': False,
+                'message': 'Your account has been suspended. Please contact support.'
+            }), 403
         return user, None, None
     finally:
         session_db.close()
@@ -242,22 +247,48 @@ def save_wallet():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
+        # Disconnect case
         if not wallet_address:
             user.wallet_address = ''
             session_db.commit()
             clear_user_cache(telegram_id)
             return jsonify({'success': True, 'message': 'Wallet disconnected'})
         
+        # Format validation
         if not wallet_address.startswith('0x') or len(wallet_address) != 42:
             return jsonify({'success': False, 'message': 'Invalid wallet address'}), 400
         
+        # Project wallet block
         if wallet_address.lower() == PROJECT_WALLET.lower():
             return jsonify({'success': False, 'message': 'This is the project wallet. Please enter your own wallet address.'}), 400
+        
+        # ============================================
+        # STRICT DUPLICATE WALLET CHECK
+        # ============================================
+        wallet_in_use = session_db.query(User).filter(
+            func.lower(User.wallet_address) == wallet_address.lower(),
+            User.telegram_id != int(telegram_id)
+        ).first()
+
+        if wallet_in_use:
+            logger.warning(
+                f"⛔ Duplicate wallet blocked: user {telegram_id} tried to save wallet "
+                f"{wallet_address[:10]}... already used by user {wallet_in_use.telegram_id}"
+            )
+            return jsonify({
+                'success': False,
+                'message': 'This wallet is already connected to another account. Please use a different wallet.'
+            }), 400
+        # ============================================
         
         user.wallet_address = wallet_address
         session_db.commit()
         clear_user_cache(telegram_id)
         return jsonify({'success': True, 'message': 'Wallet saved successfully'})
+    except Exception as e:
+        session_db.rollback()
+        logger.error(f"Error in save_wallet: {e}")
+        return jsonify({'success': False, 'message': 'Failed to save wallet. Please try again.'}), 500
     finally:
         session_db.close()
 
@@ -349,7 +380,7 @@ def withdraw():
         amount = withdraw_amount
         
         # ============================================
-        # WITHDRAWAL FEE STRUCTURE (UPDATED)
+        # WITHDRAWAL FEE STRUCTURE
         # $1 - $49.99     -> 15%
         # $50 - $99.99    -> 18%
         # $100+           -> 20%
