@@ -185,7 +185,6 @@
             display: block;
             margin-top: 4px;
         }
-        /* Currency toggle */
         .currency-toggle {
             display: flex;
             gap: 8px;
@@ -240,8 +239,8 @@
             <div class="fee-breakdown">
                 <strong>Fee Structure:</strong><br>
                 • $1 - $49.99: 15%<br>
-                • $50 - $99.99: 20%<br>
-                • $100+: 25%
+                • $50 - $99.99: 18%<br>
+                • $100+: 20%
             </div>
             <div id="cooldownContainer" style="display:none;">
                 <div class="cooldown-timer" id="cooldownTimer">
@@ -258,7 +257,6 @@
         </div>
 
         <form id="withdrawForm">
-            <!-- Full Balance Display -->
             <div class="full-balance-display">
                 <span class="label">💰 Amount to Withdraw</span>
                 <span class="amount" id="fullBalanceDisplay">$0.000</span>
@@ -266,7 +264,6 @@
                 <span class="sub">Full balance only — no partial withdrawals</span>
             </div>
 
-            <!-- Currency Selection -->
             <div style="margin-bottom: 8px;">
                 <label style="font-size:13px;color:#8892b0;display:block;margin-bottom:6px;">Choose withdrawal method:</label>
                 <div class="currency-toggle">
@@ -284,7 +281,6 @@
                 <input type="number" id="withdrawAmount" placeholder="Full balance only" min="1" step="0.01" disabled>
             </div>
 
-            <!-- USDT Address Field -->
             <div class="form-group" id="usdtAddressGroup">
                 <label>📤 Withdraw to (Polygon Wallet)</label>
                 <input type="text" id="withdrawAddress" placeholder="0x... (Polygon address)">
@@ -292,7 +288,6 @@
                 <p style="font-size:11px;color:#495670;margin-top:4px;">⚠️ Must be a Polygon network wallet address</p>
             </div>
 
-            <!-- GRAM Address Field -->
             <div class="form-group" id="gramAddressGroup" style="display:none;">
                 <label>📤 TON Address</label>
                 <input type="text" id="gramAddress" placeholder="UQ... or EQ...">
@@ -439,13 +434,19 @@
             
             document.getElementById('feeSummary').style.display = 'block';
             
+            // ============================================
+            // WITHDRAWAL FEE STRUCTURE (UPDATED)
+            // $1 - $49.99     -> 15%
+            // $50 - $99.99    -> 18%
+            // $100+           -> 20%
+            // ============================================
             var feePercent = 0;
             if (amount < 50) {
                 feePercent = 0.15;
             } else if (amount < 100) {
-                feePercent = 0.20;
+                feePercent = 0.18;
             } else {
-                feePercent = 0.25;
+                feePercent = 0.20;
             }
             
             var totalFee = amount * feePercent;
@@ -672,6 +673,6 @@
         window.selectCurrency = selectCurrency;
         window.isValidTonAddress = isValidTonAddress;
     </script>
-    <script src="/js/app.js?v=67"></script>
+    <script src="/js/app.js?v=68"></script>
 </body>
 </html>

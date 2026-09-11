@@ -212,8 +212,8 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💎 GRAM (TON)\n\n"
             f"**Fee structure:**\n"
             f"• $1 — $49.99 → 15% fee\n"
-            f"• $50 — $99.99 → 20% fee\n"
-            f"• $100+ → 25% fee\n\n"
+            f"• $50 — $99.99 → 18% fee\n"
+            f"• $100+ → 20% fee\n\n"
             f"⏳ Processing: Up to 24 hours\n"
             f"🔄 Cooldown: 1 withdrawal per 24 hours",
             parse_mode='Markdown',
@@ -311,7 +311,7 @@ Grow your USDT with returns up to 80% on Polygon network!
 • 🌿 30 Days: 80% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $1 USDT
-• 🔒 Platform fee: 5% on withdrawals
+• 🔒 Withdrawal fee: 15% – 20% (based on amount)
 • 🌱 3 Planting Fields: $100 max each
 • ⛓️ Network: Polygon (MATIC) - Low fees!
 
@@ -473,14 +473,13 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_obj = db.get_user_by_id(w.user_id)
         username = user_obj.username if user_obj else "Unknown"
         
-        # Detect currency based on address format
         is_gram = w.wallet_address and (w.wallet_address.startswith('UQ') or w.wallet_address.startswith('EQ'))
         currency_label = "💎 GRAM (TON)" if is_gram else "🟣 USDT (Polygon)"
         
         text += f"ID: {w.id}\n"
         text += f"👤 User: @{username}\n"
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
-        text += f"🔒 Fee (15-25%): ${w.fee:.2f} USDT\n"
+        text += f"🔒 Fee (15-20%): ${w.fee:.2f} USDT\n"
         text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
         text += f"💎 Withdraw in: {currency_label}\n"
         text += f"🏦 Address: <code>{w.wallet_address}</code>\n"
@@ -529,7 +528,6 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Withdrawal {withdrawal_id} is already {withdrawal.status}.")
         return
 
-    # Detect currency
     is_gram = withdrawal.wallet_address and (withdrawal.wallet_address.startswith('UQ') or withdrawal.wallet_address.startswith('EQ'))
     currency_label = "GRAM (TON)" if is_gram else "USDT (Polygon)"
 
@@ -1214,15 +1212,12 @@ def main():
 
         application = Application.builder().token(Config.BOT_TOKEN).build()
 
-        # User commands
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("app", app_command))
         application.add_handler(CommandHandler("menu", menu))
 
-        # Web App Data handler
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
 
-        # Admin commands
         application.add_handler(CommandHandler("pending", pending))
         application.add_handler(CommandHandler("complete_payout", complete_payout))
         application.add_handler(CommandHandler("pending_fees", pending_fees))
@@ -1232,13 +1227,11 @@ def main():
         application.add_handler(CommandHandler("reset_referral", reset_referral))
         application.add_handler(CommandHandler("manual_balance", manual_balance))
 
-        # Admin task commands
         application.add_handler(CommandHandler("add_task", add_task))
         application.add_handler(CommandHandler("list_tasks", list_tasks))
         application.add_handler(CommandHandler("delete_task", delete_task_cmd))
         application.add_handler(CommandHandler("complete_task", complete_task_cmd))
 
-        # Referral system commands
         application.add_handler(CommandHandler("upgrade", upgrade))
         application.add_handler(CommandHandler("referral_stats", referral_stats))
         application.add_handler(CallbackQueryHandler(upgrade_callback, pattern="^upgrade_"))

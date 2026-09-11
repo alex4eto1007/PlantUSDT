@@ -6,6 +6,7 @@ import logging
 import random
 import string
 import math
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 from functools import wraps
@@ -33,7 +34,6 @@ logger = logging.getLogger(__name__)
 # ============================================
 ALLOWED_ORIGINS = [
     'https://plant-usdt.vercel.app',
-    'https://web.telegram.org',
     'https://web.telegram.org',
     'https://*.telegram.org'
 ]
@@ -164,7 +164,6 @@ def sanitize_input(value):
 
 def isValidTonAddress(address):
     """Validate TON address (UQ, EQ, or raw format)"""
-    import re
     if not address:
         return False
     return bool(re.match(r'^(UQ|EQ)[A-Za-z0-9_-]{46}$', address)) or bool(re.match(r'^-?\d+:[a-fA-F0-9]{64}$', address))
@@ -286,7 +285,6 @@ def withdraw():
     if currency not in ['usdt', 'gram']:
         return jsonify({'success': False, 'message': 'Invalid currency'}), 400
     
-    # Validate address based on currency
     if currency == 'usdt':
         if not address.startswith('0x') or len(address) != 42:
             return jsonify({'success': False, 'message': 'Invalid Polygon wallet address'}), 400
@@ -306,7 +304,6 @@ def withdraw():
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
-        # Check for existing pending withdrawal
         existing_pending = session_db.query(Withdrawal).filter_by(
             user_id=user.id,
             status='pending'
@@ -318,7 +315,6 @@ def withdraw():
                 'message': 'You already have a pending withdrawal. Please wait for it to be processed.'
             }), 400
         
-        # ---- COOLDOWN CHECK ----
         if user.last_withdrawal_at:
             time_since_last = (datetime.utcnow() - user.last_withdrawal_at).total_seconds()
             if time_since_last < 86400:
@@ -336,14 +332,12 @@ def withdraw():
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
         
-        # ---- FULL BALANCE ONLY ----
         if abs(amount - float(user.balance)) > 0.01:
             return jsonify({
                 'success': False,
-                'message': f'You can only withdraw your full balance (${float(user.balance):.2f}).'
+                'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
             }), 400
         
-        # ---- TRUNCATE TO 2 DECIMAL PLACES ----
         withdraw_amount = math.floor(amount * 100) / 100
         dust = amount - withdraw_amount
         
@@ -354,19 +348,23 @@ def withdraw():
         
         amount = withdraw_amount
         
-        # Calculate fee
+        # ============================================
+        # WITHDRAWAL FEE STRUCTURE (UPDATED)
+        # $1 - $49.99     -> 15%
+        # $50 - $99.99    -> 18%
+        # $100+           -> 20%
+        # ============================================
         fee_percent = 0.0
         if amount < 50:
             fee_percent = 0.15
         elif amount < 100:
-            fee_percent = 0.20
+            fee_percent = 0.18
         else:
-            fee_percent = 0.25
+            fee_percent = 0.20
 
         fee = amount * fee_percent
         net_amount = amount - fee
         
-        # ✅ Store currency and TON address if GRAM
         withdrawal = Withdrawal(
             user_id=user.id,
             amount=amount,
@@ -375,17 +373,8 @@ def withdraw():
             wallet_address=address,
             status='pending'
         )
-        
-        # If gram, we store the address in wallet_address (it's a TON address)
-        # Add currency field if it doesn't exist yet - we'll add it via a helper
-        try:
-            withdrawal.currency = currency
-        except:
-            pass  # If the column doesn't exist, we'll add it later
-        
         session_db.add(withdrawal)
         
-        # Log to audit log
         audit = AuditLog(
             user_id=user.id,
             action='withdrawal_request',
