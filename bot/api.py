@@ -379,7 +379,7 @@ def get_user():
             'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
             'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
             'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None,
-            'pending_referral_rewards': 0
+            'pending_referral_rewards': 0, 'total_ads_watched': 0
         })
     cached = get_cached_user(telegram_id)
     if cached: return jsonify(cached)
@@ -396,7 +396,7 @@ def get_user():
                 'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
                 'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
                 'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None,
-                'pending_referral_rewards': 0
+                'pending_referral_rewards': 0, 'total_ads_watched': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -443,6 +443,7 @@ def get_user():
             'referral_tier': user.referral_tier or 'free',
             'expected_daily_earnings': round(expected_daily_earnings, 2),
             'last_withdrawal_at': user.last_withdrawal_at.isoformat() if user.last_withdrawal_at else None,
+            'total_ads_watched': int(user.total_ads_watched or 0),
             'daily_ad_count': user.daily_ad_count or 0,
             'last_ad_reset': user.last_ad_reset.isoformat() if user.last_ad_reset else None,
             'pending_referral_rewards': round(float(user.pending_referral_rewards or 0), 3)
@@ -1149,9 +1150,6 @@ def api_claim_task_reward_old():
     finally:
         session_db.close()
 
-# ============================================
-# REFERRAL PROGRESS — ELIGIBLE ONLY
-# ============================================
 @app.route('/api/get_referral_progress/<int:telegram_id>', methods=['GET'])
 @rate_limit
 def get_referral_progress(telegram_id):
@@ -1165,8 +1163,6 @@ def get_referral_progress(telegram_id):
         referrals = session_db.query(User).filter_by(referred_by=user.id).all()
         result = []
         for ref in referrals:
-            # Only include referrals that have completed the requirements:
-            # wallet connected + 3+ ads watched
             wallet_ok = bool(ref.wallet_address and ref.wallet_address != '')
             ads_ok = (ref.total_ads_watched or 0) >= 3
             if not (wallet_ok and ads_ok):

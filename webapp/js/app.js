@@ -1034,17 +1034,6 @@ function setupEventListeners() {
 
 async function canWatchAd() { return true; }
 
-function updateAdUI(dailyCount) {
-    window._latestAdCount = dailyCount;
-    window._adCountTimestamp = Date.now();
-    const adsTodayEl = document.getElementById('adsToday');
-    if (adsTodayEl && typeof dailyCount === 'number') adsTodayEl.textContent = String(dailyCount);
-    const watchBtn = document.getElementById('watchAdBtn');
-    if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
-    const statusEl = document.getElementById('adStatus');
-    if (statusEl) statusEl.style.display = 'none';
-}
-
 async function watchRewardedAd() {
     if (window._isBanned) return false;
     if (!window.showRewardedAd) {
@@ -1232,119 +1221,106 @@ async function disableInterstitialAds() {
     });
 }
 
+// ============================================
+// TASKS — explicit per-category render
+// ============================================
 async function loadTasks() {
     if (window._isBanned) return;
     const userId = tgUser ? tgUser.id : '0';
     try {
-        const response = await fetch(`${API_BASE}/api/tasks/${userId}`);
+        const response = await fetch(`${API_BASE}/api/tasks/${userId}?t=${Date.now()}`);
         const data = await response.json();
-        if (data.success) {
-            const tasksEl = document.getElementById('tasksList');
-            if (tasksEl) {
-                let html = '';
-                let completedCount = 0;
-                let totalTasks = 0;
-                if (data.newly_completed && data.newly_completed.length > 0) {
-                    const taskNames = data.newly_completed.map(id => {
-                        const task = data.tasks.find(t => t.task_id === id);
-                        return task ? task.title : '';
-                    }).filter(Boolean);
-                    if (taskNames.length > 0) {
-                        safePopup({ title: '🎉 Tasks Completed!', message: 'You completed:\n• ' + taskNames.join('\n• ') + '\n\nGo to Tasks to claim your rewards!', buttons: [{type: 'ok'}] });
-                    }
-                }
-                const visibleTasks = data.tasks.filter(task => {
-                    if (task.task_id >= 8 && task.task_id <= 16) return false;
-                    return !task.claimed;
-                });
-                totalTasks = visibleTasks.length;
-                const categories = {'investments':{icon:'🌱',label:'Investments'},'community':{icon:'📢',label:'Community'},'milestones':{icon:'🏆',label:'Milestones'}};
-                const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
-                let currentCategory = '';
-                let categoryCounts = {};
-                for (const task of sortedTasks) {
-                    const isCompleted = task.completed;
-                    const isClaimed = task.claimed;
-                    if (isCompleted && !isClaimed) completedCount++;
-                    if (task.category !== currentCategory) {
-                        currentCategory = task.category;
-                        categoryCounts[task.category] = 0;
-                        const catInfo = categories[currentCategory] || { icon: '📌', label: currentCategory };
-                        html += `<div style="margin-top:16px;margin-bottom:8px;font-size:14px;font-weight:700;color:#8247E5;border-bottom:1px solid rgba(130,71,229,0.2);padding-bottom:4px;">${catInfo.icon} ${catInfo.label}</div>`;
-                    }
-                    categoryCounts[task.category] = (categoryCounts[task.category] || 0) + 1;
-                    const currentCount = categoryCounts[task.category];
-                    if (currentCount === 4 && !isCompleted && task.category === 'milestones') {
-                        const hiddenCount = sortedTasks.filter(t => t.category === 'milestones' && !t.claimed).length - 3;
-                        if (hiddenCount > 0) {
-                            html += `<button onclick="showMoreTasks('milestones')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 More Milestones (${hiddenCount} remaining)...</button>`;
-                        }
-                    }
-                    const hideTask = (currentCount > 3 && !isCompleted && task.category === 'milestones');
-                    const userStats = data.user_stats || {};
-                    let progressText = '';
-                    let progressPercent = 0;
-                    const conditionValue = getTaskConditionValue(task.task_id);
-                    const currentValue = getTaskCurrentValue(task.task_id, userStats);
-                    if (task.category === 'community') {
-                        // manual
-                    } else if (!isCompleted && conditionValue !== null && currentValue !== null) {
-                        if (task.category === 'milestones') {
-                            var displayValue = Math.min(currentValue, conditionValue);
-                            progressText = `${Number(displayValue).toFixed(3)}/${conditionValue}`;
-                        } else {
-                            progressText = `${Math.round(Number(currentValue))}/${conditionValue}`;
-                        }
-                        progressPercent = Math.min((Number(currentValue) / conditionValue) * 100, 100);
-                    } else if (isCompleted) {
-                        const displayMax = conditionValue || 1;
-                        progressText = `${displayMax}/${displayMax}`;
-                        progressPercent = 100;
-                    }
-                    const statusBadge = isCompleted ? (isClaimed ? '✅ Claimed' : 'Claim Now!') : (progressText ? `⏳ ${progressText}` : '');
-                    const statusColor = isCompleted ? (isClaimed ? '#495670' : '#00ff87') : '#495670';
-                    const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(2);
-                    const hiddenStyle = hideTask ? 'style="display:none;"' : '';
-                    let actionButton = '';
-                    if (task.category === 'community' && !isClaimed) {
-                        actionButton = `<button onclick="openCommunityLink(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00d4ff,#0088ff);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔗 Join</button>`;
-                    } else if (isCompleted && !isClaimed) {
-                        actionButton = `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>`;
-                    }
-                    html += `<div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hiddenStyle}>
-                        <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted && !isClaimed ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <div style="display:flex;align-items:center;gap:10px;flex:1;">
-                                    <div style="font-size:20px;">${task.icon || '📌'}</div>
-                                    <div style="flex:1;">
-                                        <div style="font-weight:600;font-size:14px;color:${isCompleted && !isClaimed ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
-                                        <div style="font-size:12px;color:#8892b0;">${task.description}</div>
-                                        <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
-                                        ${!isCompleted && progressText ? `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;"></div></div>` : ''}
-                                    </div>
-                                </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                    ${actionButton}
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                }
-                if (totalTasks === 0) {
-                    html = `<div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);"><div style="font-size:48px;margin-bottom:10px;">🎉</div><div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div><div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all tasks!</div></div>`;
-                }
-                tasksEl.innerHTML = html;
-                const progressEl = document.getElementById('taskProgress');
-                if (progressEl) {
-                    const total = data.stats.total_tasks || 0;
-                    const done = data.stats.completed_tasks || 0;
-                    progressEl.textContent = `${done}/${total} tasks completed`;
-                    progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
-                }
+        if (!data.success) return;
+        const tasksEl = document.getElementById('tasksList');
+        if (!tasksEl) return;
+
+        if (data.newly_completed && data.newly_completed.length > 0) {
+            const names = data.newly_completed.map(id => {
+                const t = data.tasks.find(x => x.task_id === id);
+                return t ? t.title : '';
+            }).filter(Boolean);
+            if (names.length > 0) {
+                safePopup({ title: '🎉 Tasks Completed!', message: 'You completed:\n• ' + names.join('\n• ') + '\n\nGo to Tasks to claim!', buttons: [{type: 'ok'}] });
             }
         }
-    } catch (error) {}
+
+        const allTasks = data.tasks.filter(t => !t.claimed);
+        const userStats = data.user_stats || {};
+
+        function renderTask(task, hide) {
+            const isCompleted = task.completed;
+            const conditionValue = getTaskConditionValue(task.task_id);
+            const currentValue = getTaskCurrentValue(task.task_id, userStats);
+            let progressText = '';
+            let progressPercent = 0;
+            if (task.category !== 'community') {
+                if (!isCompleted && conditionValue !== null && currentValue !== null) {
+                    if (task.category === 'milestones') {
+                        progressText = `${Number(Math.min(currentValue, conditionValue)).toFixed(3)}/${conditionValue}`;
+                    } else {
+                        progressText = `${Math.round(Number(currentValue))}/${conditionValue}`;
+                    }
+                    progressPercent = Math.min((Number(currentValue) / conditionValue) * 100, 100);
+                } else if (isCompleted) {
+                    const max = conditionValue || 1;
+                    progressText = `${max}/${max}`;
+                    progressPercent = 100;
+                }
+            }
+            const statusBadge = isCompleted ? 'Claim Now!' : (progressText ? `⏳ ${progressText}` : '');
+            const statusColor = isCompleted ? '#00ff87' : '#495670';
+            const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(2);
+            const hideStyle = hide ? 'style="display:none;"' : '';
+            let actionButton = '';
+            if (task.category === 'community' && !task.claimed) {
+                actionButton = `<button onclick="openCommunityLink(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00d4ff,#0088ff);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔗 Join</button>`;
+            } else if (isCompleted && !task.claimed) {
+                actionButton = `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>`;
+            }
+            return `<div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hideStyle}><div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;flex:1;"><div style="font-size:20px;">${task.icon || '📌'}</div><div style="flex:1;"><div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div><div style="font-size:12px;color:#8892b0;">${task.description}</div><div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>${!isCompleted && progressText ? `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;"></div></div>` : ''}</div></div><div style="text-align:right;"><div style="font-size:11px;color:${statusColor};">${statusBadge}</div>${actionButton}</div></div></div></div>`;
+        }
+
+        let html = '';
+        const cats = {
+            'investments': { icon: '🌱', label: 'Investments' },
+            'community':   { icon: '📢', label: 'Community' },
+            'milestones':  { icon: '🏆', label: 'Milestones' }
+        };
+
+        ['investments','community','milestones'].forEach(cat => {
+            const items = allTasks.filter(t => t.category === cat).sort((a,b)=>a.task_id-b.task_id);
+            if (items.length === 0) return;
+            html += `<div style="margin-top:16px;margin-bottom:8px;font-size:14px;font-weight:700;color:#8247E5;border-bottom:1px solid rgba(130,71,229,0.2);padding-bottom:4px;">${cats[cat].icon} ${cats[cat].label}</div>`;
+            if (cat === 'milestones') {
+                let shown = 0, hidden = 0;
+                items.forEach(t => {
+                    const shouldHide = !t.completed && shown >= 3;
+                    if (shouldHide) hidden++; else shown++;
+                    html += renderTask(t, shouldHide);
+                });
+                if (hidden > 0) {
+                    html += `<button onclick="showMoreTasks('milestones')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 More Milestones (${hidden} remaining)...</button>`;
+                }
+            } else {
+                items.forEach(t => { html += renderTask(t, false); });
+            }
+        });
+
+        if (allTasks.length === 0) {
+            html = `<div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);"><div style="font-size:48px;margin-bottom:10px;">🎉</div><div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div></div>`;
+        }
+        tasksEl.innerHTML = html;
+
+        const progressEl = document.getElementById('taskProgress');
+        if (progressEl) {
+            const total = data.stats.total_tasks || 0;
+            const done = data.stats.completed_tasks || 0;
+            progressEl.textContent = `${done}/${total} tasks completed`;
+            progressEl.style.color = done === total ? '#00ff87' : '#ccd6f0';
+        }
+    } catch (error) {
+        console.error('loadTasks error:', error);
+    }
 }
 
 function openCommunityLink(taskId) {
@@ -1545,15 +1521,23 @@ window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 
-console.log('✅ PlantUSDT app loaded successfully (v76)');
-console.log('📊 Ads stat now shows Total Ads Watched (from user.total_ads_watched)');
-console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
-console.log('📢 Tasks categories: Investments, Community, Milestones');
+console.log('✅ PlantUSDT app loaded successfully (v77)');
+console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
-console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
-console.log('🚫 Ban system active');
-console.log('🛡️ Fingerprint + real IP capture active');
+console.log('🔥 Active Referrals tracked silently for ambassador promotion');
+console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
+console.log('♾️ Ads have no limits — watch as many as you like');
+console.log('📊 Ads stat shows Total Ads Watched (from API total_ads_watched)');
+console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
+console.log('📢 Tasks: explicit per-category render (investments, community, milestones)');
+console.log('🚫 Ban system active — banned users see suspension notice');
+console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
+console.log('📊 Task rewards display 2 decimals');
 console.log('💳 Withdrawal fees: 15% / 18% / 20%');
-console.log('♾️ Ads have no limits');
-console.log('🎁 Welcome bonus button removed after claiming');
+console.log('🔒 Duplicate wallet protection active');
+console.log('🎯 Math captcha accepts 0 as valid answer');
+console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
+console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');
+console.log('🔧 Community tasks render explicitly per category (bug fix)');
+console.log('📈 total_ads_watched added to /api/user response');
