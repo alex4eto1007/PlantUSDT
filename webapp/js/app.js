@@ -1789,7 +1789,7 @@ async function loadTasks() {
                     }
                     const statusBadge = isCompleted ? (isClaimed ? '✅ Claimed' : 'Claim Now!') : (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
                     const statusColor = isCompleted ? (isClaimed ? '#495670' : '#00ff87') : '#495670';
-                    const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(3);
+                    const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(2);
                     const hiddenStyle = hideTask ? 'style="display:none;"' : '';
                     html += `<div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hiddenStyle}>
                         <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted && !isClaimed ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
