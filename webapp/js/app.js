@@ -1274,7 +1274,7 @@ async function loadTasks() {
             const hideStyle = hide ? 'style="display:none;"' : '';
             let actionButton = '';
             if (isClaimed) {
-                actionButton = '<span style="font-size:11px;color:#00ff87;font-weight:700;">✅</span>';
+                actionButton = '';
             } else if (task.category === 'community') {
                 actionButton = `<button onclick="openCommunityLink(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00d4ff,#0088ff);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔗 Join</button>`;
             } else if (isCompleted) {
