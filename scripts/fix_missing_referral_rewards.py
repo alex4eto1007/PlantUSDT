@@ -7,15 +7,14 @@ This script checks for referrals that have met the conditions:
 2. Referred user has watched at least 3 ads
 3. Reward hasn't been credited yet
 
-Then credits $0.002 to the referrer and logs it.
+Then adds $0.005 to the referrer's pending_referral_rewards balance and logs it.
 """
 
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
-# Add project root to path
 sys.path.insert(0, '/root/PlantUSDT')
 
 from database.db_manager import DatabaseManager
@@ -30,11 +29,6 @@ def fix_missing_referral_rewards():
     try:
         print("🔍 Checking for missing referral rewards...")
         
-        # Find all users who:
-        # 1. Have a referrer
-        # 2. Have a connected wallet
-        # 3. Have watched at least 3 ads
-        # 4. Haven't been rewarded yet
         eligible_referrals = session.query(User).filter(
             User.referred_by.isnot(None),
             User.wallet_address.isnot(None),
@@ -55,7 +49,6 @@ def fix_missing_referral_rewards():
                 skipped_count += 1
                 continue
             
-            # Check if reward was already given
             existing = session.query(AuditLog).filter(
                 AuditLog.user_id == referrer.id,
                 AuditLog.action == 'referral_reward',
@@ -67,32 +60,26 @@ def fix_missing_referral_rewards():
                 skipped_count += 1
                 continue
             
-            # Credit $0.002 to referrer
-            reward = Decimal('0.002')
-            old_balance = Decimal(referrer.balance or 0)
-            old_referral_earnings = Decimal(referrer.referral_earnings_all_time or 0)
-            old_total_earnings = Decimal(referrer.total_earnings_all_time or 0)
+            reward = Decimal('0.005')
+            old_pending = Decimal(referrer.pending_referral_rewards or 0)
             
-            referrer.balance = old_balance + reward
-            referrer.referral_earnings_all_time = old_referral_earnings + reward
-            referrer.total_earnings_all_time = old_total_earnings + reward
+            referrer.pending_referral_rewards = old_pending + reward
             
-            # Log the reward
             audit = AuditLog(
                 user_id=referrer.id,
                 action='referral_reward',
-                field_changed='balance',
-                old_value=float(old_balance),
-                new_value=float(referrer.balance),
+                field_changed='pending_referral_rewards',
+                old_value=float(old_pending),
+                new_value=float(referrer.pending_referral_rewards),
                 amount=float(reward),
-                description=f'Referral reward for {referred_user.telegram_id} (wallet + 3 ads) - FIXED',
-                source='referral_reward_fix',
-                created_at=datetime.utcnow()
+                description=f'Referral reward for {referred_user.telegram_id} (wallet + 3 ads) - AUTO',
+                source='referral_reward_scheduler',
+                created_at=datetime.now(timezone.utc)
             )
             session.add(audit)
             
             credited_count += 1
-            print(f"✅ Credited $0.002 to {referrer.telegram_id} for referral {referred_user.telegram_id}")
+            print(f"✅ Added $0.005 to pending for {referrer.telegram_id} from referral {referred_user.telegram_id}")
         
         session.commit()
         
@@ -101,9 +88,12 @@ def fix_missing_referral_rewards():
         print(f"⏭️ Total skipped: {skipped_count}")
         print("="*50)
         
+        return credited_count
+        
     except Exception as e:
         session.rollback()
         print(f"❌ Error: {e}")
+        return 0
     finally:
         session.close()
 

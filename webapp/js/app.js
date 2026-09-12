@@ -9,7 +9,6 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
-let resetTimerInterval = null;
 let lastAdTime = 0;
 const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
@@ -19,15 +18,16 @@ window.selectedCurrency = window.selectedCurrency || 'usdt';
 
 window._latestAdCount = null;
 window._adCountTimestamp = null;
-window._lastTimerValue = null;
 window._isBanned = false;
 
+// ============================================
+// BAN SCREEN
+// ============================================
 function showBanScreen(reason) {
     if (window._isBanned) return;
     window._isBanned = true;
     try {
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-        if (resetTimerInterval) { clearInterval(resetTimerInterval); resetTimerInterval = null; }
     } catch (e) {}
     var ids = ['appContent','loadingMessage','fieldsContainer','dashboardStats','historyList'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
@@ -46,11 +46,17 @@ function showBanScreen(reason) {
     console.log('🚫 Ban screen displayed');
 }
 
+// ============================================
+// GRAM (TON) ADDRESS VALIDATION
+// ============================================
 function isValidTonAddress(address) {
     if (!address) return false;
     return /^(UQ|EQ)[A-Za-z0-9_-]{46}$/.test(address) || /^-?\d+:[a-fA-F0-9]{64}$/.test(address);
 }
 
+// ============================================
+// MATH CAPTCHA
+// ============================================
 let mathCaptchaAnswer = null;
 let mathCaptchaQuestion = null;
 let pendingAdCallback = null;
@@ -75,6 +81,9 @@ function generateMathCaptcha() {
     return { question: mathCaptchaQuestion, answer: mathCaptchaAnswer };
 }
 
+// ============================================
+// DEVICE FINGERPRINT
+// ============================================
 function getDeviceFingerprint() {
     try {
         const scr = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
@@ -100,31 +109,9 @@ function showMathCaptcha(callback) {
     }
 }
 
-function updateAdResetTimer() {
-    if (window._isBanned) return;
-    const now = new Date();
-    const day = now.getUTCDay();
-    const daysUntilFriday = (5 - day + 7) % 7;
-    const nextFriday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilFriday, 0, 0, 0));
-    if (nextFriday <= now) nextFriday.setUTCDate(nextFriday.getUTCDate() + 7);
-    const timeLeft = nextFriday - now;
-    const timerEl = document.getElementById('adResetTimer');
-    if (!timerEl) return;
-    if (timeLeft <= 0) {
-        timerEl.textContent = '🎁 Draw happening now!';
-    } else {
-        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-        let str = '';
-        if (days > 0) str = `${days}d ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
-        else str = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
-        timerEl.textContent = `🔄 Next draw in: ${str}`;
-    }
-    window._lastTimerValue = timeLeft;
-}
-
+// ============================================
+// SAFE POPUP
+// ============================================
 function safePopup(options) {
     try {
         if (typeof tg !== 'undefined' && tg.showPopup) tg.showPopup(options);
@@ -157,6 +144,9 @@ function showInterstitialIfNeeded() {
     }
 }
 
+// ============================================
+// PAGE NAVIGATION
+// ============================================
 document.addEventListener('DOMContentLoaded', function() {
     try {
         tg.ready();
@@ -171,9 +161,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadActiveReferrals();
                 loadTasks();
                 loadReferralProgress();
-                updateAdResetTimer();
-                if (resetTimerInterval) clearInterval(resetTimerInterval);
-                resetTimerInterval = setInterval(updateAdResetTimer, 1000);
             } else { setTimeout(initializeApp, 100); }
         }
         initializeApp();
@@ -196,6 +183,9 @@ function navigateTo(page) {
 
 function goBack() { window.history.back(); }
 
+// ============================================
+// CURRENCY SELECTION
+// ============================================
 function selectCurrency(currency) {
     window.selectedCurrency = currency;
     var usdtBtn = document.getElementById('usdtBtn'), gramBtn = document.getElementById('gramBtn');
@@ -221,6 +211,9 @@ function selectCurrency(currency) {
     }
 }
 
+// ============================================
+// USER DATA
+// ============================================
 async function loadUserData(retries = 3) {
     if (window._isBanned) return;
     if (isLoading) return;
@@ -250,6 +243,7 @@ async function loadUserData(retries = 3) {
             await updateReferralStats(userId);
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
+            updateClaimReferralButton(data);
             var loadingEl = document.getElementById('loadingMessage');
             var appContent = document.getElementById('appContent');
             if (loadingEl) loadingEl.style.display = 'none';
@@ -264,17 +258,6 @@ async function loadUserData(retries = 3) {
     } catch (error) {
         if (retries > 0 && !window._isBanned) setTimeout(() => loadUserData(retries - 1), 1000);
     } finally { isLoading = false; }
-}
-
-function resetAdDisplay() {
-    const adsTodayEl = document.getElementById('adsToday');
-    if (adsTodayEl) adsTodayEl.textContent = '0';
-    const progressEl = document.getElementById('adProgressBar');
-    if (progressEl) progressEl.style.width = '0%';
-    const watchBtn = document.getElementById('watchAdBtn');
-    if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
-    const statusEl = document.getElementById('adStatus');
-    if (statusEl) statusEl.style.display = 'none';
 }
 
 function refreshData() {
@@ -336,21 +319,40 @@ function updateWelcomeBonusButton(data) {
     const btn = document.getElementById('claimWelcomeBtn');
     if (!btn) return;
     if (data.has_received_welcome_bonus) {
-        btn.textContent = '✅ Claimed (0.1 USDT)';
+        btn.textContent = '✅ Welcome';
         btn.disabled = true;
-        btn.style.opacity = '0.7';
+        btn.style.opacity = '0.5';
         btn.style.cursor = 'default';
         btn.style.background = 'rgba(0,255,135,0.1)';
-        btn.style.border = '1px solid rgba(0,255,135,0.2)';
         btn.style.color = '#00ff87';
     } else {
-        btn.textContent = '🎁 Claim Welcome Bonus (0.1 USDT)';
+        btn.textContent = '🎁 Welcome';
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
-        btn.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
-        btn.style.border = 'none';
+        btn.style.background = 'linear-gradient(135deg,#ffd93d,#f9a825)';
         btn.style.color = '#0a0e17';
+    }
+}
+
+function updateClaimReferralButton(data) {
+    var btn = document.getElementById('claimReferralEarningsBtn');
+    if (!btn) return;
+    var pending = Number(data.pending_referral_rewards || 0);
+    if (pending > 0) {
+        btn.textContent = '💰 Available Earnings: $' + pending.toFixed(3) + ' (Claim)';
+        btn.disabled = false;
+        btn.style.background = 'linear-gradient(135deg,#00ff87,#00cc6a)';
+        btn.style.color = '#0a0e17';
+        btn.style.cursor = 'pointer';
+        btn.style.opacity = '1';
+    } else {
+        btn.textContent = '💰 Available Earnings: $0.000';
+        btn.disabled = true;
+        btn.style.background = '#495670';
+        btn.style.color = '#ccd6f0';
+        btn.style.cursor = 'not-allowed';
+        btn.style.opacity = '0.6';
     }
 }
 
@@ -613,18 +615,7 @@ async function copyReferral() {
                 document.body.removeChild(textArea);
             }
             if (!copied) {
-                try {
-                    tg.showPopup({
-                        title: '📋 Share Referral Link',
-                        message: 'Share this link:\n\n' + referralLink,
-                        buttons: [{id:'share',type:'default',text:'📤 Share'},{id:'cancel',type:'cancel'}]
-                    }, function(bid) {
-                        if (bid === 'share') {
-                            try { tg.sendData(JSON.stringify({ type: 'share_referral', link: referralLink })); }
-                            catch (e) { safePopup({ title: '📋 Copy Referral Link', message: 'Copy manually:\n\n' + referralLink, buttons: [{type:'ok'}] }); }
-                        }
-                    });
-                } catch (e) { safePopup({ title: '📋 Copy Referral Link', message: 'Copy manually:\n\n' + referralLink, buttons: [{type:'ok'}] }); }
+                safePopup({ title: '📋 Copy Referral Link', message: 'Copy manually:\n\n' + referralLink, buttons: [{type:'ok'}] });
                 return;
             }
             safePopup({ title: '✅ Copied!', message: 'Referral link copied! Share it with friends! 🎉', buttons: [{type: 'ok'}] });
@@ -632,6 +623,34 @@ async function copyReferral() {
             safePopup({ title: '❌ Error', message: 'Could not get referral link.', buttons: [{type: 'ok'}] });
         }
     } catch (error) { safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] }); }
+}
+
+async function claimReferralRewards() {
+    if (window._isBanned) return;
+    const userId = tgUser ? tgUser.id : '0';
+    safePopupWithCallback({
+        title: '💰 Claim Referral Rewards',
+        message: 'Claim all available referral earnings to your balance?',
+        buttons: [{id: 'cancel', type: 'cancel'}, {id: 'confirm', type: 'ok', text: '✅ Claim'}]
+    }, async function(buttonId) {
+        if (buttonId === 'confirm') {
+            try {
+                const response = await fetch(`${API_BASE}/api/claim_referral_rewards`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: userId })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    safePopup({ title: '🎉 Claimed!', message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(3), buttons: [{type: 'ok'}] });
+                    loadUserData();
+                } else {
+                    safePopup({ title: '❌ Error', message: data.message || 'Failed to claim.', buttons: [{type: 'ok'}] });
+                }
+            } catch (error) {
+                safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] });
+            }
+        }
+    });
 }
 
 async function saveWallet() {
@@ -1034,8 +1053,6 @@ function updateAdUI(dailyCount) {
     window._adCountTimestamp = Date.now();
     const adsTodayEl = document.getElementById('adsToday');
     if (adsTodayEl) adsTodayEl.textContent = String(dailyCount);
-    const progressEl = document.getElementById('adProgressBar');
-    if (progressEl) progressEl.style.width = Math.min((dailyCount / 100) * 100, 100) + '%';
     const watchBtn = document.getElementById('watchAdBtn');
     if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
     const statusEl = document.getElementById('adStatus');
@@ -1112,8 +1129,6 @@ async function loadAdStats() {
         }
         const adsTodayEl = document.getElementById('adsToday');
         if (adsTodayEl) adsTodayEl.textContent = String(finalCount);
-        const progressEl = document.getElementById('adProgressBar');
-        if (progressEl) progressEl.style.width = Math.min((finalCount / 100) * 100, 100) + '%';
         const watchBtn = document.getElementById('watchAdBtn');
         if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
     } catch (error) {}
@@ -1168,17 +1183,17 @@ async function loadActiveReferrals() {
                     const showCount = 3;
                     const hasMore = total > showCount;
                     const visibleRefs = data.active_list.slice(0, showCount);
-                    let html = `<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals (eligible for 0.03 USDT bonus):</div>`;
+                    let html = `<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals:</div>`;
                     visibleRefs.forEach(ref => {
                         const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                        html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span><span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span></div>`;
+                        html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span></div>`;
                     });
                     if (hasMore) {
                         const hiddenCount = total - showCount;
                         html += `<div id="hiddenActiveRefs" style="display:none;">`;
                         data.active_list.slice(showCount).forEach(ref => {
                             const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                            html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span><span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span></div>`;
+                            html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span></div>`;
                         });
                         html += `</div><button onclick="toggleActiveReferrals()" style="width:100%;padding:8px;margin-top:6px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 Show all ${total} active referrals (${hiddenCount} more)</button>`;
                     }
@@ -1549,6 +1564,7 @@ window.goBack = goBack;
 window.refreshData = refreshData;
 window.copyAddress = copyAddress;
 window.copyReferral = copyReferral;
+window.claimReferralRewards = claimReferralRewards;
 window.checkDeposit = checkDeposit;
 window.checkDepositWithAmount = checkDepositWithAmount;
 window.investField = investField;
@@ -1576,31 +1592,19 @@ window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 
-console.log('✅ PlantUSDT app loaded successfully');
-console.log('📢 Welcome bonus: No requirements — everyone can claim!');
-console.log('📢 Task management system active with 35 visible tasks (ads tasks removed)');
-console.log('📢 All amounts displayed with 3 decimal places');
-console.log('📈 Expected Daily Earnings feature active');
-console.log('📅 Days display fixed: shows elapsed days (0/30 on day 1)');
-console.log('📋 Tasks collapse: first 3 tasks per category shown, click "more" to expand');
-console.log('📊 Milestone display fixed: values capped at target');
-console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
-console.log('🧮 Math captcha fixed — now accepts 0 as a valid answer');
-console.log('📺 Ads tasks (8-16) have been permanently removed');
-console.log('🎁 Ad model updated: 100% of ad revenue funds weekly community giveaways');
-console.log('📊 No more per-ad rewards — ads now support the community prize pool');
-console.log('🏆 Winners announced every Friday — 10 winners share the pool');
-console.log('💰 Withdrawal fee: simplified structure (15% under $50, 18% under $100, 20% over $100)');
-console.log('💳 Withdrawals are FULL BALANCE ONLY');
-console.log('📋 Active referrals: first 3 shown, click to show all');
-console.log('🎯 Watch button always enabled — ads count toward giveaway eligibility');
-console.log('🎁 Referral reward progress UI added (table layout) — $0.002 per referral');
-console.log('💎 GRAM (TON) withdrawal option active — UQ or EQ address format');
-console.log('🟣 USDT withdrawal continues to work with connected wallet button');
-console.log('🔄 Referral progress table only shows on index page (null-guarded)');
-console.log('🛡️ API_BASE uses window fallback to avoid duplicate const conflicts');
-console.log('📋 selectedCurrency uses window fallback to avoid duplicate let conflicts');
-console.log('🎯 All null-guards in place for dashboard/history/withdraw pages');
-console.log('🚫 Ban screen active — banned users see a clean suspension notice');
-console.log('🔧 Device fingerprint FIXED — uses window.screen instead of shadowed screen');
-console.log('🎁 Giveaway model active — countdown timer now shows next Friday 00:00 UTC');
+console.log('✅ PlantUSDT app loaded successfully (v73)');
+console.log('📢 Welcome bonus: 0.1 USDT — everyone can claim!');
+console.log('🎁 Referral reward: $0.005 when friend connects wallet + watches 3 ads');
+console.log('💰 Available Earnings button: shows unclaimed referral rewards');
+console.log('🔥 Active Referrals tracked silently for ambassador promotion');
+console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
+console.log('🚫 Ban system active — banned users see suspension notice');
+console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
+console.log('📊 Task rewards display 2 decimals (no more 0.010)');
+console.log('💳 Withdrawal fees: 15% / 18% / 20%');
+console.log('🔒 Duplicate wallet protection active');
+console.log('🎯 Math captcha accepts 0 as valid answer');
+console.log('💰 Pending referral rewards accumulate until claimed');
+console.log('📋 Referral progress table shows wallet + 3 ads status');
+console.log('🔄 No more auto-timer — giveaway drawn manually by admin');
+console.log('🎨 UI cleaned: no giveaway pool display, no active referral bonus row');

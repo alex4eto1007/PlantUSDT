@@ -27,106 +27,79 @@ def is_referral_active(user_id: int, session: Session) -> bool:
     investments = session.query(Investment).filter(
         Investment.user_id == user_id
     ).count()
-    
     if investments > 0:
         return True
-    
     return False
 
 
 def check_and_award_active_referrals(user_id: int, session: Session):
-    """Check if any active referrals should be awarded"""
+    """Check if any active referrals should be recorded (NOT credited — for ambassador tracking only)"""
     try:
-        # Get the user to find their referrer
         user = session.query(User).filter_by(id=user_id).first()
         if not user or not user.referred_by:
             return
-        
-        # Check if this user qualifies as active
         if not is_referral_active(user_id, session):
             return
-        
-        # Check if already awarded
         existing = session.query(ActiveReferral).filter(
             ActiveReferral.referrer_id == user.referred_by,
             ActiveReferral.referred_user_id == user_id,
             ActiveReferral.status == "awarded"
         ).first()
-        
         if existing:
-            logger.info(f"Active referral already awarded for user {user_id} to referrer {user.referred_by}")
+            logger.info(f"Active referral already recorded for user {user_id} to referrer {user.referred_by}")
             return
-        
-        # Award the bonus
         success, msg = award_active_referral_bonus(user.referred_by, user_id, session)
         if success:
-            logger.info(f"✅ Active referral bonus awarded: user {user_id} -> referrer {user.referred_by}")
+            logger.info(f"✅ Active referral recorded: user {user_id} -> referrer {user.referred_by}")
         else:
-            logger.warning(f"⚠️ Failed to award active referral bonus: {msg}")
-            
+            logger.warning(f"⚠️ Failed to record active referral: {msg}")
     except Exception as e:
         logger.error(f"Error checking active referrals: {e}")
         session.rollback()
 
 
 def award_active_referral_bonus(referrer_id: int, referred_user_id: int, session: Session):
-    """Award 0.03 USDT bonus for active referral"""
+    """
+    Record an active referral — NO balance credit.
+    Only creates the ActiveReferral record and increments total_active_referrals.
+    This is used for ambassador promotion tracking.
+    """
     try:
-        # Check if already awarded
         existing = session.query(ActiveReferral).filter(
             ActiveReferral.referrer_id == referrer_id,
             ActiveReferral.referred_user_id == referred_user_id,
             ActiveReferral.status == "awarded"
         ).first()
-        
         if existing:
-            return False, "Bonus already awarded"
-        
+            return False, "Already recorded"
         referrer = session.query(User).filter_by(id=referrer_id).first()
         referred = session.query(User).filter_by(id=referred_user_id).first()
-        
         if not referrer or not referred:
             return False, "User not found"
-        
-        bonus = Decimal('0.03')
-        
-        # Update referrer's balance and all earnings fields
-        referrer.balance = (referrer.balance or Decimal('0')) + bonus
-        referrer.active_referral_bonus_earned = (referrer.active_referral_bonus_earned or Decimal('0')) + bonus
-        referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + bonus
-        referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + bonus
-        referrer.total_active_referrals = (referrer.total_active_referrals or 0) + 1
-        
-        # Check if there's an existing pending record
         active_ref = session.query(ActiveReferral).filter(
             ActiveReferral.referrer_id == referrer_id,
             ActiveReferral.referred_user_id == referred_user_id
         ).first()
-        
         if active_ref:
             active_ref.status = "awarded"
             active_ref.awarded_at = datetime.utcnow()
         else:
-            # Create new record
             new_ref = ActiveReferral(
                 referrer_id=referrer_id,
                 referred_user_id=referred_user_id,
-                bonus_amount=bonus,
+                bonus_amount=Decimal('0'),
                 status='awarded',
                 awarded_at=datetime.utcnow()
             )
             session.add(new_ref)
-        
+        referrer.total_active_referrals = (referrer.total_active_referrals or 0) + 1
         session.commit()
-        
-        logger.info(f"✅ Active referral bonus awarded: referrer {referrer.telegram_id} +0.03 USDT from {referred.telegram_id}")
+        logger.info(f"✅ Active referral recorded: referrer {referrer.telegram_id} from {referred.telegram_id} (no credit)")
         logger.info(f"📊 Referrer now has {referrer.total_active_referrals} active referrals")
-        
-        return True, f"Awarded 0.03 USDT active referral bonus!"
-        
+        return True, "Active referral recorded"
     except Exception as e:
         session.rollback()
-        logger.error(f"Error awarding active referral bonus: {e}")
+        logger.error(f"Error recording active referral: {e}")
         return False, str(e)
 
 
@@ -134,36 +107,26 @@ def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tupl
     """Upgrade user's referral tier"""
     if new_tier not in REFERRAL_TIERS:
         return False, "Invalid tier"
-    
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
         return False, "User not found"
-    
     old_tier = user.referral_tier or "free"
-    
     old_price = Decimal(str(REFERRAL_TIERS[old_tier]["price"]))
     new_price = Decimal(str(REFERRAL_TIERS[new_tier]["price"]))
-    
     if old_tier == new_tier:
         return False, f"You already have {new_tier} tier!"
-    
     if TIER_ORDER.index(new_tier) < TIER_ORDER.index(old_tier):
         return False, "Cannot downgrade tier"
-    
     upgrade_cost = new_price - old_price
-    
     if upgrade_cost <= 0:
         return False, "Invalid upgrade path"
-    
     user_balance = user.balance or Decimal('0')
     if user_balance < upgrade_cost:
         return False, f"Insufficient balance. Need ${upgrade_cost:.2f} USDT"
-    
     user.balance = user_balance - upgrade_cost
     user.referral_tier = new_tier
     user.referral_tier_upgraded_at = datetime.utcnow()
     user.referral_upgrade_total_spent = (user.referral_upgrade_total_spent or Decimal('0')) + upgrade_cost
-    
     upgrade = ReferralUpgrade(
         user_id=user_id,
         tier=new_tier,
@@ -171,9 +134,7 @@ def upgrade_referral_tier(user_id: int, new_tier: str, session: Session) -> tupl
     )
     session.add(upgrade)
     session.commit()
-    
     logger.info(f"✅ User {user.telegram_id} upgraded to {new_tier} tier (cost: ${upgrade_cost:.2f})")
-    
     return True, f"✅ Upgraded to {REFERRAL_TIERS[new_tier]['emoji']} {new_tier.title()} tier! Bonus: {REFERRAL_TIERS[new_tier]['bonus_percent']}%"
 
 
@@ -183,26 +144,21 @@ def get_referral_stats(user_id: int, session: Session) -> dict:
     if not user:
         logger.error(f"User {user_id} not found in get_referral_stats")
         return {}
-    
     total_referred = session.query(User).filter_by(referred_by=user_id).count()
     active_count = user.total_active_referrals or 0
     active_bonus = user.active_referral_bonus_earned or 0
-    
     pending = session.query(ActiveReferral).filter(
         ActiveReferral.referrer_id == user_id,
         ActiveReferral.status == "pending"
     ).count()
-    
     tier = user.referral_tier or "free"
     tier_info = REFERRAL_TIERS.get(tier, REFERRAL_TIERS["free"])
-    
     next_tier = None
     next_price = None
     tier_index = TIER_ORDER.index(tier) if tier in TIER_ORDER else 0
     if tier_index < len(TIER_ORDER) - 1:
         next_tier = TIER_ORDER[tier_index + 1]
         next_price = REFERRAL_TIERS[next_tier]["price"] - REFERRAL_TIERS[tier]["price"]
-    
     return {
         "total_referred": total_referred,
         "active_referrals": active_count,
@@ -223,7 +179,6 @@ def get_referral_bonus_percent(user_id: int, session: Session) -> int:
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
         return 1
-    
     tier = user.referral_tier or "free"
     return REFERRAL_TIERS[tier]["bonus_percent"]
 
@@ -237,31 +192,25 @@ def calculate_referral_bonus(amount: float, user_id: int, session: Session) -> f
 def award_welcome_bonus(user_id: int, session: Session) -> tuple:
     """Award 0.1 USDT welcome bonus using task system (no referral required)"""
     from services.task_system import claim_task_reward
-    
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
         return False, "User not found"
-    
     if user.has_received_welcome_bonus:
         logger.info(f"⚠️ User {user_id} already claimed welcome bonus")
         return False, "Welcome bonus already claimed"
-    
     from database.models import UserTaskProgress
     existing = session.query(UserTaskProgress).filter_by(
         user_id=user_id,
         task_id=45,
         claimed=True
     ).first()
-    
     if existing:
         user.has_received_welcome_bonus = True
         user.welcome_bonus_claimed_at = datetime.utcnow()
         session.commit()
         logger.info(f"ℹ️ Welcome bonus was already claimed for user {user_id}, marking as received")
         return True, "Welcome bonus already claimed previously!"
-    
     success, msg = claim_task_reward(user_id, 45, session)
-    
     if success:
         user.has_received_welcome_bonus = True
         user.welcome_bonus_claimed_at = datetime.utcnow()
@@ -318,7 +267,6 @@ def get_user_tasks(user_id: int, session: Session) -> dict:
     user = session.query(User).filter_by(id=user_id).first()
     if not user:
         return {}
-    
     tasks = {
         'connect_wallet': {
             'title': '🔗 Connect Wallet',
@@ -346,52 +294,38 @@ def get_user_tasks(user_id: int, session: Session) -> dict:
         },
         'active_referral_bonus': {
             'title': '🎁 Active Referral Bonus',
-            'description': 'Get 0.03 USDT from an active referral (someone who invested)',
-            'completed': (user.active_referral_bonus_earned or 0) > 0,
+            'description': 'Get a referral to become active (they must invest)',
+            'completed': (user.total_active_referrals or 0) > 0,
             'reward': 0
         }
     }
-    
     return tasks
 
 
-# ============================================
-# ✅ CATCH-UP FUNCTION FOR MISSED ACTIVE REFERRALS
-# ============================================
-
 def check_missed_active_referrals():
-    """Scan all users and award active referral bonuses that were missed"""
+    """Scan all users and record active referrals that were missed (no credit)"""
     try:
         session = db.get_session()
-        
-        # Find all users who have invested at least once
-        # and have a referrer, but haven't been awarded yet
         active_users = session.query(User).filter(
             User.referred_by.isnot(None),
             User.total_invested > 0
         ).all()
-        
-        awarded_count = 0
+        recorded_count = 0
         for user in active_users:
-            # Check if already awarded
             existing = session.query(ActiveReferral).filter(
                 ActiveReferral.referrer_id == user.referred_by,
                 ActiveReferral.referred_user_id == user.id,
                 ActiveReferral.status == "awarded"
             ).first()
-            
             if not existing:
-                # Award the bonus
                 success, msg = award_active_referral_bonus(user.referred_by, user.id, session)
                 if success:
-                    awarded_count += 1
-                    logger.info(f"✅ Catch-up: Awarded active referral bonus for user {user.telegram_id} -> referrer {user.referred_by}")
-        
-        if awarded_count > 0:
-            logger.info(f"✅ Catch-up complete: Awarded {awarded_count} missed active referral bonuses")
+                    recorded_count += 1
+                    logger.info(f"✅ Catch-up: Recorded active referral for user {user.telegram_id} -> referrer {user.referred_by}")
+        if recorded_count > 0:
+            logger.info(f"✅ Catch-up complete: Recorded {recorded_count} missed active referrals")
         else:
             logger.info("✅ Catch-up: No missed active referrals found")
-            
     except Exception as e:
         logger.error(f"Error in check_missed_active_referrals: {e}")
         session.rollback()

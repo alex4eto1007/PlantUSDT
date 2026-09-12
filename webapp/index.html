@@ -127,7 +127,7 @@
 
             <div class="referral-reward-section" style="margin-top:12px;padding:12px;background:rgba(0,255,135,0.05);border-radius:8px;border:1px solid rgba(0,255,135,0.1);">
                 <p style="font-size:13px;color:#ffd93d;margin:0 0 10px 0;">
-                    🎁 <strong>$0.002</strong> when a friend connects wallet + watches 3 ads
+                    🎁 <strong>$0.005</strong> when a friend connects wallet + watches 3 ads
                 </p>
                 <div style="overflow-x:auto;">
                     <table style="width:100%;font-size:12px;border-collapse:collapse;">
@@ -154,13 +154,17 @@
             <div class="referral-details">
                 <div class="referral-detail-row"><span>👤 Referrals:</span><strong id="level1Count">0</strong></div>
                 <div class="referral-detail-row"><span>💰 Earnings from deposits:</span><strong id="level1Earnings">$0.000</strong></div>
-                <div class="referral-detail-row" style="color:#ffd93d;"><span>🎁 Active Referral Bonus:</span><strong style="color:#ffd93d;">0.03 USDT each</strong></div>
                 <div class="referral-detail-row" style="color:#00d4ff;"><span>🎉 Welcome Bonus:</span><strong style="color:#00d4ff;">0.1 USDT</strong></div>
             </div>
 
-            <button id="claimWelcomeBtn" onclick="claimWelcomeBonus()" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;color:#0a0e17;font-weight:700;cursor:pointer;">
-                🎁 Claim Welcome Bonus (0.1 USDT)
-            </button>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button id="claimReferralEarningsBtn" onclick="claimReferralRewards()" disabled style="flex:2;padding:12px;border-radius:8px;background:#495670;border:none;color:#ccd6f0;font-weight:700;cursor:not-allowed;opacity:0.6;">
+                    💰 Available Earnings: $0.000
+                </button>
+                <button id="claimWelcomeBtn" onclick="claimWelcomeBonus()" style="flex:1;padding:12px;border-radius:8px;background:linear-gradient(135deg,#ffd93d,#f9a825);border:none;color:#0a0e17;font-weight:700;cursor:pointer;font-size:12px;">
+                    🎁 Welcome
+                </button>
+            </div>
         </div>
 
         <div class="referral-upgrade-section" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
@@ -230,21 +234,9 @@
                     <span class="ad-stat-label">📊 Ads Today</span>
                     <span class="ad-stat-value" id="adsToday">0</span>
                 </div>
-                <div class="ad-stat-box">
-                    <span class="ad-stat-label">🎁 Giveaway Pool</span>
-                    <span class="ad-stat-value" id="adEarnings">$0.000</span>
-                </div>
             </div>
 
-            <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:8px;margin-bottom:6px;overflow:hidden;">
-                <div id="adProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
-            </div>
-
-            <div id="adResetTimer" style="text-align:center;font-size:16px;font-weight:600;color:#a29bfe;background:rgba(130,71,229,0.08);border:1px solid rgba(130,71,229,0.2);border-radius:8px;padding:6px 10px;margin-top:4px;margin-bottom:12px;font-family:'Courier New',monospace;">
-                🔄 Next draw in: 00:00:00
-            </div>
-
-            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad — Support Giveaways</button>
+            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;margin-top:12px;">▶️ Watch Ad — Support Giveaways</button>
 
             <div id="adStatus" style="margin-top:10px;font-size:13px;color:#ffd93d;text-align:center;display:none;"></div>
 
@@ -297,42 +289,22 @@
         let rewardedController = null;
 
         function showInterstitialAd() {
-            console.log('📢 Attempting to show interstitial ad...');
             return new Promise((resolve) => {
                 try {
-                    if (typeof window.Adsgram === 'undefined') {
-                        console.warn('📢 Adsgram not loaded');
-                        resolve({ done: false, error: true });
-                        return;
-                    }
-                    if (!interstitialController) {
-                        interstitialController = window.Adsgram.init({ blockId: INTERSTITIAL_ID });
-                    }
-                    interstitialController.show()
-                        .then((result) => resolve(result))
-                        .catch((result) => resolve(result));
-                } catch (e) {
-                    resolve({ done: false, error: true });
-                }
+                    if (typeof window.Adsgram === 'undefined') { resolve({ done: false, error: true }); return; }
+                    if (!interstitialController) interstitialController = window.Adsgram.init({ blockId: INTERSTITIAL_ID });
+                    interstitialController.show().then((result) => resolve(result)).catch((result) => resolve(result));
+                } catch (e) { resolve({ done: false, error: true }); }
             });
         }
 
         function showRewardedAd() {
             return new Promise((resolve) => {
                 try {
-                    if (typeof window.Adsgram === 'undefined') {
-                        resolve({ done: false, error: true, description: 'Adsgram not loaded' });
-                        return;
-                    }
-                    if (!rewardedController) {
-                        rewardedController = window.Adsgram.init({ blockId: REWARDED_ID });
-                    }
-                    rewardedController.show()
-                        .then((result) => resolve(result))
-                        .catch((result) => resolve({ done: false, error: true, description: result }));
-                } catch (e) {
-                    resolve({ done: false, error: true, description: e.message });
-                }
+                    if (typeof window.Adsgram === 'undefined') { resolve({ done: false, error: true, description: 'Adsgram not loaded' }); return; }
+                    if (!rewardedController) rewardedController = window.Adsgram.init({ blockId: REWARDED_ID });
+                    rewardedController.show().then((result) => resolve(result)).catch((result) => resolve({ done: false, error: true, description: result }));
+                } catch (e) { resolve({ done: false, error: true, description: e.message }); }
             });
         }
 
@@ -341,6 +313,6 @@
         window.AD_REWARD = AD_REWARD;
     </script>
 
-    <script src="js/app.js?v=72"></script>
+    <script src="js/app.js?v=73"></script>
 </body>
 </html>

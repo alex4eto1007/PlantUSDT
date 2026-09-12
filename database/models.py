@@ -54,7 +54,10 @@ class User(Base):
     last_task_completed_at = Column(DateTime, nullable=True)
     tasks_earnings = Column(Numeric(20,6), default=0.0)
     notes = Column(Text, nullable=True)
-    
+
+    # PENDING REFERRAL REWARDS (accumulated, claimed by user)
+    pending_referral_rewards = Column(Numeric(20,6), default=0.0)
+
     # WITHDRAWAL COOLDOWN
     last_withdrawal_at = Column(DateTime, nullable=True)
 
@@ -232,7 +235,7 @@ class ActiveReferral(Base):
     id = Column(Integer, primary_key=True)
     referrer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     referred_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    bonus_amount = Column(Numeric(20,6), default=0.03)
+    bonus_amount = Column(Numeric(20,6), default=0.0)
     awarded_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String(20), default="pending")
     referrer = relationship("User", foreign_keys=[referrer_id], back_populates="active_referrals_given")
