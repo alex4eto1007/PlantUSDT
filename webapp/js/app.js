@@ -1038,7 +1038,7 @@ function updateAdUI(dailyCount) {
     window._latestAdCount = dailyCount;
     window._adCountTimestamp = Date.now();
     const adsTodayEl = document.getElementById('adsToday');
-    if (adsTodayEl) adsTodayEl.textContent = String(dailyCount);
+    if (adsTodayEl && typeof dailyCount === 'number') adsTodayEl.textContent = String(dailyCount);
     const watchBtn = document.getElementById('watchAdBtn');
     if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
     const statusEl = document.getElementById('adStatus');
@@ -1071,7 +1071,7 @@ async function watchRewardedAd() {
                 });
                 const data = await response.json();
                 if (data.success) {
-                    updateAdUI(data.daily_ad_count || 0);
+                    loadAdStats();
                     safePopup({
                         title: '✅ Ad Watched!',
                         message: 'Thanks for supporting the community giveaway! 🎁\n\nYour ad helps fund the weekly prize pool. Winners announced every Friday.',
@@ -1107,14 +1107,9 @@ async function loadAdStats() {
         const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
         const userData = await response.json();
         if (!userData.success) return;
-        const serverDailyCount = userData.daily_ad_count || 0;
-        let finalCount = serverDailyCount;
-        if (window._latestAdCount !== null && window._adCountTimestamp !== null) {
-            const timeSinceUpdate = Date.now() - window._adCountTimestamp;
-            if (timeSinceUpdate < 10000 && window._latestAdCount > serverDailyCount) finalCount = window._latestAdCount;
-        }
+        const totalAds = userData.total_ads_watched || 0;
         const adsTodayEl = document.getElementById('adsToday');
-        if (adsTodayEl) adsTodayEl.textContent = String(finalCount);
+        if (adsTodayEl) adsTodayEl.textContent = String(totalAds);
         const watchBtn = document.getElementById('watchAdBtn');
         if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
     } catch (error) {}
@@ -1237,9 +1232,6 @@ async function disableInterstitialAds() {
     });
 }
 
-// ============================================
-// TASKS (fixed: community tasks always visible)
-// ============================================
 async function loadTasks() {
     if (window._isBanned) return;
     const userId = tgUser ? tgUser.id : '0';
@@ -1295,7 +1287,7 @@ async function loadTasks() {
                     const conditionValue = getTaskConditionValue(task.task_id);
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     if (task.category === 'community') {
-                        // Manual
+                        // manual
                     } else if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
                             var displayValue = Math.min(currentValue, conditionValue);
@@ -1553,19 +1545,15 @@ window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 
-console.log('✅ PlantUSDT app loaded successfully (v74)');
-console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
+console.log('✅ PlantUSDT app loaded successfully (v76)');
+console.log('📊 Ads stat now shows Total Ads Watched (from user.total_ads_watched)');
+console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
+console.log('📢 Tasks categories: Investments, Community, Milestones');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
-console.log('🔥 Active Referrals tracked silently for ambassador promotion');
-console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
-console.log('♾️ Ads have no limits — watch as many as you like');
-console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
-console.log('🚫 Ban system active — banned users see suspension notice');
-console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
-console.log('📊 Task rewards display 2 decimals');
-console.log('💳 Withdrawal fees: 15% / 18% / 20%');
-console.log('🔒 Duplicate wallet protection active');
-console.log('🎯 Math captcha accepts 0 as valid answer');
 console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
-console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');
+console.log('🚫 Ban system active');
+console.log('🛡️ Fingerprint + real IP capture active');
+console.log('💳 Withdrawal fees: 15% / 18% / 20%');
+console.log('♾️ Ads have no limits');
+console.log('🎁 Welcome bonus button removed after claiming');
