@@ -676,7 +676,6 @@ def credit_ad_reward():
     captcha_answer = data.get('captcha_answer')
     captcha_question = data.get('captcha_question')
 
-    # FIX: 0 is a valid captcha answer — only reject None or empty string
     if captcha_answer is None or captcha_answer == '' or not captcha_question:
         return jsonify({'success': False, 'message': 'Please solve the math question to earn ad reward.', 'need_captcha': True}), 400
     try:
@@ -694,7 +693,7 @@ def credit_ad_reward():
             return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
 
         # ============================================
-        # STORE FINGERPRINT FIRST (before the check)
+        # STORE FINGERPRINT FIRST
         # ============================================
         fingerprint = data.get('device_fingerprint', 'unknown')
         if not user.device_fingerprint and fingerprint != 'unknown':
@@ -709,7 +708,7 @@ def credit_ad_reward():
             }), 403
 
         # ============================================
-        # FINGERPRINT ENFORCEMENT (checked AFTER storing)
+        # FINGERPRINT ENFORCEMENT
         # ============================================
         if not user.device_fingerprint and (user.total_ads_watched or 0) >= 10:
             user.flagged_for_anomaly = True
@@ -722,41 +721,25 @@ def credit_ad_reward():
         # ============================================
 
         reset_daily_ad_count(user)
-        if user.daily_ad_count >= 100:
-            ad_log = AdLog(
-                user_id=user.id, watched_at=datetime.utcnow(), reward=0,
-                ip_address=get_client_ip(), user_agent=request.headers.get('User-Agent', 'unknown'),
-                session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
-            )
-            session_db.add(ad_log)
-            session_db.commit()
-            return jsonify({
-                'success': True, 'reward': 0, 'balance': float(user.balance),
-                'daily_ad_count': user.daily_ad_count, 'daily_ad_limit': 100,
-                'limit_reached': True,
-                'message': 'You have reached the daily limit. No reward for this ad. Watch tomorrow!'
-            }), 200
-        reward = Decimal('0.001')
-        old_balance = Decimal(user.balance or 0)
-        user.balance = (user.balance or Decimal('0')) + reward
+
+        # ============================================
+        # AD REWARD = $0 (revenue redirected to community giveaways)
+        # Daily cap removed — abuse has no value since reward is 0
+        # ============================================
+        reward = Decimal('0')
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
-        user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
-        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
+
         ad_log = AdLog(
             user_id=user.id, watched_at=datetime.utcnow(), reward=reward,
             ip_address=get_client_ip(), user_agent=request.headers.get('User-Agent', 'unknown'),
             session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
         )
         session_db.add(ad_log)
-        audit = AuditLog(
-            user_id=user.id, action='ad_earnings', field_changed='balance',
-            old_value=float(old_balance), new_value=float(user.balance),
-            amount=float(reward),
-            description=f'Ad reward #{user.total_ads_watched} (day {user.daily_ad_count}/100)',
-            source='ad_reward', created_at=datetime.utcnow()
-        )
-        session_db.add(audit)
+        session_db.commit()
+        clear_user_cache(telegram_id)
+
+        # Referral reward check (still applies at 3+ ads with wallet)
         if user.referred_by:
             referrer = session_db.query(User).filter_by(id=user.referred_by).first()
             if referrer and user.wallet_address and user.total_ads_watched >= 3:
@@ -778,13 +761,15 @@ def credit_ad_reward():
                     )
                     session_db.add(reward_audit)
                     session_db.commit()
-                    logger.info(f"✅ Referral reward $0.002 credited to {referrer.telegram_id} for {user.telegram_id}")
-        session_db.commit()
-        clear_user_cache(telegram_id)
+
         return jsonify({
-            'success': True, 'reward': float(reward), 'balance': float(user.balance),
-            'daily_ad_count': user.daily_ad_count, 'daily_ad_limit': 100,
-            'limit_reached': False, 'total_ad_earnings': float(user.total_ad_earnings)
+            'success': True,
+            'reward': 0,
+            'balance': float(user.balance),
+            'daily_ad_count': user.daily_ad_count,
+            'daily_ad_limit': None,
+            'limit_reached': False,
+            'total_ad_earnings': float(user.total_ad_earnings or 0)
         })
     except Exception as e:
         session_db.rollback()
