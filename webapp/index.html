@@ -11,13 +11,8 @@
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <title>🌱 PlantUSDT</title>
     <link rel="stylesheet" href="css/style.css?v=48">
-    <!-- External scripts with SRI and crossorigin -->
-    <script src="https://telegram.org/js/telegram-web-app.js" 
-            crossorigin="anonymous">
-    </script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js" 
-            crossorigin="anonymous">
-    </script>
+    <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container" id="appContent" style="display: none;">
@@ -32,7 +27,6 @@
             </div>
         </div>
 
-        <!-- Expected Daily Earnings - Below Logo, Left Side -->
         <div class="daily-earnings-display">
             <span class="daily-label">📈 Expected Daily Earnings</span>
             <span class="daily-amount" id="dailyEarnings">+$0.00 / day</span>
@@ -131,9 +125,6 @@
                 <span>Earned: <strong id="referralEarned">$0.000</strong></span>
             </div>
 
-            <!-- ============================================ -->
-            <!-- 🆕 REFERRAL REWARD SECTION (TABLE UI) -->
-            <!-- ============================================ -->
             <div class="referral-reward-section" style="margin-top:12px;padding:12px;background:rgba(0,255,135,0.05);border-radius:8px;border:1px solid rgba(0,255,135,0.1);">
                 <p style="font-size:13px;color:#ffd93d;margin:0 0 10px 0;">
                     🎁 <strong>$0.002</strong> when a friend connects wallet + watches 3 ads
@@ -157,7 +148,6 @@
                     📋 Show more →
                 </button>
             </div>
-            <!-- ============================================ -->
 
             <div id="activeReferralList" style="margin-top:10px;display:none;"></div>
 
@@ -176,7 +166,7 @@
         <div class="referral-upgrade-section" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
             <h3 style="font-size: 18px; margin-bottom: 4px;">📊 Upgrade Referral Bonus</h3>
             <p style="font-size: 13px; color: #8892b0; margin-bottom: 12px;">Permanently increase your referral earnings!</p>
-            
+
             <div class="tier-grid">
                 <div class="tier-card">
                     <div class="tier-emoji">🌱</div>
@@ -185,7 +175,6 @@
                     <div class="tier-price">$0</div>
                     <button class="tier-btn free" disabled>Current</button>
                 </div>
-                
                 <div class="tier-card" style="border-color: #cd7f32;">
                     <div class="tier-emoji">🥉</div>
                     <div class="tier-name">Bronze</div>
@@ -193,7 +182,6 @@
                     <div class="tier-price">$42</div>
                     <button class="tier-btn bronze" onclick="upgradeReferralTier('bronze')">Upgrade</button>
                 </div>
-                
                 <div class="tier-card" style="border-color: #c0c0c0;">
                     <div class="tier-emoji">🥈</div>
                     <div class="tier-name">Silver</div>
@@ -201,7 +189,6 @@
                     <div class="tier-price">$80</div>
                     <button class="tier-btn silver" onclick="upgradeReferralTier('silver')">Upgrade</button>
                 </div>
-                
                 <div class="tier-card" style="border-color: #ffd700;">
                     <div class="tier-emoji">🥇</div>
                     <div class="tier-name">Gold</div>
@@ -209,7 +196,6 @@
                     <div class="tier-price">$120</div>
                     <button class="tier-btn gold" onclick="upgradeReferralTier('gold')">Upgrade</button>
                 </div>
-                
                 <div class="tier-card" style="border-color: #b9f2ff;">
                     <div class="tier-emoji">💎</div>
                     <div class="tier-name">Diamond</div>
@@ -218,7 +204,7 @@
                     <button class="tier-btn diamond" onclick="upgradeReferralTier('diamond')">Upgrade</button>
                 </div>
             </div>
-            
+
             <div id="upgradeResult" style="margin-top: 10px; display: none; padding: 10px; border-radius: 6px;"></div>
         </div>
 
@@ -231,48 +217,45 @@
         </div>
 
         <div class="ad-section">
-            <h3>📺 Watch Ads & Earn USDT</h3>
+            <h3>📺 Watch Ads — Fund the Giveaway</h3>
             <p style="font-size:13px;color:#8892b0;margin-bottom:12px;">
-                Watch a short ad and earn <strong>$0.001 USDT</strong> each time!<br>
+                Every ad you watch helps fund the <strong>weekly community giveaway</strong>!<br>
                 <span style="font-size:12px;opacity:0.7;">
-                    ✅ Only rewarded ads count toward tasks • Max 100 ads per day
+                    🎁 10 winners share the pool every Friday • 100% of ad revenue goes to prizes
                 </span>
             </p>
-            
+
             <div class="ad-stats">
                 <div class="ad-stat-box">
                     <span class="ad-stat-label">📊 Ads Today</span>
-                    <span class="ad-stat-value" id="adsToday">0 / 100</span>
+                    <span class="ad-stat-value" id="adsToday">0</span>
                 </div>
                 <div class="ad-stat-box">
-                    <span class="ad-stat-label">💰 Total Earned</span>
+                    <span class="ad-stat-label">🎁 Giveaway Pool</span>
                     <span class="ad-stat-value" id="adEarnings">$0.000</span>
                 </div>
             </div>
-            
-            <!-- Ad Progress Bar -->
+
             <div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:8px;margin-bottom:6px;overflow:hidden;">
                 <div id="adProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div>
             </div>
-            
-            <!-- Ad Reset Timer -->
+
             <div id="adResetTimer" style="text-align:center;font-size:16px;font-weight:600;color:#a29bfe;background:rgba(130,71,229,0.08);border:1px solid rgba(130,71,229,0.2);border-radius:8px;padding:6px 10px;margin-top:4px;margin-bottom:12px;font-family:'Courier New',monospace;">
-                🔄 Resets in: 00:00:00 UTC
+                🔄 Next draw in: 00:00:00
             </div>
-            
-            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad & Earn $0.001</button>
-            
+
+            <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;">▶️ Watch Ad — Support Giveaways</button>
+
             <div id="adStatus" style="margin-top:10px;font-size:13px;color:#ffd93d;text-align:center;display:none;"></div>
-            
-            <!-- Note about daily counter reset -->
+
             <div style="margin-top:12px;padding:10px;background:rgba(255,193,7,0.06);border-radius:8px;border:1px solid rgba(255,193,7,0.1);">
                 <p style="font-size:11px;color:#ffd93d;margin:0;text-align:center;line-height:1.5;">
-                    📊 Daily ad limit: 100 per day.<br>
-                    ⚠️ The counter may show yesterday's data when you first open the app.<br>
-                    🔄 It will automatically reset to today's count after you watch an ad.
+                    🎁 100% of ad revenue funds weekly community giveaways.<br>
+                    📊 Your ads count toward eligibility — watch as many as you like!<br>
+                    🏆 Winners announced every Friday.
                 </p>
             </div>
-            
+
             <button class="action-btn warning" onclick="disableInterstitialAds()" id="disableAdsBtn" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);color:#ff6b6b;font-weight:600;cursor:pointer;">
                 🔇 Disable Ads ($4)
             </button>
@@ -324,19 +307,11 @@
                     }
                     if (!interstitialController) {
                         interstitialController = window.Adsgram.init({ blockId: INTERSTITIAL_ID });
-                        console.log('📢 Interstitial controller initialized with ID:', INTERSTITIAL_ID);
                     }
                     interstitialController.show()
-                        .then((result) => {
-                            console.log('📢 Interstitial ad result:', result);
-                            resolve(result);
-                        })
-                        .catch((result) => {
-                            console.error('📢 Interstitial ad error:', result);
-                            resolve(result);
-                        });
+                        .then((result) => resolve(result))
+                        .catch((result) => resolve(result));
                 } catch (e) {
-                    console.error('📢 Interstitial ad exception:', e);
                     resolve({ done: false, error: true });
                 }
             });
@@ -364,9 +339,8 @@
         window.showInterstitialAd = showInterstitialAd;
         window.showRewardedAd = showRewardedAd;
         window.AD_REWARD = AD_REWARD;
-        console.log("✅ Adsgram initialized");
     </script>
 
-    <script src="js/app.js?v=71"></script>
+    <script src="js/app.js?v=72"></script>
 </body>
 </html>

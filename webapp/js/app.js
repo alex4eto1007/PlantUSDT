@@ -22,77 +22,35 @@ window._adCountTimestamp = null;
 window._lastTimerValue = null;
 window._isBanned = false;
 
-// ============================================
-// BAN SCREEN
-// ============================================
 function showBanScreen(reason) {
     if (window._isBanned) return;
     window._isBanned = true;
-
     try {
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         if (resetTimerInterval) { clearInterval(resetTimerInterval); resetTimerInterval = null; }
     } catch (e) {}
-
-    var appContent = document.getElementById('appContent');
-    var loadingMessage = document.getElementById('loadingMessage');
-    var fieldsContainer = document.getElementById('fieldsContainer');
-    var dashboardStats = document.getElementById('dashboardStats');
-    var historyList = document.getElementById('historyList');
-
-    if (appContent) appContent.style.display = 'none';
-    if (loadingMessage) loadingMessage.style.display = 'none';
-    if (fieldsContainer) fieldsContainer.style.display = 'none';
-    if (dashboardStats) dashboardStats.style.display = 'none';
-    if (historyList) historyList.style.display = 'none';
-
+    var ids = ['appContent','loadingMessage','fieldsContainer','dashboardStats','historyList'];
+    ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
     var banOverlay = document.createElement('div');
     banOverlay.id = 'banScreen';
-    banOverlay.style.cssText = [
-        'position: fixed', 'top: 0', 'left: 0', 'right: 0', 'bottom: 0',
-        'background: #0a0e17', 'display: flex', 'flex-direction: column',
-        'align-items: center', 'justify-content: center', 'padding: 32px 24px',
-        'text-align: center', 'z-index: 999999',
-        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        'color: #ccd6f0'
-    ].join(';');
-
-    banOverlay.innerHTML = `
-        <div style="font-size: 72px; margin-bottom: 16px; line-height: 1;">🚫</div>
-        <div style="font-size: 24px; font-weight: 800; color: #ff6b6b; margin-bottom: 12px; letter-spacing: 0.5px;">
-            Account Suspended
-        </div>
-        <div style="font-size: 15px; color: #8892b0; line-height: 1.7; max-width: 360px; margin-bottom: 28px;">
-            Your PlantUSDT account has been suspended.
-            <br><br>
-            ${reason ? '<em style="color:#ffd93d;">' + reason + '</em><br><br>' : ''}
-            If you believe this is a mistake, please contact support.
-        </div>
-        <a href="https://t.me/Alex_PlantUSDT" target="_blank"
-           style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #00d4ff, #0088ff); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 20px rgba(0,136,255,0.3);">
-            💬 Contact Support
-        </a>
-        <div style="margin-top: 32px; font-size: 12px; color: #495670;">
-            🟣 PlantUSDT · Polygon Network
-        </div>
-    `;
-
+    banOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0e17;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;z-index:999999;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#ccd6f0;';
+    banOverlay.innerHTML = '<div style="font-size:72px;margin-bottom:16px;line-height:1;">🚫</div>' +
+        '<div style="font-size:24px;font-weight:800;color:#ff6b6b;margin-bottom:12px;letter-spacing:0.5px;">Account Suspended</div>' +
+        '<div style="font-size:15px;color:#8892b0;line-height:1.7;max-width:360px;margin-bottom:28px;">' +
+        'Your PlantUSDT account has been suspended.<br><br>' +
+        (reason ? '<em style="color:#ffd93d;">' + reason + '</em><br><br>' : '') +
+        'If you believe this is a mistake, please contact support.</div>' +
+        '<a href="https://t.me/Alex_PlantUSDT" target="_blank" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#00d4ff,#0088ff);color:#fff;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(0,136,255,0.3);">💬 Contact Support</a>' +
+        '<div style="margin-top:32px;font-size:12px;color:#495670;">🟣 PlantUSDT · Polygon Network</div>';
     document.body.appendChild(banOverlay);
     console.log('🚫 Ban screen displayed');
 }
 
-// ============================================
-// GRAM (TON) ADDRESS VALIDATION
-// ============================================
 function isValidTonAddress(address) {
     if (!address) return false;
-    return /^(UQ|EQ)[A-Za-z0-9_-]{46}$/.test(address) ||
-           /^-?\d+:[a-fA-F0-9]{64}$/.test(address);
+    return /^(UQ|EQ)[A-Za-z0-9_-]{46}$/.test(address) || /^-?\d+:[a-fA-F0-9]{64}$/.test(address);
 }
 
-// ============================================
-// MATH CAPTCHA
-// ============================================
 let mathCaptchaAnswer = null;
 let mathCaptchaQuestion = null;
 let pendingAdCallback = null;
@@ -102,7 +60,6 @@ function generateMathCaptcha() {
     const num2 = Math.floor(Math.random() * 10) + 1;
     const operators = ['+', '-'];
     const op = operators[Math.floor(Math.random() * operators.length)];
-    
     let answer, question;
     if (op === '+') {
         answer = num1 + num2;
@@ -113,15 +70,11 @@ function generateMathCaptcha() {
         answer = bigger - smaller;
         question = `${bigger} - ${smaller} = ?`;
     }
-    
     mathCaptchaQuestion = question;
     mathCaptchaAnswer = answer;
     return { question: mathCaptchaQuestion, answer: mathCaptchaAnswer };
 }
 
-// ============================================
-// DEVICE FINGERPRINT (FIXED — window.screen)
-// ============================================
 function getDeviceFingerprint() {
     try {
         const scr = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
@@ -136,13 +89,8 @@ function getDeviceFingerprint() {
 
 function showMathCaptcha(callback) {
     const captcha = generateMathCaptcha();
-    const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question to claim your ad reward:\n\n${captcha.question}\n\nEnter your answer:`);
-    
-    if (userAnswer === null) {
-        callback(false, null, null);
-        return;
-    }
-    
+    const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question:\n\n${captcha.question}\n\nEnter your answer:`);
+    if (userAnswer === null) { callback(false, null, null); return; }
     const parsed = parseInt(userAnswer);
     if (!isNaN(parsed) && parsed === captcha.answer) {
         callback(true, captcha.answer, captcha.question);
@@ -152,64 +100,42 @@ function showMathCaptcha(callback) {
     }
 }
 
-// ============================================
-// UTC MIDNIGHT RESET TIMER
-// ============================================
 function updateAdResetTimer() {
     if (window._isBanned) return;
-
     const now = new Date();
-    const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-    const timeLeft = utcMidnight - now;
+    const day = now.getUTCDay();
+    const daysUntilFriday = (5 - day + 7) % 7;
+    const nextFriday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilFriday, 0, 0, 0));
+    if (nextFriday <= now) nextFriday.setUTCDate(nextFriday.getUTCDate() + 7);
+    const timeLeft = nextFriday - now;
     const timerEl = document.getElementById('adResetTimer');
     if (!timerEl) return;
-    
-    if (window._lastCheckedDate) {
-        const lastDate = new Date(window._lastCheckedDate);
-        const currentDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-        if (lastDate.getTime() !== currentDate.getTime()) {
-            console.log('🔄 New day detected by timer — refreshing...');
-            loadUserData();
-            loadAdStats();
-        }
-    }
-    window._lastCheckedDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    
     if (timeLeft <= 0) {
-        timerEl.textContent = '🔄 Resets in: 00:00:00 UTC';
-        console.log('🔄 UTC Midnight reached — refreshing ad data...');
-        loadUserData();
-        loadAdStats();
+        timerEl.textContent = '🎁 Draw happening now!';
     } else {
-        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-        timerEl.textContent = `🔄 Resets in: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} UTC`;
+        let str = '';
+        if (days > 0) str = `${days}d ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+        else str = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+        timerEl.textContent = `🔄 Next draw in: ${str}`;
     }
     window._lastTimerValue = timeLeft;
 }
 
-// ============================================
-// SAFE POPUP
-// ============================================
 function safePopup(options) {
     try {
-        if (typeof tg !== 'undefined' && tg.showPopup) {
-            tg.showPopup(options);
-        } else {
-            const message = typeof options === 'string' ? options : options.title + '\n\n' + options.message;
-            alert(message);
-        }
-    } catch (e) {
-        alert('An error occurred. Please try again.');
-    }
+        if (typeof tg !== 'undefined' && tg.showPopup) tg.showPopup(options);
+        else alert(typeof options === 'string' ? options : options.title + '\n\n' + options.message);
+    } catch (e) { alert('An error occurred. Please try again.'); }
 }
 
 function safePopupWithCallback(options, callback) {
     try {
-        if (typeof tg !== 'undefined' && tg.showPopup) {
-            tg.showPopup(options, callback);
-        } else {
+        if (typeof tg !== 'undefined' && tg.showPopup) tg.showPopup(options, callback);
+        else {
             const message = options.title + '\n\n' + options.message;
             if (confirm(message)) { if (callback) callback('confirm'); }
             else { if (callback) callback('cancel'); }
@@ -222,26 +148,19 @@ function safePopupWithCallback(options, callback) {
 
 function showInterstitialIfNeeded() {
     if (window._isBanned) return;
-    if (interstitialAdsDisabled) { console.log("Interstitial ads disabled by user"); return; }
-    
+    if (interstitialAdsDisabled) return;
     var now = Date.now();
-    if (now - lastAdTime < AD_COOLDOWN) { console.log("Ad cooldown active, skipping..."); return; }
+    if (now - lastAdTime < AD_COOLDOWN) return;
     lastAdTime = now;
-
     if (window.showInterstitialAd && typeof window.showInterstitialAd === 'function') {
-        console.log("Showing interstitial ad on button click...");
         setTimeout(function() { window.showInterstitialAd().catch(() => {}); }, 500);
     }
 }
 
-// ============================================
-// PAGE NAVIGATION
-// ============================================
 document.addEventListener('DOMContentLoaded', function() {
     try {
         tg.ready();
         tg.expand();
-        
         function initializeApp() {
             if (tgUser) {
                 loadUserData();
@@ -255,19 +174,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateAdResetTimer();
                 if (resetTimerInterval) clearInterval(resetTimerInterval);
                 resetTimerInterval = setInterval(updateAdResetTimer, 1000);
-            } else {
-                setTimeout(initializeApp, 100);
-            }
+            } else { setTimeout(initializeApp, 100); }
         }
         initializeApp();
     } catch (e) { console.log('Error initializing app'); }
-
     document.addEventListener('click', function(e) {
         if (window._isBanned) return;
         var target = e.target.closest('button');
         if (!target) return;
-        if (target.classList.contains('back-btn') || target.classList.contains('no-ad') || 
-            target.id === 'watchAdBtn' || target.classList.contains('currency-btn')) return;
+        if (target.classList.contains('back-btn') || target.classList.contains('no-ad') || target.id === 'watchAdBtn' || target.classList.contains('currency-btn')) return;
         if (target.type === 'submit' && target.closest('#withdrawForm')) return;
         showInterstitialIfNeeded();
     });
@@ -275,26 +190,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function navigateTo(page) {
     if (window._isBanned) return;
-    const pages = {
-        'dashboard': 'dashboard.html', 'deposit': 'deposit.html',
-        'withdraw': 'withdraw.html', 'history': 'history.html', 'index': 'index.html'
-    };
+    const pages = {'dashboard':'dashboard.html','deposit':'deposit.html','withdraw':'withdraw.html','history':'history.html','index':'index.html'};
     if (pages[page]) { showInterstitialIfNeeded(); window.location.href = pages[page]; }
 }
 
 function goBack() { window.history.back(); }
 
-// ============================================
-// CURRENCY SELECTION
-// ============================================
 function selectCurrency(currency) {
     window.selectedCurrency = currency;
-    var usdtBtn = document.getElementById('usdtBtn');
-    var gramBtn = document.getElementById('gramBtn');
-    var usdtGroup = document.getElementById('usdtAddressGroup');
-    var gramGroup = document.getElementById('gramAddressGroup');
+    var usdtBtn = document.getElementById('usdtBtn'), gramBtn = document.getElementById('gramBtn');
+    var usdtGroup = document.getElementById('usdtAddressGroup'), gramGroup = document.getElementById('gramAddressGroup');
     var networkLabel = document.getElementById('networkLabel');
-    
     if (currency === 'usdt') {
         if (usdtBtn) usdtBtn.classList.add('active');
         if (gramBtn) gramBtn.classList.remove('active');
@@ -308,27 +214,20 @@ function selectCurrency(currency) {
         if (usdtGroup) usdtGroup.style.display = 'none';
         if (networkLabel) networkLabel.textContent = 'TON';
     }
-    
     var feeNetEl = document.getElementById('feeNet');
     if (feeNetEl) {
         var currentText = feeNetEl.textContent.replace('~', '').replace(' in GRAM', '');
-        if (currency === 'gram') { feeNetEl.textContent = '~' + currentText + ' in GRAM'; }
-        else { feeNetEl.textContent = currentText; }
+        feeNetEl.textContent = currency === 'gram' ? '~' + currentText + ' in GRAM' : currentText;
     }
 }
 
-// ============================================
-// USER DATA
-// ============================================
 async function loadUserData(retries = 3) {
     if (window._isBanned) return;
     if (isLoading) return;
     isLoading = true;
-    
     try {
         const userId = tgUser ? tgUser.id : '0';
         const response = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`);
-
         if (response.status === 403) {
             let bannedData = null;
             try { bannedData = await response.json(); } catch (e) {}
@@ -339,12 +238,9 @@ async function loadUserData(retries = 3) {
                 return;
             }
         }
-
         const data = await response.json();
         if (data.success) {
             interstitialAdsDisabled = data.interstitial_ads_disabled || false;
-            console.log('📢 interstitial_ads_disabled:', interstitialAdsDisabled);
-            
             isDataLoaded = true;
             updateUI(data);
             updateFields(data);
@@ -354,57 +250,31 @@ async function loadUserData(retries = 3) {
             await updateReferralStats(userId);
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
-            
-            if (data.last_ad_reset) {
-                const lastReset = new Date(data.last_ad_reset);
-                const now = new Date();
-                if (now.getUTCDate() !== lastReset.getUTCDate() || 
-                    now.getUTCMonth() !== lastReset.getUTCMonth() || 
-                    now.getUTCFullYear() !== lastReset.getUTCFullYear()) {
-                    console.log('🔄 New day detected — resetting ad display');
-                    resetAdDisplay();
-                }
-            }
-            
             var loadingEl = document.getElementById('loadingMessage');
             var appContent = document.getElementById('appContent');
             if (loadingEl) loadingEl.style.display = 'none';
             if (appContent) appContent.style.display = 'block';
-            
             if (data.interstitial_ads_disabled) {
                 const disableBtn = document.getElementById('disableAdsBtn');
-                if (disableBtn) {
-                    disableBtn.textContent = '✅ Ads Disabled';
-                    disableBtn.disabled = true;
-                    disableBtn.style.opacity = '0.5';
-                }
+                if (disableBtn) { disableBtn.textContent = '✅ Ads Disabled'; disableBtn.disabled = true; disableBtn.style.opacity = '0.5'; }
             }
-            
             loadAdStats();
             loadReferralProgress();
         }
     } catch (error) {
-        console.error('Error loading user data:', error);
-        if (retries > 0 && !window._isBanned) {
-            console.log('Retrying user data load... (' + retries + ' attempts left)');
-            setTimeout(() => loadUserData(retries - 1), 1000);
-        }
-    } finally {
-        isLoading = false;
-    }
+        if (retries > 0 && !window._isBanned) setTimeout(() => loadUserData(retries - 1), 1000);
+    } finally { isLoading = false; }
 }
 
 function resetAdDisplay() {
     const adsTodayEl = document.getElementById('adsToday');
-    if (adsTodayEl) { adsTodayEl.textContent = '0 / 100'; adsTodayEl.style.color = '#00ff87'; }
+    if (adsTodayEl) adsTodayEl.textContent = '0';
     const progressEl = document.getElementById('adProgressBar');
-    if (progressEl) { progressEl.style.width = '0%'; progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)'; }
+    if (progressEl) progressEl.style.width = '0%';
     const watchBtn = document.getElementById('watchAdBtn');
-    if (watchBtn) { watchBtn.disabled = false; watchBtn.style.opacity = '1'; watchBtn.textContent = '▶️ Watch Ad & Earn $0.001'; }
+    if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
     const statusEl = document.getElementById('adStatus');
     if (statusEl) statusEl.style.display = 'none';
-    window._latestAdCount = 0;
-    window._adCountTimestamp = Date.now();
 }
 
 function refreshData() {
@@ -415,12 +285,8 @@ function refreshData() {
     if (balanceEl) balanceEl.textContent = '⏳ ...';
     if (totalEarningsEl) totalEarningsEl.textContent = '⏳ ...';
     setTimeout(function() {
-        loadUserData();
-        loadSavedWallet();
-        loadAdStats();
-        loadActiveReferrals();
-        loadTasks();
-        loadReferralProgress();
+        loadUserData(); loadSavedWallet(); loadAdStats();
+        loadActiveReferrals(); loadTasks(); loadReferralProgress();
     }, 300);
 }
 
@@ -430,56 +296,40 @@ async function updateReferralStats(userId) {
         const response = await fetch(`${API_BASE}/api/referral_stats/${userId}`);
         const data = await response.json();
         if (data.success) {
-            var referralCountEl = document.getElementById('referralCount');
-            var referralEarnedEl = document.getElementById('referralEarned');
-            var level1CountEl = document.getElementById('level1Count');
-            var level1EarningsEl = document.getElementById('level1Earnings');
-            if (referralCountEl) referralCountEl.textContent = data.total_referrals || 0;
-            if (referralEarnedEl) referralEarnedEl.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
-            if (level1CountEl) level1CountEl.textContent = data.level1_count || 0;
-            if (level1EarningsEl) level1EarningsEl.textContent = '$' + Number(data.level1_earnings || 0).toFixed(3);
+            var rc = document.getElementById('referralCount');
+            var re = document.getElementById('referralEarned');
+            var lc = document.getElementById('level1Count');
+            var le = document.getElementById('level1Earnings');
+            if (rc) rc.textContent = data.total_referrals || 0;
+            if (re) re.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
+            if (lc) lc.textContent = data.level1_count || 0;
+            if (le) le.textContent = '$' + Number(data.level1_earnings || 0).toFixed(3);
         }
-    } catch (error) { console.error('Error loading referral stats'); }
+    } catch (error) {}
 }
 
 function updateUI(data) {
-    var balanceEl = document.getElementById('balance');
-    if (balanceEl) balanceEl.textContent = '$' + Number(data.balance || 0).toFixed(3);
-    var totalEarningsEl = document.getElementById('totalEarnings');
-    if (totalEarningsEl) totalEarningsEl.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
-    var investmentEarningsEl = document.getElementById('investmentEarnings');
-    if (investmentEarningsEl) investmentEarningsEl.textContent = '$' + Number(data.investment_earnings || 0).toFixed(3);
-    var referralEarningsDisplayEl = document.getElementById('referralEarningsDisplay');
-    if (referralEarningsDisplayEl) referralEarningsDisplayEl.textContent = '$' + Number(data.referral_earned || 0).toFixed(3);
-    var adEarningsDisplayEl = document.getElementById('adEarningsDisplay');
-    if (adEarningsDisplayEl) adEarningsDisplayEl.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
-    var tasksEarningsDisplayEl = document.getElementById('tasksEarningsDisplay');
-    if (tasksEarningsDisplayEl) tasksEarningsDisplayEl.textContent = '$' + Number(data.tasks_earnings || 0).toFixed(3);
+    var b = document.getElementById('balance'); if (b) b.textContent = '$' + Number(data.balance || 0).toFixed(3);
+    var te = document.getElementById('totalEarnings'); if (te) te.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
+    var ie = document.getElementById('investmentEarnings'); if (ie) ie.textContent = '$' + Number(data.investment_earnings || 0).toFixed(3);
+    var rd = document.getElementById('referralEarningsDisplay'); if (rd) rd.textContent = '$' + Number(data.referral_earned || 0).toFixed(3);
+    var ad = document.getElementById('adEarningsDisplay'); if (ad) ad.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
+    var tsk = document.getElementById('tasksEarningsDisplay'); if (tsk) tsk.textContent = '$' + Number(data.tasks_earnings || 0).toFixed(3);
 }
 
 function updateDashboardUI(data) {
-    var dashBalance = document.getElementById('dashBalance');
-    var dashInvested = document.getElementById('dashInvested');
-    var dashEarned = document.getElementById('dashEarned');
-    var dashDeposited = document.getElementById('dashDeposited');
-    var dashReferrals = document.getElementById('dashReferrals');
-    var dashAdEarnings = document.getElementById('dashAdEarnings');
-    var dashTasksEarnings = document.getElementById('dashTasksEarnings');
-    if (dashBalance) dashBalance.textContent = '$' + Number(data.balance || 0).toFixed(3);
-    if (dashInvested) dashInvested.textContent = '$' + Number(data.total_invested || 0).toFixed(3);
-    if (dashEarned) dashEarned.textContent = '$' + Number(data.total_earnings || 0).toFixed(3);
-    if (dashDeposited) dashDeposited.textContent = '$' + Number(data.total_deposited || 0).toFixed(3);
-    if (dashReferrals) dashReferrals.textContent = data.referrals || 0;
-    if (dashAdEarnings) dashAdEarnings.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
-    if (dashTasksEarnings) dashTasksEarnings.textContent = '$' + Number(data.tasks_earnings || 0).toFixed(3);
+    var ids = {'dashBalance':'balance','dashInvested':'total_invested','dashEarned':'total_earnings','dashDeposited':'total_deposited','dashAdEarnings':'total_ad_earnings','dashTasksEarnings':'tasks_earnings'};
+    for (var id in ids) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '$' + Number(data[ids[id]] || 0).toFixed(3);
+    }
+    var dr = document.getElementById('dashReferrals');
+    if (dr) dr.textContent = data.referrals || 0;
 }
 
 function updateDailyEarnings(data) {
     var dailyEl = document.getElementById('dailyEarnings');
-    if (dailyEl) {
-        var amount = Number(data.expected_daily_earnings || 0);
-        dailyEl.textContent = '+$' + amount.toFixed(2) + ' / day';
-    }
+    if (dailyEl) dailyEl.textContent = '+$' + Number(data.expected_daily_earnings || 0).toFixed(2) + ' / day';
 }
 
 function updateWelcomeBonusButton(data) {
@@ -506,15 +356,13 @@ function updateWelcomeBonusButton(data) {
 
 function updateTierButtons(data) {
     const userTier = data.referral_tier || 'free';
-    console.log('📊 User tier:', userTier);
-    const tierCards = document.querySelectorAll('.tier-card');
-    tierCards.forEach(card => {
+    const tierOrder = ['free', 'bronze', 'silver', 'gold', 'diamond'];
+    document.querySelectorAll('.tier-card').forEach(card => {
         const btn = card.querySelector('.tier-btn');
         if (!btn) return;
         const nameEl = card.querySelector('.tier-name');
         if (!nameEl) return;
         const tierName = nameEl.textContent.toLowerCase();
-        
         if (tierName === userTier) {
             btn.textContent = 'Current';
             btn.disabled = true;
@@ -524,7 +372,6 @@ function updateTierButtons(data) {
             btn.style.cursor = 'default';
             btn.onclick = null;
         } else {
-            const tierOrder = ['free', 'bronze', 'silver', 'gold', 'diamond'];
             const userIndex = tierOrder.indexOf(userTier);
             const cardIndex = tierOrder.indexOf(tierName);
             if (cardIndex > userIndex) {
@@ -580,8 +427,6 @@ function updateFields(data) {
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
-            btnEl.style.background = '';
-            btnEl.style.color = '';
             btnEl.onclick = null;
         } else {
             statusEl.textContent = '✅ Available';
@@ -596,9 +441,7 @@ function updateFields(data) {
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
             btnEl.style.cursor = 'pointer';
-            btnEl.style.background = '';
-            btnEl.style.color = '';
-            btnEl.onclick = (function(fieldNum) { return function() { showInterstitialIfNeeded(); investField(fieldNum); }; })(i);
+            btnEl.onclick = (function(fn) { return function() { showInterstitialIfNeeded(); investField(fn); }; })(i);
             window.fieldData[i] = null;
         }
     }
@@ -608,49 +451,36 @@ let claimInProgress = false;
 
 async function claimInvestment(fieldNumber) {
     if (window._isBanned) return;
-    console.log('🔍 Claim button clicked for Field #' + fieldNumber);
-    if (claimInProgress) { console.log('⏳ Claim already in progress...'); return; }
+    if (claimInProgress) return;
     claimInProgress = true;
-
     const userId = tgUser ? tgUser.id : '0';
     if (!userId || userId === '0') {
-        safePopup({ title: '❌ Error', message: 'User not authenticated. Please restart the app.', buttons: [{type: 'ok'}] });
+        safePopup({ title: '❌ Error', message: 'User not authenticated.', buttons: [{type: 'ok'}] });
         claimInProgress = false;
         return;
     }
-
     const btn = document.getElementById('field' + fieldNumber + 'Btn');
     const originalText = btn ? btn.textContent : '';
     if (btn) { btn.textContent = '⏳ Processing...'; btn.disabled = true; btn.style.opacity = '0.7'; }
-
     safePopupWithCallback({
         title: '🌾 Claim Investment',
         message: 'Are you sure you want to claim Field #' + fieldNumber + '?',
-        buttons: [{id: 'cancel', type: 'cancel'}, {id: 'confirm', type: 'ok', text: '✅ Claim'}]
+        buttons: [{id:'cancel',type:'cancel'},{id:'confirm',type:'ok',text:'✅ Claim'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
-                console.log('📤 Sending claim request for Field #' + fieldNumber);
                 const response = await fetch(`${API_BASE}/api/claim_investment`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId, field_number: fieldNumber })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    safePopup({
-                        title: '✅ Claimed!',
-                        message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!\n\n🌱 The field is now available for a new investment.',
-                        buttons: [{type: 'ok'}]
-                    });
+                    safePopup({ title: '✅ Claimed!', message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!', buttons: [{type: 'ok'}] });
                     setTimeout(function() {
-                        if (window.watchRewardedAd) { window.watchRewardedAd(); }
-                        setTimeout(function() {
-                            loadUserData(); loadAdStats(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
-                            claimInProgress = false;
-                            if (btn) { btn.textContent = originalText; btn.disabled = false; btn.style.opacity = '1'; }
-                        }, 3000);
-                    }, 1000);
+                        loadUserData(); loadAdStats(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
+                        claimInProgress = false;
+                        if (btn) { btn.textContent = originalText; btn.disabled = false; btn.style.opacity = '1'; }
+                    }, 3000);
                 } else {
                     safePopup({ title: '❌ Error', message: data.message || 'Failed to claim.', buttons: [{type: 'ok'}] });
                     claimInProgress = false;
@@ -673,18 +503,13 @@ function updateFieldTimers() {
     if (document.getElementById('historyList')) return;
     var now = new Date();
     var utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-
     for (var i = 1; i <= 3; i++) {
         var timerEl = document.getElementById('field' + i + 'Timer');
         var statusEl = document.getElementById('field' + i + 'Status');
         var btnEl = document.getElementById('field' + i + 'Btn');
         if (!timerEl || !statusEl || !btnEl) continue;
         var fieldData = window.fieldData ? window.fieldData[i] : null;
-        if (!fieldData || !fieldData.unlock_date) {
-            timerEl.textContent = '⏳ Payout: --:--:-- UTC';
-            timerEl.className = 'field-timer';
-            continue;
-        }
+        if (!fieldData || !fieldData.unlock_date) { timerEl.textContent = '⏳ Payout: --:--:-- UTC'; timerEl.className = 'field-timer'; continue; }
         var isLocked = fieldData.is_locked === true;
         var lockPeriod = fieldData.lock_period || 30;
         var unlockDateStr = fieldData.unlock_date;
@@ -697,8 +522,6 @@ function updateFieldTimers() {
             timerEl.textContent = '🟢 READY TO CLAIM!';
             timerEl.className = 'field-timer ready';
             timerEl.style.color = '#ffd93d';
-            timerEl.style.borderColor = 'rgba(255, 217, 61, 0.3)';
-            timerEl.style.background = 'rgba(255, 217, 61, 0.1)';
             timerEl.style.animation = 'pulse-gold 1.5s infinite';
             btnEl.textContent = '🌾 Claim Now!';
             btnEl.disabled = false;
@@ -706,8 +529,7 @@ function updateFieldTimers() {
             btnEl.style.cursor = 'pointer';
             btnEl.style.background = 'linear-gradient(135deg, #ffd93d, #f9a825)';
             btnEl.style.color = '#0a0e17';
-            btnEl.style.border = 'none';
-            btnEl.onclick = (function(fieldNum) { return function() { console.log('🖱️ Claim button clicked for Field #' + fieldNum); claimInvestment(fieldNum); }; })(i);
+            btnEl.onclick = (function(fn) { return function() { claimInvestment(fn); }; })(i);
             statusEl.textContent = '✅ Ready to Claim!';
             statusEl.className = 'field-status ready';
             statusEl.style.color = '#ffd93d';
@@ -716,21 +538,13 @@ function updateFieldTimers() {
             var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             var minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             var seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            var timeString = days > 0
-                ? days + 'd ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0')
-                : String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            var timeString = days > 0 ? days + 'd ' + String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0') : String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0');
             timerEl.textContent = '🔄 Unlock in: ' + timeString + ' UTC';
             timerEl.className = 'field-timer countdown';
-            timerEl.style.color = '';
-            timerEl.style.borderColor = '';
-            timerEl.style.background = '';
-            timerEl.style.animation = '';
             btnEl.textContent = '🔒 Locked';
             btnEl.disabled = true;
             btnEl.style.opacity = '0.5';
             btnEl.style.cursor = 'not-allowed';
-            btnEl.style.background = '';
-            btnEl.style.color = '';
             btnEl.onclick = null;
             statusEl.textContent = '🔒 Locked';
             statusEl.className = 'field-status locked';
@@ -738,17 +552,11 @@ function updateFieldTimers() {
         } else if (isLocked === false) {
             timerEl.textContent = '🟢 Available (UTC)';
             timerEl.className = 'field-timer';
-            timerEl.style.color = '';
-            timerEl.style.borderColor = '';
-            timerEl.style.background = '';
-            timerEl.style.animation = '';
             btnEl.textContent = '🌱 Plant Now';
             btnEl.disabled = false;
             btnEl.style.opacity = '1';
             btnEl.style.cursor = 'pointer';
-            btnEl.style.background = '';
-            btnEl.style.color = '';
-            btnEl.onclick = (function(fieldNum) { return function() { showInterstitialIfNeeded(); investField(fieldNum); }; })(i);
+            btnEl.onclick = (function(fn) { return function() { showInterstitialIfNeeded(); investField(fn); }; })(i);
             statusEl.textContent = '✅ Available';
             statusEl.className = 'field-status available';
             statusEl.style.color = '#8247E5';
@@ -760,15 +568,8 @@ var style = document.createElement('style');
 style.textContent = `@keyframes pulse-gold { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`;
 document.head.appendChild(style);
 
-function startCountdownTimer() {
-    updateFieldTimers();
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(updateFieldTimers, 1000);
-}
-
-function stopCountdownTimer() {
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
+function startCountdownTimer() { updateFieldTimers(); if (timerInterval) clearInterval(timerInterval); timerInterval = setInterval(updateFieldTimers, 1000); }
+function stopCountdownTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
 
 async function updateReferral(data) {
     if (window._isBanned) return;
@@ -784,18 +585,9 @@ async function updateReferral(data) {
             if (result.success && result.referral_code) {
                 referralLink.textContent = 'https://t.me/PlantUSDT_bot?start=' + result.referral_code;
                 referralLink.style.color = '#ccd6f0';
-            } else {
-                referralLink.textContent = 'Error loading referral link';
-                referralLink.style.color = '#ff6b6b';
-            }
-        } catch (error) {
-            referralLink.textContent = 'Error loading referral link';
-            referralLink.style.color = '#ff6b6b';
-        }
-    } else {
-        referralLink.textContent = '⚠️ Save wallet to get referral link';
-        referralLink.style.color = '#ff6b6b';
-    }
+            } else { referralLink.textContent = 'Error loading referral link'; referralLink.style.color = '#ff6b6b'; }
+        } catch (error) { referralLink.textContent = 'Error loading referral link'; referralLink.style.color = '#ff6b6b'; }
+    } else { referralLink.textContent = '⚠️ Save wallet to get referral link'; referralLink.style.color = '#ff6b6b'; }
 }
 
 async function copyReferral() {
@@ -810,69 +602,36 @@ async function copyReferral() {
             var referralLink = 'https://t.me/PlantUSDT_bot?start=' + data.referral_code;
             if (referralLinkEl) { referralLinkEl.textContent = referralLink; referralLinkEl.style.color = '#ccd6f0'; }
             var copied = false;
-            try { await navigator.clipboard.writeText(referralLink); copied = true; } catch (clipError) {}
+            try { await navigator.clipboard.writeText(referralLink); copied = true; } catch (e) {}
             if (!copied) {
                 var textArea = document.createElement('textarea');
                 textArea.value = referralLink;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-9999px';
-                textArea.style.top = '-9999px';
-                textArea.style.width = '1px';
-                textArea.style.height = '1px';
+                textArea.style.position = 'fixed'; textArea.style.left = '-9999px';
                 document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try { var success = document.execCommand('copy'); if (success) copied = true; } catch (e) {}
+                textArea.focus(); textArea.select();
+                try { if (document.execCommand('copy')) copied = true; } catch (e) {}
                 document.body.removeChild(textArea);
             }
             if (!copied) {
                 try {
                     tg.showPopup({
                         title: '📋 Share Referral Link',
-                        message: 'Share this link with your friends:\n\n' + referralLink,
-                        buttons: [
-                            {id: 'share', type: 'default', text: '📤 Share'},
-                            {id: 'copy', type: 'default', text: '📋 Copy'},
-                            {id: 'cancel', type: 'cancel'}
-                        ]
-                    }, function(buttonId) {
-                        if (buttonId === 'share') {
+                        message: 'Share this link:\n\n' + referralLink,
+                        buttons: [{id:'share',type:'default',text:'📤 Share'},{id:'cancel',type:'cancel'}]
+                    }, function(bid) {
+                        if (bid === 'share') {
                             try { tg.sendData(JSON.stringify({ type: 'share_referral', link: referralLink })); }
-                            catch (e) { safePopup({ title: '📋 Copy Referral Link', message: 'Please copy this link manually:\n\n' + referralLink, buttons: [{type: 'ok'}] }); }
-                        } else if (buttonId === 'copy') {
-                            var tempInput = document.createElement('input');
-                            tempInput.value = referralLink;
-                            tempInput.style.position = 'fixed';
-                            tempInput.style.left = '-9999px';
-                            tempInput.style.top = '-9999px';
-                            tempInput.style.width = '1px';
-                            tempInput.style.height = '1px';
-                            tempInput.style.opacity = '0';
-                            document.body.appendChild(tempInput);
-                            tempInput.focus();
-                            tempInput.select();
-                            try {
-                                var copySuccess = document.execCommand('copy');
-                                document.body.removeChild(tempInput);
-                                if (copySuccess) { safePopup({ title: '✅ Copied!', message: 'Referral link copied to clipboard!\n\nShare it with your friends! 🎉', buttons: [{type: 'ok'}] }); }
-                                else { safePopup({ title: '📋 Copy Referral Link', message: 'Please copy this link manually:\n\n' + referralLink, buttons: [{type: 'ok'}] }); }
-                            } catch (e) {
-                                document.body.removeChild(tempInput);
-                                safePopup({ title: '📋 Copy Referral Link', message: 'Please copy this link manually:\n\n' + referralLink, buttons: [{type: 'ok'}] });
-                            }
+                            catch (e) { safePopup({ title: '📋 Copy Referral Link', message: 'Copy manually:\n\n' + referralLink, buttons: [{type:'ok'}] }); }
                         }
                     });
-                } catch (e) { safePopup({ title: '📋 Copy Referral Link', message: 'Please copy this link manually:\n\n' + referralLink, buttons: [{type: 'ok'}] }); }
+                } catch (e) { safePopup({ title: '📋 Copy Referral Link', message: 'Copy manually:\n\n' + referralLink, buttons: [{type:'ok'}] }); }
                 return;
             }
-            safePopup({ title: '✅ Copied!', message: 'Referral link copied to clipboard!\n\nShare it with your friends and earn up to 5% of their deposits! 🎉', buttons: [{type: 'ok'}] });
+            safePopup({ title: '✅ Copied!', message: 'Referral link copied! Share it with friends! 🎉', buttons: [{type: 'ok'}] });
         } else {
-            safePopup({ title: '❌ Error', message: 'Could not get referral link. Please try again.', buttons: [{type: 'ok'}] });
+            safePopup({ title: '❌ Error', message: 'Could not get referral link.', buttons: [{type: 'ok'}] });
         }
-    } catch (error) {
-        console.error('Error getting referral code');
-        safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
-    }
+    } catch (error) { safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] }); }
 }
 
 async function saveWallet() {
@@ -883,25 +642,19 @@ async function saveWallet() {
     var walletAddress = walletInput ? walletInput.value.trim() : '';
     if (!walletAddress) { safePopup({title:'❌ Error', message:'Please enter a Polygon wallet address.', buttons:[{type:'ok'}]}); return; }
     if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) { safePopup({title:'❌ Invalid Address', message:'Please enter a valid Polygon wallet address.', buttons:[{type:'ok'}]}); return; }
-    if (walletAddress.toLowerCase() === PROJECT_WALLET.toLowerCase()) { safePopup({title:'❌ Invalid Wallet', message:'This is the project wallet on Polygon. Please enter your own.', buttons:[{type:'ok'}]}); return; }
+    if (walletAddress.toLowerCase() === PROJECT_WALLET.toLowerCase()) { safePopup({title:'❌ Invalid Wallet', message:'This is the project wallet.', buttons:[{type:'ok'}]}); return; }
     try {
         var response = await fetch(API_BASE + '/api/save_wallet', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
+            method:'POST', headers:{'Content-Type':'application/json'},
             body:JSON.stringify({telegram_id:userId, wallet_address:walletAddress})
         });
         var data = await response.json();
         if (data.success) {
-            safePopup({title:'✅ Wallet Saved!', message:'Polygon wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
+            safePopup({title:'✅ Wallet Saved!', message:'Wallet saved: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4), buttons:[{type:'ok'}]});
             updateWalletUI(walletAddress);
             loadUserData();
-        } else {
-            safePopup({title:'❌ Error', message:data.message || 'Failed to save wallet.', buttons:[{type:'ok'}]});
-        }
-    } catch (error) {
-        console.error('Error saving wallet');
-        safePopup({title:'❌ Error', message:'Failed to save wallet. Please try again.', buttons:[{type:'ok'}]});
-    }
+        } else { safePopup({title:'❌ Error', message:data.message || 'Failed to save wallet.', buttons:[{type:'ok'}]}); }
+    } catch (error) { safePopup({title:'❌ Error', message:'Failed to save wallet.', buttons:[{type:'ok'}]}); }
 }
 
 function updateWalletUI(address) {
@@ -918,9 +671,7 @@ function updateWalletUI(address) {
     loadUserData();
     setTimeout(function() {
         var userId = tgUser ? tgUser.id : '0';
-        fetch(API_BASE + '/api/user?telegram_id=' + userId)
-            .then(r => r.json())
-            .then(data => updateReferral(data));
+        fetch(API_BASE + '/api/user?telegram_id=' + userId).then(r => r.json()).then(data => updateReferral(data));
     }, 500);
 }
 
@@ -945,25 +696,18 @@ async function disconnectWallet() {
     safePopupWithCallback({
         title:'🔓 Disconnect Wallet',
         message:'Are you sure you want to disconnect your Polygon wallet?',
-        buttons:[{id:'cancel', type:'cancel'}, {id:'confirm', type:'ok', text:'Disconnect'}]
+        buttons:[{id:'cancel',type:'cancel'},{id:'confirm',type:'ok',text:'Disconnect'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
                 var response = await fetch(API_BASE + '/api/save_wallet', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
+                    method:'POST', headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({telegram_id:userId, wallet_address:''})
                 });
                 var data = await response.json();
-                if (data.success) {
-                    resetWalletUI();
-                    safePopup({title:'✅ Disconnected', message:'Polygon wallet disconnected.', buttons:[{type:'ok'}]});
-                } else {
-                    safePopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]});
-                }
-            } catch (error) {
-                safePopup({title:'❌ Error', message:'Failed to disconnect. Please try again.', buttons:[{type:'ok'}]});
-            }
+                if (data.success) { resetWalletUI(); safePopup({title:'✅ Disconnected', message:'Polygon wallet disconnected.', buttons:[{type:'ok'}]}); }
+                else { safePopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]}); }
+            } catch (error) { safePopup({title:'❌ Error', message:'Failed to disconnect.', buttons:[{type:'ok'}]}); }
         }
     });
 }
@@ -974,8 +718,8 @@ async function loadSavedWallet() {
     try {
         var response = await fetch(API_BASE + '/api/get_wallet?telegram_id=' + userId);
         var data = await response.json();
-        if (data.success && data.wallet_address) { updateWalletUI(data.wallet_address); }
-    } catch (error) { console.error('Error loading wallet'); }
+        if (data.success && data.wallet_address) updateWalletUI(data.wallet_address);
+    } catch (error) {}
 }
 
 async function setWallet() {
@@ -989,35 +733,28 @@ async function setWallet() {
             var withdrawAddress = document.getElementById('withdrawAddress');
             if (withdrawAddress) {
                 withdrawAddress.value = data.wallet_address;
-                safePopup({title:'✅ Wallet Loaded!', message:'Polygon wallet loaded: ' + data.wallet_address.slice(0,6) + '...' + data.wallet_address.slice(-4), buttons:[{type:'ok'}]});
+                safePopup({title:'✅ Wallet Loaded!', message:'Wallet loaded.', buttons:[{type:'ok'}]});
             }
         } else {
-            safePopup({ title: '❌ No Wallet Found', message: 'Please save a Polygon wallet address first in the main app.', buttons: [{type: 'ok'}] });
+            safePopup({ title: '❌ No Wallet Found', message: 'Please save a wallet first.', buttons: [{type: 'ok'}] });
         }
-    } catch (error) {
-        safePopup({ title: '❌ Error', message: 'Failed to load wallet. Please try again.', buttons: [{type: 'ok'}] });
-    }
+    } catch (error) { safePopup({ title: '❌ Error', message: 'Failed to load wallet.', buttons: [{type: 'ok'}] }); }
 }
 
 function calculateReturn(amount, days) {
-    const multipliers = { 1: 1.02, 7: 1.18, 30: 1.80 };
-    const multiplier = multipliers[days] || 1.80;
-    return amount * multiplier;
+    const multipliers = {1: 1.02, 7: 1.18, 30: 1.80};
+    return amount * (multipliers[days] || 1.80);
 }
 
 function getLockOptions() {
-    return [
-        { days: 1, returnPercent: 2 },
-        { days: 7, returnPercent: 18 },
-        { days: 30, returnPercent: 80 }
-    ];
+    return [{days:1,returnPercent:2},{days:7,returnPercent:18},{days:30,returnPercent:80}];
 }
 
 async function investFieldWithLock(fieldNumber) {
     if (window._isBanned) return;
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
-    const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5.00, max $100.00, e.g. 25.50):');
+    const amount = prompt('Enter amount to invest in Field #' + fieldNumber + ' (min $5.00, max $100.00):');
     if (!amount) return;
     const amountNum = parseFloat(amount.replace('$', '').trim());
     if (isNaN(amountNum) || amountNum < 5 || amountNum > 100) {
@@ -1043,45 +780,31 @@ async function investFieldWithLock(fieldNumber) {
     const profit = expectedReturn - amountNum;
     safePopupWithCallback({
         title: '📊 Confirm Investment',
-        message: 'Field #' + fieldNumber + '\n\n💰 Amount: $' + amountNum.toFixed(2) + '\n⏱️ Lock Period: ' + days + ' day' + (days > 1 ? 's' : '') + '\n📈 Expected Return: $' + expectedReturn.toFixed(2) + '\n✅ Profit: +$' + profit.toFixed(2) + '\n⛓️ Network: Polygon',
-        buttons: [{id:'cancel', type:'cancel'}, {id:'confirm', type:'ok', text:'✅ Confirm'}]
+        message: 'Field #' + fieldNumber + '\n\n💰 Amount: $' + amountNum.toFixed(2) + '\n⏱️ Lock: ' + days + ' days\n📈 Return: $' + expectedReturn.toFixed(2) + '\n✅ Profit: +$' + profit.toFixed(2),
+        buttons: [{id:'cancel',type:'cancel'},{id:'confirm',type:'ok',text:'✅ Confirm'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
                 const response = await fetch(API_BASE + '/api/invest_locked', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
+                    method:'POST', headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({ telegram_id: userId, field_number: fieldNumber, amount: amountNum, lock_period: days })
                 });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Server error:', errorText);
-                    safePopup({ title:'❌ Error', message:'Something went wrong. Please try again.', buttons:[{type:'ok'}] });
-                    return;
-                }
+                if (!response.ok) { safePopup({ title:'❌ Error', message:'Something went wrong.', buttons:[{type:'ok'}] }); return; }
                 const data = await response.json();
                 if (data.success) {
                     safePopup({
                         title:'✅ Success!',
-                        message:'Invested $' + amountNum.toFixed(2) + ' in Field #' + fieldNumber + ' on Polygon!\n🔒 Locked for ' + days + ' days.\n📈 Expected return: $' + expectedReturn.toFixed(2),
+                        message:'Invested $' + amountNum.toFixed(2) + ' in Field #' + fieldNumber + '!\n🔒 Locked for ' + days + ' days.\n📈 Expected return: $' + expectedReturn.toFixed(2),
                         buttons:[{type:'ok'}]
                     });
-                    if (window.watchRewardedAd) { setTimeout(function() { window.watchRewardedAd(); }, 500); }
-                    if (window.showInterstitialAd) { setTimeout(function() { window.showInterstitialAd(); }, 1000); }
                     loadUserData();
-                } else {
-                    safePopup({ title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}] });
-                }
-            } catch (error) {
-                safePopup({ title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}] });
-            }
+                } else { safePopup({ title:'❌ Error', message:data.message || 'Investment failed.', buttons:[{type:'ok'}] }); }
+            } catch (error) { safePopup({ title:'❌ Error', message:'Network error.', buttons:[{type:'ok'}] }); }
         }
     });
 }
 
-async function investField(fieldNumber) {
-    await investFieldWithLock(fieldNumber);
-}
+async function investField(fieldNumber) { await investFieldWithLock(fieldNumber); }
 
 function copyAddress() {
     if (window._isBanned) return;
@@ -1090,34 +813,28 @@ function copyAddress() {
     var address = addressElement ? addressElement.textContent.trim() : '';
     if (!address) {
         var displayElement = document.querySelector('.address');
-        if (displayElement) { address = displayElement.textContent.trim(); }
+        if (displayElement) address = displayElement.textContent.trim();
     }
     address = address.replace(/\s+/g, '').trim();
     if (address && address.startsWith('0x') && address.length === 42) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(address).then(function() {
-                safePopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                safePopup({ title: '✅ Copied!', message: 'Address copied.', buttons: [{type: 'ok'}] });
             }).catch(function() {
                 var textArea = document.createElement('textarea');
-                textArea.value = address;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
+                textArea.value = address; document.body.appendChild(textArea);
+                textArea.select(); document.execCommand('copy');
                 document.body.removeChild(textArea);
-                safePopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+                safePopup({ title: '✅ Copied!', message: 'Address copied.', buttons: [{type: 'ok'}] });
             });
         } else {
             var textArea = document.createElement('textarea');
-            textArea.value = address;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
+            textArea.value = address; document.body.appendChild(textArea);
+            textArea.select(); document.execCommand('copy');
             document.body.removeChild(textArea);
-            safePopup({ title: '✅ Copied!', message: 'Polygon address copied.', buttons: [{type: 'ok'}] });
+            safePopup({ title: '✅ Copied!', message: 'Address copied.', buttons: [{type: 'ok'}] });
         }
-    } else {
-        safePopup({ title: '❌ Error', message: 'Invalid address. Please try again.', buttons: [{type: 'ok'}] });
-    }
+    } else { safePopup({ title: '❌ Error', message: 'Invalid address.', buttons: [{type: 'ok'}] }); }
 }
 
 async function checkDeposit() {
@@ -1129,15 +846,9 @@ async function checkDeposit() {
             var userId = tgUser ? tgUser.id : '0';
             var response = await fetch(API_BASE + '/api/check_deposit?telegram_id=' + userId);
             var data = await response.json();
-            if (data.success) {
-                statusDiv.textContent = '✅ Deposit detected on Polygon! Balance updated.';
-                loadUserData();
-            } else {
-                statusDiv.textContent = '⏳ No new deposits found on Polygon.';
-            }
-        } catch (error) {
-            statusDiv.textContent = '❌ Error checking deposits.';
-        }
+            if (data.success) { statusDiv.textContent = '✅ Deposit detected!'; loadUserData(); }
+            else { statusDiv.textContent = '⏳ No new deposits found.'; }
+        } catch (error) { statusDiv.textContent = '❌ Error checking deposits.'; }
     }
 }
 
@@ -1148,7 +859,7 @@ async function checkDepositWithAmount() {
     const amountInput = document.getElementById('depositAmount');
     const amount = amountInput?.value;
     if (!amount || parseFloat(amount) < 5) {
-        safePopup({ title: '⚠️ Invalid Amount', message: 'Please enter at least $5 USDT on Polygon.', buttons: [{type: 'ok'}] });
+        safePopup({ title: '⚠️ Invalid Amount', message: 'Please enter at least $5 USDT.', buttons: [{type: 'ok'}] });
         return;
     }
     const statusDiv = document.getElementById('depositStatus');
@@ -1168,7 +879,7 @@ async function checkDepositWithAmount() {
                 statusDiv.className = 'deposit-status pending';
             }
         } catch (error) {
-            statusDiv.textContent = '❌ Error checking deposits on Polygon. Please try again.';
+            statusDiv.textContent = '❌ Error checking deposits.';
             statusDiv.className = 'deposit-status error';
         }
     }
@@ -1182,9 +893,9 @@ function filterHistory(type) {
         var btnText = buttons[i].textContent.toLowerCase();
         if (btnText === type || btnText.includes(type)) { activeButton = buttons[i]; break; }
     }
-    if (!activeButton && buttons.length > 0) { activeButton = buttons[0]; }
-    for (var i = 0; i < buttons.length; i++) { buttons[i].classList.remove('active'); }
-    if (activeButton) { activeButton.classList.add('active'); }
+    if (!activeButton && buttons.length > 0) activeButton = buttons[0];
+    for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove('active');
+    if (activeButton) activeButton.classList.add('active');
     var historyList = document.getElementById('historyList');
     if (!historyList) return;
     historyList.textContent = 'Loading...';
@@ -1195,12 +906,12 @@ function filterHistory(type) {
         .then(function(responses) { return Promise.all(responses.map(function(r) { return r.json(); })); })
         .then(function(data) {
             var allTransactions = [];
-            if (data[0].transactions && data[0].transactions.length > 0) { allTransactions = allTransactions.concat(data[0].transactions); }
+            if (data[0].transactions && data[0].transactions.length > 0) allTransactions = allTransactions.concat(data[0].transactions);
             if (data[1].transactions && data[1].transactions.length > 0) {
                 data[1].transactions.forEach(function(tx) { tx.type = 'investment'; });
                 allTransactions = allTransactions.concat(data[1].transactions);
             }
-            if (allTransactions.length === 0) { historyList.textContent = 'No transactions found on Polygon.'; return; }
+            if (allTransactions.length === 0) { historyList.textContent = 'No transactions found.'; return; }
             if (type !== 'all') {
                 allTransactions = allTransactions.filter(function(tx) {
                     if (type === 'deposits') return tx.type === 'deposit' || tx.type === 'deposits';
@@ -1210,22 +921,11 @@ function filterHistory(type) {
                     return tx.type === type;
                 });
             }
-            if (allTransactions.length === 0) {
-                var displayType = type;
-                if (type === 'deposits') displayType = 'deposit';
-                if (type === 'withdrawals') displayType = 'withdrawal';
-                if (type === 'earnings') displayType = 'earning';
-                if (type === 'investments') displayType = 'investment';
-                historyList.textContent = 'No ' + displayType + ' transactions found on Polygon.';
-                return;
-            }
+            if (allTransactions.length === 0) { historyList.textContent = 'No ' + type + ' transactions found.'; return; }
             allTransactions.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
             renderHistory(allTransactions);
         })
-        .catch(function(error) {
-            console.error('Error loading history');
-            historyList.textContent = 'Error loading history. Please try again.';
-        });
+        .catch(function(error) { historyList.textContent = 'Error loading history.'; });
 }
 
 function renderHistory(transactions) {
@@ -1236,20 +936,18 @@ function renderHistory(transactions) {
         var tx = transactions[i];
         var icon = tx.type === 'deposit' ? '📥' : tx.type === 'withdraw' ? '📤' : tx.type === 'investment' ? '🌱' : tx.type === 'referral_earnings' ? '🎁' : tx.type === 'ad_earnings' ? '📺' : tx.type === 'tasks_earnings' ? '✅' : '💰';
         var status = tx.status || 'completed';
-        var date = tx.date;
         var displayText = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         if (tx.type === 'referral_earnings') displayText = 'Referral Bonus';
         if (tx.type === 'ad_earnings') displayText = 'Ad Earnings';
         if (tx.type === 'tasks_earnings') displayText = 'Tasks Earnings';
         var amountDisplay = '$' + tx.amount.toFixed(3);
         if (tx.type === 'investment' && tx.field) amountDisplay = '$' + tx.amount.toFixed(3) + ' (Field ' + tx.field + ')';
-        var statusBadge = '';
-        if (tx.type === 'withdraw' && tx.status === 'pending') statusBadge = ' ⏳';
+        var statusBadge = (tx.type === 'withdraw' && tx.status === 'pending') ? ' ⏳' : '';
         html += '<div class="history-item">' +
             '<div class="history-icon">' + icon + '</div>' +
             '<div class="history-details">' +
                 '<div class="history-type">' + displayText + ' 🟣 Polygon' + statusBadge + '</div>' +
-                '<div class="history-date">' + date + '</div>' +
+                '<div class="history-date">' + tx.date + '</div>' +
             '</div>' +
             '<div class="history-amount ' + status + '">' + amountDisplay + '</div>' +
         '</div>';
@@ -1286,24 +984,23 @@ function setupEventListeners() {
                     return;
                 }
                 if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
-                    safePopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet on Polygon.', buttons:[{type:'ok'}]});
+                    safePopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet.', buttons:[{type:'ok'}]});
                     return;
                 }
             } else {
                 address = gramInput ? gramInput.value.trim() : '';
                 if (!isValidTonAddress(address)) {
-                    safePopup({title:'❌ Error', message:'Please enter a valid TON wallet address (UQ or EQ format).', buttons:[{type:'ok'}]});
+                    safePopup({title:'❌ Error', message:'Please enter a valid TON wallet address.', buttons:[{type:'ok'}]});
                     return;
                 }
             }
             if (!amount || amount < 1) {
-                safePopup({title:'❌ Error', message:'Please enter at least $1 USDT for withdrawal.', buttons:[{type:'ok'}]});
+                safePopup({title:'❌ Error', message:'Please enter at least $1 USDT.', buttons:[{type:'ok'}]});
                 return;
             }
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Processing...'; }
             fetch(API_BASE + '/api/withdraw', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
+                method:'POST', headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({ telegram_id: userId, amount: parseFloat(amount), address: address, currency: currency })
             })
             .then(function(response) { return response.json(); })
@@ -1319,8 +1016,7 @@ function setupEventListeners() {
                 }
             })
             .catch(function(error) {
-                console.error('Error submitting withdrawal');
-                safePopup({title:'❌ Error', message:'Network error. Please try again.', buttons:[{type:'ok'}]});
+                safePopup({title:'❌ Error', message:'Network error.', buttons:[{type:'ok'}]});
             })
             .finally(function() {
                 setTimeout(function() {
@@ -1333,78 +1029,31 @@ function setupEventListeners() {
 
 async function canWatchAd() { return true; }
 
-async function creditAdRewardWithCaptcha(answer, question, fingerprint) {
-    if (window._isBanned) return { success: false, message: 'Account suspended' };
-    const userId = tgUser ? tgUser.id : '0';
-    try {
-        const response = await fetch(API_BASE + '/api/credit_ad_reward', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegram_id: userId, captcha_answer: answer, captcha_question: question, device_fingerprint: fingerprint })
-        });
-        const data = await response.json();
-        console.log('📊 creditAdRewardWithCaptcha response:', data);
-        return data;
-    } catch (error) {
-        return { success: false, message: 'Network error' };
-    }
-}
-
 function updateAdUI(dailyCount) {
-    const dailyLimit = 100;
-    console.log('📊 updateAdUI called with count:', dailyCount);
     window._latestAdCount = dailyCount;
     window._adCountTimestamp = Date.now();
     const adsTodayEl = document.getElementById('adsToday');
-    if (adsTodayEl) {
-        console.log('📊 Found adsToday element, setting to:', dailyCount + ' / ' + dailyLimit);
-        adsTodayEl.textContent = dailyCount + ' / ' + dailyLimit;
-        if (dailyCount >= dailyLimit) adsTodayEl.style.color = '#ff6b6b';
-        else if (dailyCount >= dailyLimit * 0.8) adsTodayEl.style.color = '#ffd93d';
-        else adsTodayEl.style.color = '#00ff87';
-    } else { console.warn('📊 adsToday element NOT FOUND!'); }
+    if (adsTodayEl) adsTodayEl.textContent = String(dailyCount);
     const progressEl = document.getElementById('adProgressBar');
-    if (progressEl) {
-        const progress = Math.min((dailyCount / dailyLimit) * 100, 100);
-        progressEl.style.width = progress + '%';
-        if (dailyCount >= dailyLimit) progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
-        else if (dailyCount >= dailyLimit * 0.8) progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
-        else progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
-    } else { console.warn('📊 adProgressBar element NOT FOUND!'); }
+    if (progressEl) progressEl.style.width = Math.min((dailyCount / 100) * 100, 100) + '%';
     const watchBtn = document.getElementById('watchAdBtn');
+    if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
     const statusEl = document.getElementById('adStatus');
-    if (watchBtn) {
-        watchBtn.disabled = false;
-        watchBtn.style.opacity = '1';
-        if (dailyCount >= dailyLimit) {
-            watchBtn.textContent = '▶️ Watch Ad (No reward after 100/100)';
-            if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '⚠️ Daily limit reached. You can still watch ads but no reward will be given.'; statusEl.style.color = '#ffd93d'; }
-        } else {
-            watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-            if (statusEl) statusEl.style.display = 'none';
-        }
-    } else { console.warn('📊 watchAdBtn element NOT FOUND!'); }
+    if (statusEl) statusEl.style.display = 'none';
 }
 
 async function watchRewardedAd() {
     if (window._isBanned) return false;
-    console.log('📢 watchRewardedAd called');
     if (!window.showRewardedAd) {
-        console.log('📢 Rewarded ad not available');
-        safePopup({ title: '❌ Ad Not Available', message: 'No ads available right now. Please try again later.', buttons: [{type: 'ok'}] });
+        safePopup({ title: '❌ Ad Not Available', message: 'No ads available right now.', buttons: [{type: 'ok'}] });
         return false;
     }
     try {
         const result = await window.showRewardedAd();
-        console.log('📢 Ad result:', result);
         if (result.done && !result.error && result.state === 'destroy') {
             const captcha = generateMathCaptcha();
-            const userAnswer = prompt(`🧮 Verify You're Human\n\nSolve this simple math question to claim your ad reward:\n\n${captcha.question}\n\nEnter your answer:`);
-            if (userAnswer === null) {
-                console.log('📢 Captcha cancelled');
-                safePopup({ title: '🧮 Verification Cancelled', message: 'You need to solve the math question to earn your reward.', buttons: [{type: 'ok'}] });
-                return false;
-            }
+            const userAnswer = prompt(`🧮 Verify You're Human\n\n${captcha.question}\n\nEnter your answer:`);
+            if (userAnswer === null) return false;
             const parsed = parseInt(userAnswer);
             if (isNaN(parsed) || parsed !== captcha.answer) {
                 safePopup({ title: '❌ Wrong Answer', message: 'Incorrect. Please try again.', buttons: [{type: 'ok'}] });
@@ -1412,51 +1061,38 @@ async function watchRewardedAd() {
             }
             const userId = tgUser ? tgUser.id : '0';
             const fingerprint = getDeviceFingerprint();
-            console.log('📊 Sending fingerprint:', fingerprint);
             try {
                 const response = await fetch(API_BASE + '/api/credit_ad_reward', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId, captcha_answer: captcha.answer, captcha_question: captcha.question, device_fingerprint: fingerprint })
                 });
                 const data = await response.json();
-                console.log('📊 API Response from credit_ad_reward:', data);
                 if (data.success) {
-                    const dailyCount = data.daily_ad_count || 0;
-                    const limitReached = data.limit_reached || false;
-                    console.log('📊 Ad count from API:', dailyCount, 'Limit reached:', limitReached);
-                    updateAdUI(dailyCount);
-                    const adEarningsEl = document.getElementById('adEarnings');
-                    if (adEarningsEl && data.total_ad_earnings !== undefined) adEarningsEl.textContent = '$' + Number(data.total_ad_earnings || 0).toFixed(3);
-                    if (limitReached) {
-                        safePopup({ title: '📊 Daily Limit Reached', message: 'You have reached the daily ad limit (100/100).\n\nNo reward for this ad. Watch tomorrow for more rewards! 🟣', buttons: [{type: 'ok'}] });
-                    } else {
-                        safePopup({ title: '🎁 Bonus Earned!', message: `You earned $${data.reward.toFixed(3)} USDT for watching the ad! (${dailyCount}/100 today)`, buttons: [{type: 'ok'}] });
-                    }
-                    setTimeout(() => { console.log('📊 Refreshing other data after ad...'); loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress(); }, 2000);
+                    updateAdUI(data.daily_ad_count || 0);
+                    safePopup({
+                        title: '✅ Ad Watched!',
+                        message: 'Thanks for supporting the community giveaway! 🎁\n\nYour ad helps fund the weekly prize pool. Winners announced every Friday.',
+                        buttons: [{type: 'ok'}]
+                    });
+                    setTimeout(() => { loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress(); }, 2000);
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({ title: '🧮 Verification Required', message: data.message || 'Please solve the math question.', buttons: [{type: 'ok'}] });
                     return false;
-                } else if (data.message && data.message.includes('daily ad limit')) {
-                    safePopup({ title: '📊 Daily Limit Reached', message: data.message, buttons: [{type: 'ok'}] });
-                    return false;
                 } else {
-                    safePopup({ title: '❌ Error', message: data.message || 'Failed to earn ad reward.', buttons: [{type: 'ok'}] });
+                    safePopup({ title: '❌ Error', message: data.message || 'Failed to process ad.', buttons: [{type: 'ok'}] });
                     return false;
                 }
             } catch (error) {
-                console.error('Error crediting ad reward:', error);
-                safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
+                safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] });
                 return false;
             }
         } else {
-            safePopup({ title: '❌ Ad Not Available', message: 'No ads available right now. Please try again later.', buttons: [{type: 'ok'}] });
+            safePopup({ title: '❌ Ad Not Available', message: 'No ads available right now.', buttons: [{type: 'ok'}] });
             return false;
         }
     } catch (error) {
-        console.error('Error watching ad:', error);
-        safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
+        safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] });
         return false;
     }
 }
@@ -1467,50 +1103,20 @@ async function loadAdStats() {
     try {
         const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
         const userData = await response.json();
-        console.log('📊 loadAdStats fetched user data:', userData);
-        if (!userData.success) { console.error('Failed to fetch user data for ad stats'); return; }
+        if (!userData.success) return;
         const serverDailyCount = userData.daily_ad_count || 0;
         let finalCount = serverDailyCount;
         if (window._latestAdCount !== null && window._adCountTimestamp !== null) {
             const timeSinceUpdate = Date.now() - window._adCountTimestamp;
-            if (timeSinceUpdate < 10000 && window._latestAdCount > serverDailyCount) {
-                console.log('📊 loadAdStats: Using stored latest count (', window._latestAdCount, ') instead of server (', serverDailyCount, ')');
-                finalCount = window._latestAdCount;
-            }
+            if (timeSinceUpdate < 10000 && window._latestAdCount > serverDailyCount) finalCount = window._latestAdCount;
         }
-        console.log('📊 loadAdStats final count:', finalCount);
-        const adEarningsEl = document.getElementById('adEarnings');
-        if (adEarningsEl) adEarningsEl.textContent = '$' + Number(userData.total_ad_earnings || 0).toFixed(3);
         const adsTodayEl = document.getElementById('adsToday');
-        const dailyLimit = 100;
-        if (adsTodayEl) {
-            adsTodayEl.textContent = finalCount + ' / ' + dailyLimit;
-            if (finalCount >= dailyLimit) adsTodayEl.style.color = '#ff6b6b';
-            else if (finalCount >= dailyLimit * 0.8) adsTodayEl.style.color = '#ffd93d';
-            else adsTodayEl.style.color = '#00ff87';
-        }
+        if (adsTodayEl) adsTodayEl.textContent = String(finalCount);
         const progressEl = document.getElementById('adProgressBar');
-        if (progressEl) {
-            const progress = Math.min((finalCount / dailyLimit) * 100, 100);
-            progressEl.style.width = progress + '%';
-            if (finalCount >= dailyLimit) progressEl.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
-            else if (finalCount >= dailyLimit * 0.8) progressEl.style.background = 'linear-gradient(90deg, #ffd93d, #f9a825)';
-            else progressEl.style.background = 'linear-gradient(90deg, #8247E5, #00ff87)';
-        }
+        if (progressEl) progressEl.style.width = Math.min((finalCount / 100) * 100, 100) + '%';
         const watchBtn = document.getElementById('watchAdBtn');
-        const statusEl = document.getElementById('adStatus');
-        if (watchBtn) {
-            watchBtn.disabled = false;
-            watchBtn.style.opacity = '1';
-            if (finalCount >= dailyLimit) {
-                watchBtn.textContent = '▶️ Watch Ad (No reward after 100/100)';
-                if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '⚠️ Daily limit reached. You can still watch ads but no reward will be given.'; statusEl.style.color = '#ffd93d'; }
-            } else {
-                watchBtn.textContent = '▶️ Watch Ad & Earn $0.001';
-                if (statusEl) statusEl.style.display = 'none';
-            }
-        }
-    } catch (error) { console.error('Error loading ad stats:', error); }
+        if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
+    } catch (error) {}
 }
 
 async function upgradeReferralTier(tier) {
@@ -1518,19 +1124,18 @@ async function upgradeReferralTier(tier) {
     showInterstitialIfNeeded();
     const userId = tgUser ? tgUser.id : '0';
     if (!userId || userId === '0') {
-        safePopup({ title: '❌ Error', message: 'User not authenticated. Please restart the app.', buttons: [{type: 'ok'}] });
+        safePopup({ title: '❌ Error', message: 'User not authenticated.', buttons: [{type: 'ok'}] });
         return;
     }
     safePopupWithCallback({
         title: '📊 Upgrade Referral Tier',
-        message: 'Are you sure you want to upgrade to ' + tier.toUpperCase() + ' tier?\n\nThis is a PERMANENT upgrade. No refunds.',
-        buttons: [{id: 'cancel', type: 'cancel'}, {id: 'confirm', type: 'ok', text: '✅ Upgrade'}]
+        message: 'Upgrade to ' + tier.toUpperCase() + ' tier?\n\nPERMANENT upgrade. No refunds.',
+        buttons: [{id:'cancel',type:'cancel'},{id:'confirm',type:'ok',text:'✅ Upgrade'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
                 const response = await fetch(API_BASE + '/api/upgrade_tier', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId, tier: tier })
                 });
                 const data = await response.json();
@@ -1541,7 +1146,7 @@ async function upgradeReferralTier(tier) {
                     safePopup({ title: '❌ Error', message: data.message || 'Upgrade failed.', buttons: [{type: 'ok'}] });
                 }
             } catch (error) {
-                safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
+                safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] });
             }
         }
     });
@@ -1566,27 +1171,16 @@ async function loadActiveReferrals() {
                     let html = `<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals (eligible for 0.03 USDT bonus):</div>`;
                     visibleRefs.forEach(ref => {
                         const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                        html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
-                            <span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span>
-                            <span style="font-size:11px;color:#00ff87;">✅ ${status}</span>
-                            <span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span>
-                        </div>`;
+                        html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span><span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span></div>`;
                     });
                     if (hasMore) {
                         const hiddenCount = total - showCount;
                         html += `<div id="hiddenActiveRefs" style="display:none;">`;
                         data.active_list.slice(showCount).forEach(ref => {
                             const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                            html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);">
-                                <span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span>
-                                <span style="font-size:11px;color:#00ff87;">✅ ${status}</span>
-                                <span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span>
-                            </div>`;
+                            html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span><span style="font-size:11px;color:#ffd93d;">+0.03 USDT</span></div>`;
                         });
-                        html += `</div>
-                            <button onclick="toggleActiveReferrals()" style="width:100%;padding:8px;margin-top:6px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">
-                                📋 Show all ${total} active referrals (${hiddenCount} more)
-                            </button>`;
+                        html += `</div><button onclick="toggleActiveReferrals()" style="width:100%;padding:8px;margin-top:6px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 Show all ${total} active referrals (${hiddenCount} more)</button>`;
                     }
                     listEl.innerHTML = html;
                     listEl.style.display = 'block';
@@ -1596,7 +1190,7 @@ async function loadActiveReferrals() {
                 }
             }
         }
-    } catch (error) { console.error('Error loading active referrals'); }
+    } catch (error) {}
 }
 
 function toggleActiveReferrals() {
@@ -1630,8 +1224,7 @@ async function claimWelcomeBonus() {
         if (buttonId === 'claim') {
             try {
                 const response = await fetch(`${API_BASE}/api/claim_welcome_bonus`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId })
                 });
                 if (!response.ok) {
@@ -1641,7 +1234,7 @@ async function claimWelcomeBonus() {
                         loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
                         return;
                     }
-                    safePopup({ title: '❌ Error', message: errorData.message || 'Something went wrong. Please try again.', buttons: [{type: 'ok'}] });
+                    safePopup({ title: '❌ Error', message: errorData.message || 'Something went wrong.', buttons: [{type: 'ok'}] });
                     return;
                 }
                 const data = await response.json();
@@ -1667,7 +1260,7 @@ async function claimWelcomeBonus() {
                         return;
                     }
                 } catch (e) {}
-                safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
+                safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] });
             }
         }
     });
@@ -1678,19 +1271,18 @@ async function disableInterstitialAds() {
     const userId = tgUser ? tgUser.id : '0';
     safePopupWithCallback({
         title: '🔇 Disable Ads',
-        message: 'Pay $4 USDT to reduce pop-up ads on button clicks.\n\n⚠️ Note: This may not disable all ads but will disable most of them.\n\nYou will still be able to watch rewarded ads for $0.001 USDT.',
+        message: 'Pay $4 USDT to reduce pop-up ads on button clicks.\n\nYou will still be able to watch rewarded ads.',
         buttons: [{id: 'cancel', type: 'cancel'}, {id: 'confirm', type: 'ok', text: '✅ Pay $4'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             try {
                 const response = await fetch(`${API_BASE}/api/disable_interstitial_ads`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    safePopup({ title: '✅ Ads Reduced!', message: data.message + '\n\nMost interstitial ads disabled!', buttons: [{type: 'ok'}] });
+                    safePopup({ title: '✅ Ads Reduced!', message: data.message, buttons: [{type: 'ok'}] });
                     const disableBtn = document.getElementById('disableAdsBtn');
                     if (disableBtn) { disableBtn.textContent = '✅ Ads Disabled'; disableBtn.disabled = true; disableBtn.style.opacity = '0.5'; }
                     interstitialAdsDisabled = true;
@@ -1699,8 +1291,7 @@ async function disableInterstitialAds() {
                     safePopup({ title: '❌ Error', message: data.message || 'Failed to disable ads.', buttons: [{type: 'ok'}] });
                 }
             } catch (error) {
-                console.error('Error disabling ads');
-                safePopup({ title: '❌ Error', message: 'Network error. Please try again.', buttons: [{type: 'ok'}] });
+                safePopup({ title: '❌ Error', message: 'Network error.', buttons: [{type: 'ok'}] });
             }
         }
     });
@@ -1708,14 +1299,11 @@ async function disableInterstitialAds() {
 
 async function loadTasks() {
     if (window._isBanned) return;
-    console.log('🔄 Loading tasks...');
     const userId = tgUser ? tgUser.id : '0';
     try {
         const response = await fetch(`${API_BASE}/api/tasks/${userId}`);
         const data = await response.json();
-        console.log('📊 Tasks API response:', data);
         if (data.success) {
-            console.log('✅ Tasks loaded:', data.tasks.length, 'tasks found');
             const tasksEl = document.getElementById('tasksList');
             if (tasksEl) {
                 let html = '';
@@ -1734,14 +1322,8 @@ async function loadTasks() {
                     if (task.task_id >= 8 && task.task_id <= 16) return false;
                     return !task.claimed;
                 });
-                console.log('📊 Visible tasks (not claimed):', visibleTasks.length);
                 totalTasks = visibleTasks.length;
-                const categories = {
-                    'investments': { icon: '🌱', label: 'Investments' },
-                    'referrals': { icon: '👤', label: 'Referrals' },
-                    'active_referrals': { icon: '🔥', label: 'Active Referrals' },
-                    'milestones': { icon: '🏆', label: 'Milestones' }
-                };
+                const categories = {'investments':{icon:'🌱',label:'Investments'},'referrals':{icon:'👤',label:'Referrals'},'active_referrals':{icon:'🔥',label:'Active Referrals'},'milestones':{icon:'🏆',label:'Milestones'}};
                 const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
                 let currentCategory = '';
                 let categoryCounts = {};
@@ -1760,7 +1342,7 @@ async function loadTasks() {
                     if (currentCount === 4 && !isCompleted) {
                         const hiddenCount = sortedTasks.filter(t => t.category === task.category && !t.claimed).length - 3;
                         if (hiddenCount > 0) {
-                            html += `<button onclick="showMoreTasks('${task.category}')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 Click here for more ${categories[task.category]?.label || task.category} tasks (${hiddenCount} remaining)...</button>`;
+                            html += `<button onclick="showMoreTasks('${task.category}')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 More ${categories[task.category]?.label || task.category} tasks (${hiddenCount} remaining)...</button>`;
                         }
                     }
                     const hideTask = (currentCount > 3 && !isCompleted);
@@ -1777,14 +1359,9 @@ async function loadTasks() {
                             progressText = `${Math.round(Number(currentValue))}/${conditionValue}`;
                         }
                         progressPercent = Math.min((Number(currentValue) / conditionValue) * 100, 100);
-                    } else if (!isCompleted && conditionValue === null && currentValue !== null) {
-                        const maxVal = 1;
-                        progressText = `${Math.round(Number(currentValue))}/${maxVal}`;
-                        progressPercent = Math.min((Number(currentValue) / maxVal) * 100, 100);
                     } else if (isCompleted) {
                         const displayMax = conditionValue || 1;
-                        const displayCurrent = conditionValue || 1;
-                        progressText = `${displayCurrent}/${displayMax}`;
+                        progressText = `${displayMax}/${displayMax}`;
                         progressPercent = 100;
                     }
                     const statusBadge = isCompleted ? (isClaimed ? '✅ Claimed' : 'Claim Now!') : (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
@@ -1800,7 +1377,7 @@ async function loadTasks() {
                                         <div style="font-weight:600;font-size:14px;color:${isCompleted && !isClaimed ? '#00ff87' : '#ccd6f0'};">${task.title}</div>
                                         <div style="font-size:12px;color:#8892b0;">${task.description}</div>
                                         <div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>
-                                        ${!isCompleted && progressText ? `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;transition:width 0.5s ease;"></div></div>` : ''}
+                                        ${!isCompleted && progressText ? `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;"></div></div>` : ''}
                                     </div>
                                 </div>
                                 <div style="text-align:right;">
@@ -1812,14 +1389,9 @@ async function loadTasks() {
                     </div>`;
                 }
                 if (totalTasks === 0) {
-                    html = `<div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);">
-                        <div style="font-size:48px;margin-bottom:10px;">🎉</div>
-                        <div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div>
-                        <div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all tasks. Great job!</div>
-                    </div>`;
+                    html = `<div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);"><div style="font-size:48px;margin-bottom:10px;">🎉</div><div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div><div style="font-size:13px;color:#8892b0;margin-top:4px;">You've completed all tasks!</div></div>`;
                 }
                 tasksEl.innerHTML = html;
-                console.log('✅ Tasks rendered successfully');
                 const progressEl = document.getElementById('taskProgress');
                 if (progressEl) {
                     const total = data.stats.total_tasks || 0;
@@ -1829,12 +1401,11 @@ async function loadTasks() {
                 }
             }
         }
-    } catch (error) { console.error('❌ Error loading tasks'); }
+    } catch (error) {}
 }
 
 function showMoreTasks(category) {
     if (window._isBanned) return;
-    console.log('📋 Showing more tasks for category:', category);
     const taskItems = document.querySelectorAll(`.task-item[data-category="${category}"]`);
     const button = document.querySelector(`button[onclick*="showMoreTasks('${category}')"]`);
     if (button) button.style.display = 'none';
@@ -1847,12 +1418,7 @@ function showMoreTasks(category) {
 }
 
 function getTaskConditionValue(taskId) {
-    const taskConditions = {
-        1: 1, 2: 10, 3: 50, 4: 100, 5: 200, 6: 500, 7: 1000,
-        17: 1, 18: 3, 19: 5, 20: 10, 21: 25, 22: 50, 23: 100, 24: 250, 25: 500, 26: 1000,
-        27: 1, 28: 3, 29: 5, 30: 10, 31: 25, 32: 50, 33: 100, 34: 250, 35: 500, 36: 1000,
-        37: 1, 38: 10, 39: 25, 40: 50, 41: 100, 42: 250, 43: 500, 44: 1000
-    };
+    const taskConditions = {1:1,2:10,3:50,4:100,5:200,6:500,7:1000,17:1,18:3,19:5,20:10,21:25,22:50,23:100,24:250,25:500,26:1000,27:1,28:3,29:5,30:10,31:25,32:50,33:100,34:250,35:500,36:1000,37:1,38:10,39:25,40:50,41:100,42:250,43:500,44:1000};
     return taskConditions[taskId] || null;
 }
 
@@ -1865,34 +1431,20 @@ function getTaskCurrentValue(taskId, userStats) {
         5: Number(userStats.total_invested) || 0,
         6: Number(userStats.total_invested) || 0,
         7: Number(userStats.total_invested) || 0,
-        17: Number(userStats.total_referrals) || 0,
-        18: Number(userStats.total_referrals) || 0,
-        19: Number(userStats.total_referrals) || 0,
-        20: Number(userStats.total_referrals) || 0,
-        21: Number(userStats.total_referrals) || 0,
-        22: Number(userStats.total_referrals) || 0,
-        23: Number(userStats.total_referrals) || 0,
-        24: Number(userStats.total_referrals) || 0,
-        25: Number(userStats.total_referrals) || 0,
-        26: Number(userStats.total_referrals) || 0,
-        27: Number(userStats.total_active_referrals) || 0,
-        28: Number(userStats.total_active_referrals) || 0,
-        29: Number(userStats.total_active_referrals) || 0,
-        30: Number(userStats.total_active_referrals) || 0,
-        31: Number(userStats.total_active_referrals) || 0,
-        32: Number(userStats.total_active_referrals) || 0,
-        33: Number(userStats.total_active_referrals) || 0,
-        34: Number(userStats.total_active_referrals) || 0,
-        35: Number(userStats.total_active_referrals) || 0,
-        36: Number(userStats.total_active_referrals) || 0,
-        37: Number(userStats.total_earnings) || 0,
-        38: Number(userStats.total_earnings) || 0,
-        39: Number(userStats.total_earnings) || 0,
-        40: Number(userStats.total_earnings) || 0,
-        41: Number(userStats.total_earnings) || 0,
-        42: Number(userStats.total_earnings) || 0,
-        43: Number(userStats.total_earnings) || 0,
-        44: Number(userStats.total_earnings) || 0
+        17: Number(userStats.total_referrals) || 0, 18: Number(userStats.total_referrals) || 0,
+        19: Number(userStats.total_referrals) || 0, 20: Number(userStats.total_referrals) || 0,
+        21: Number(userStats.total_referrals) || 0, 22: Number(userStats.total_referrals) || 0,
+        23: Number(userStats.total_referrals) || 0, 24: Number(userStats.total_referrals) || 0,
+        25: Number(userStats.total_referrals) || 0, 26: Number(userStats.total_referrals) || 0,
+        27: Number(userStats.total_active_referrals) || 0, 28: Number(userStats.total_active_referrals) || 0,
+        29: Number(userStats.total_active_referrals) || 0, 30: Number(userStats.total_active_referrals) || 0,
+        31: Number(userStats.total_active_referrals) || 0, 32: Number(userStats.total_active_referrals) || 0,
+        33: Number(userStats.total_active_referrals) || 0, 34: Number(userStats.total_active_referrals) || 0,
+        35: Number(userStats.total_active_referrals) || 0, 36: Number(userStats.total_active_referrals) || 0,
+        37: Number(userStats.total_earnings) || 0, 38: Number(userStats.total_earnings) || 0,
+        39: Number(userStats.total_earnings) || 0, 40: Number(userStats.total_earnings) || 0,
+        41: Number(userStats.total_earnings) || 0, 42: Number(userStats.total_earnings) || 0,
+        43: Number(userStats.total_earnings) || 0, 44: Number(userStats.total_earnings) || 0
     };
     const value = taskCurrentValues[taskId];
     return typeof value === 'number' ? value : 0;
@@ -1901,22 +1453,20 @@ function getTaskCurrentValue(taskId, userStats) {
 async function claimTaskReward(taskId) {
     if (window._isBanned) return;
     const userId = tgUser ? tgUser.id : '0';
-    if (window.claimingInProgress) { console.log('⏳ Claim already in progress...'); return; }
+    if (window.claimingInProgress) return;
     safePopupWithCallback({
         title: '💰 Claim Reward',
         message: 'Claim your reward for completing this task?',
-        buttons: [{id: 'cancel', type: 'cancel'}, {id: 'confirm', type: 'ok', text: '💰 Claim'}]
+        buttons: [{id:'cancel',type:'cancel'},{id:'confirm',type:'ok',text:'💰 Claim'}]
     }, async function(buttonId) {
         if (buttonId === 'confirm') {
             window.claimingInProgress = true;
             try {
                 const response = await fetch(`${API_BASE}/api/claim_task_reward`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ telegram_id: userId, task_id: taskId })
                 });
                 const data = await response.json();
-                console.log('📡 Claim response:', data);
                 if (data.success === false && data.message === "Task not found") {
                     safePopup({ title: '✅ Already Claimed!', message: 'This task was already claimed.', buttons: [{type: 'ok'}] });
                     loadTasks(); loadUserData();
@@ -1925,7 +1475,7 @@ async function claimTaskReward(taskId) {
                 }
                 if (data.success) {
                     const reward = parseFloat(data.message.match(/\d+\.?\d*/)?.[0] || '0');
-                    const rewardDisplay = reward < 0.01 ? '0.00' : reward.toFixed(3);
+                    const rewardDisplay = reward < 0.01 ? '0.00' : reward.toFixed(2);
                     safePopup({ title: '🎉 Reward Claimed!', message: 'Claimed $' + rewardDisplay + ' USDT!\n\nNew balance: $' + data.new_balance.toFixed(2), buttons: [{type: 'ok'}] });
                     loadTasks();
                     loadUserData();
@@ -1933,8 +1483,7 @@ async function claimTaskReward(taskId) {
                     safePopup({ title: '❌ Error', message: data.message || 'Failed to claim reward.', buttons: [{type: 'ok'}] });
                 }
             } catch (error) {
-                console.error('❌ Error claiming reward');
-                safePopup({ title: 'ℹ️ Check Your Balance', message: 'Please refresh the app to see if your reward was credited.', buttons: [{type: 'ok'}] });
+                safePopup({ title: 'ℹ️ Check Your Balance', message: 'Please refresh to see if your reward was credited.', buttons: [{type: 'ok'}] });
                 loadTasks();
                 loadUserData();
             } finally {
@@ -1973,12 +1522,7 @@ async function loadReferralProgress() {
             const adsStatus = ref.ads_watched >= 3 ? '✅ 3/3' : `${ref.ads_watched}/3`;
             const rewardStatus = ref.reward_claimed ? '✅ Claimed' : '⏳ Pending';
             const statusColor = ref.reward_claimed ? '#00ff87' : '#ffd93d';
-            html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                <td style="padding:6px 4px;color:#ccd6f0;">${ref.username}</td>
-                <td style="text-align:center;padding:6px 4px;">${walletStatus}</td>
-                <td style="text-align:center;padding:6px 4px;color:#8892b0;">${adsStatus}</td>
-                <td style="text-align:right;padding:6px 4px;color:${statusColor};">${rewardStatus}</td>
-            </tr>`;
+            html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);"><td style="padding:6px 4px;color:#ccd6f0;">${ref.username}</td><td style="text-align:center;padding:6px 4px;">${walletStatus}</td><td style="text-align:center;padding:6px 4px;color:#8892b0;">${adsStatus}</td><td style="text-align:right;padding:6px 4px;color:${statusColor};">${rewardStatus}</td></tr>`;
         });
         container.innerHTML = html;
         if (showMoreBtn) {
@@ -1990,7 +1534,6 @@ async function loadReferralProgress() {
             }
         }
     } catch (error) {
-        console.error('Error loading referral progress:', error);
         const container = document.getElementById('referralProgressTable');
         if (container) container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#ff6b6b;">Error loading referral progress.</td></tr>';
     }
@@ -2044,15 +1587,13 @@ console.log('📊 Milestone display fixed: values capped at target');
 console.log('⏳ Claim buttons now show Processing... state to prevent double-clicks');
 console.log('🧮 Math captcha fixed — now accepts 0 as a valid answer');
 console.log('📺 Ads tasks (8-16) have been permanently removed');
-console.log('📊 Ad daily limit: 100/100 with progress bar and UTC reset timer');
-console.log('🔄 UTC timer detects new day and auto-refreshes');
-console.log('📈 Ad count updates IMMEDIATELY after watching ad');
-console.log('🛡️ loadAdStats now respects latest ad count and prevents stale overwrites');
-console.log('🔄 Daily ad count resets properly at UTC midnight');
+console.log('🎁 Ad model updated: 100% of ad revenue funds weekly community giveaways');
+console.log('📊 No more per-ad rewards — ads now support the community prize pool');
+console.log('🏆 Winners announced every Friday — 10 winners share the pool');
 console.log('💰 Withdrawal fee: simplified structure (15% under $50, 18% under $100, 20% over $100)');
 console.log('💳 Withdrawals are FULL BALANCE ONLY');
 console.log('📋 Active referrals: first 3 shown, click to show all');
-console.log('🎯 Watch button ALWAYS enabled — users can watch ads after 100/100 (no reward)');
+console.log('🎯 Watch button always enabled — ads count toward giveaway eligibility');
 console.log('🎁 Referral reward progress UI added (table layout) — $0.002 per referral');
 console.log('💎 GRAM (TON) withdrawal option active — UQ or EQ address format');
 console.log('🟣 USDT withdrawal continues to work with connected wallet button');
@@ -2062,3 +1603,4 @@ console.log('📋 selectedCurrency uses window fallback to avoid duplicate let c
 console.log('🎯 All null-guards in place for dashboard/history/withdraw pages');
 console.log('🚫 Ban screen active — banned users see a clean suspension notice');
 console.log('🔧 Device fingerprint FIXED — uses window.screen instead of shadowed screen');
+console.log('🎁 Giveaway model active — countdown timer now shows next Friday 00:00 UTC');
