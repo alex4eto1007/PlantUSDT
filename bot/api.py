@@ -675,7 +675,9 @@ def credit_ad_reward():
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
     captcha_answer = data.get('captcha_answer')
     captcha_question = data.get('captcha_question')
-    if not captcha_answer or not captcha_question:
+
+    # FIX: 0 is a valid captcha answer — only reject None or empty string
+    if captcha_answer is None or captcha_answer == '' or not captcha_question:
         return jsonify({'success': False, 'message': 'Please solve the math question to earn ad reward.', 'need_captcha': True}), 400
     try:
         expected_answer = int(captcha_answer)
