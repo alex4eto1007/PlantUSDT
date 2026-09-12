@@ -113,6 +113,9 @@ from services.task_system import (
 def get_webapp_dir():
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'webapp')
 
+def get_client_ip():
+    return request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+
 def get_authenticated_user(telegram_id):
     if not telegram_id or telegram_id == '0':
         return None, jsonify({'success': False, 'message': 'User not authenticated'}), 401
@@ -689,7 +692,22 @@ def credit_ad_reward():
             return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
 
         # ============================================
-        # FINGERPRINT ENFORCEMENT
+        # STORE FINGERPRINT FIRST (before the check)
+        # ============================================
+        fingerprint = data.get('device_fingerprint', 'unknown')
+        if not user.device_fingerprint and fingerprint != 'unknown':
+            user.device_fingerprint = fingerprint
+        elif fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
+            user.flagged_for_anomaly = True
+            session_db.commit()
+            logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints")
+            return jsonify({
+                'success': False,
+                'message': 'Your account has been flagged for suspicious activity. Please contact support.'
+            }), 403
+
+        # ============================================
+        # FINGERPRINT ENFORCEMENT (checked AFTER storing)
         # ============================================
         if not user.device_fingerprint and (user.total_ads_watched or 0) >= 10:
             user.flagged_for_anomaly = True
@@ -705,7 +723,7 @@ def credit_ad_reward():
         if user.daily_ad_count >= 100:
             ad_log = AdLog(
                 user_id=user.id, watched_at=datetime.utcnow(), reward=0,
-                ip_address=request.remote_addr, user_agent=request.headers.get('User-Agent', 'unknown'),
+                ip_address=get_client_ip(), user_agent=request.headers.get('User-Agent', 'unknown'),
                 session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
             )
             session_db.add(ad_log)
@@ -716,13 +734,6 @@ def credit_ad_reward():
                 'limit_reached': True,
                 'message': 'You have reached the daily limit. No reward for this ad. Watch tomorrow!'
             }), 200
-        fingerprint = data.get('device_fingerprint', 'unknown')
-        if fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
-            user.flagged_for_anomaly = True
-            session_db.commit()
-            logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints")
-        if not user.device_fingerprint and fingerprint != 'unknown':
-            user.device_fingerprint = fingerprint
         reward = Decimal('0.001')
         old_balance = Decimal(user.balance or 0)
         user.balance = (user.balance or Decimal('0')) + reward
@@ -732,7 +743,7 @@ def credit_ad_reward():
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
         ad_log = AdLog(
             user_id=user.id, watched_at=datetime.utcnow(), reward=reward,
-            ip_address=request.remote_addr, user_agent=request.headers.get('User-Agent', 'unknown'),
+            ip_address=get_client_ip(), user_agent=request.headers.get('User-Agent', 'unknown'),
             session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
         )
         session_db.add(ad_log)
