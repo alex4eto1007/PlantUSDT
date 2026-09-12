@@ -121,7 +121,6 @@
 
             <div class="referral-stats">
                 <span>Total Referrals: <strong id="referralCount">0</strong></span>
-                <span>Active: <strong id="activeReferralsCount">0 / 0</strong></span>
                 <span>Earned: <strong id="referralEarned">$0.000</strong></span>
             </div>
 
@@ -149,12 +148,9 @@
                 </button>
             </div>
 
-            <div id="activeReferralList" style="margin-top:10px;display:none;"></div>
-
             <div class="referral-details">
                 <div class="referral-detail-row"><span>👤 Referrals:</span><strong id="level1Count">0</strong></div>
                 <div class="referral-detail-row"><span>💰 Earnings from deposits:</span><strong id="level1Earnings">$0.000</strong></div>
-                <div class="referral-detail-row" style="color:#00d4ff;"><span>🎉 Welcome Bonus:</span><strong style="color:#00d4ff;">0.1 USDT</strong></div>
             </div>
 
             <div style="display:flex;gap:8px;margin-top:12px;">
@@ -229,10 +225,14 @@
                 </span>
             </p>
 
-            <div class="ad-stats">
+            <div class="ad-stats" style="grid-template-columns: 1fr 1fr;">
                 <div class="ad-stat-box">
                     <span class="ad-stat-label">📊 Ads Today</span>
                     <span class="ad-stat-value" id="adsToday">0</span>
+                </div>
+                <div class="ad-stat-box">
+                    <span class="ad-stat-label">♾️ Limit</span>
+                    <span class="ad-stat-value" style="color:#00ff87;font-size:14px;">No Limits</span>
                 </div>
             </div>
 
@@ -243,7 +243,7 @@
             <div style="margin-top:12px;padding:10px;background:rgba(255,193,7,0.06);border-radius:8px;border:1px solid rgba(255,193,7,0.1);">
                 <p style="font-size:11px;color:#ffd93d;margin:0;text-align:center;line-height:1.5;">
                     🎁 100% of ad revenue funds weekly community giveaways.<br>
-                    📊 Your ads count toward eligibility — watch as many as you like!<br>
+                    📊 Watch as many ads as you like — no daily limit!<br>
                     🏆 Winners announced every Friday.
                 </p>
             </div>
@@ -313,6 +313,6 @@
         window.AD_REWARD = AD_REWARD;
     </script>
 
-    <script src="js/app.js?v=73"></script>
+    <script src="js/app.js?v=74"></script>
 </body>
 </html>

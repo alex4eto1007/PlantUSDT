@@ -158,7 +158,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setupEventListeners();
                 startCountdownTimer();
                 loadAdStats();
-                loadActiveReferrals();
                 loadTasks();
                 loadReferralProgress();
             } else { setTimeout(initializeApp, 100); }
@@ -268,8 +267,7 @@ function refreshData() {
     if (balanceEl) balanceEl.textContent = '⏳ ...';
     if (totalEarningsEl) totalEarningsEl.textContent = '⏳ ...';
     setTimeout(function() {
-        loadUserData(); loadSavedWallet(); loadAdStats();
-        loadActiveReferrals(); loadTasks(); loadReferralProgress();
+        loadUserData(); loadSavedWallet(); loadAdStats(); loadTasks(); loadReferralProgress();
     }, 300);
 }
 
@@ -319,19 +317,7 @@ function updateWelcomeBonusButton(data) {
     const btn = document.getElementById('claimWelcomeBtn');
     if (!btn) return;
     if (data.has_received_welcome_bonus) {
-        btn.textContent = '✅ Welcome';
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'default';
-        btn.style.background = 'rgba(0,255,135,0.1)';
-        btn.style.color = '#00ff87';
-    } else {
-        btn.textContent = '🎁 Welcome';
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-        btn.style.background = 'linear-gradient(135deg,#ffd93d,#f9a825)';
-        btn.style.color = '#0a0e17';
+        btn.remove();
     }
 }
 
@@ -479,7 +465,7 @@ async function claimInvestment(fieldNumber) {
                 if (data.success) {
                     safePopup({ title: '✅ Claimed!', message: 'You claimed $' + data.amount.toFixed(2) + ' USDT from Field #' + fieldNumber + '!', buttons: [{type: 'ok'}] });
                     setTimeout(function() {
-                        loadUserData(); loadAdStats(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
+                        loadUserData(); loadAdStats(); loadTasks(); loadReferralProgress();
                         claimInProgress = false;
                         if (btn) { btn.textContent = originalText; btn.disabled = false; btn.style.opacity = '1'; }
                     }, 3000);
@@ -1091,7 +1077,7 @@ async function watchRewardedAd() {
                         message: 'Thanks for supporting the community giveaway! 🎁\n\nYour ad helps fund the weekly prize pool. Winners announced every Friday.',
                         buttons: [{type: 'ok'}]
                     });
-                    setTimeout(() => { loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress(); }, 2000);
+                    setTimeout(() => { loadUserData(); loadTasks(); loadReferralProgress(); }, 2000);
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({ title: '🧮 Verification Required', message: data.message || 'Please solve the math question.', buttons: [{type: 'ok'}] });
@@ -1167,67 +1153,6 @@ async function upgradeReferralTier(tier) {
     });
 }
 
-async function loadActiveReferrals() {
-    if (window._isBanned) return;
-    const userId = tgUser ? tgUser.id : '0';
-    try {
-        const response = await fetch(`${API_BASE}/api/get_active_referrals/${userId}`);
-        const data = await response.json();
-        if (data.success) {
-            const activeRefsEl = document.getElementById('activeReferralsCount');
-            if (activeRefsEl) activeRefsEl.textContent = data.active_count + ' / ' + data.total_referrals;
-            const listEl = document.getElementById('activeReferralList');
-            if (listEl) {
-                if (data.active_list && data.active_list.length > 0) {
-                    const total = data.active_list.length;
-                    const showCount = 3;
-                    const hasMore = total > showCount;
-                    const visibleRefs = data.active_list.slice(0, showCount);
-                    let html = `<div style="font-size:12px;color:#8892b0;margin-bottom:6px;">👥 Active Referrals:</div>`;
-                    visibleRefs.forEach(ref => {
-                        const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                        html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span></div>`;
-                    });
-                    if (hasMore) {
-                        const hiddenCount = total - showCount;
-                        html += `<div id="hiddenActiveRefs" style="display:none;">`;
-                        data.active_list.slice(showCount).forEach(ref => {
-                            const status = ref.has_invested ? '💰 Invested' : `📺 ${ref.ads_watched}/30 ads`;
-                            html += `<div class="active-ref-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(0,255,135,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(0,255,135,0.05);"><span style="font-size:13px;color:#ccd6f0;">👤 ${ref.username}</span><span style="font-size:11px;color:#00ff87;">✅ ${status}</span></div>`;
-                        });
-                        html += `</div><button onclick="toggleActiveReferrals()" style="width:100%;padding:8px;margin-top:6px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:6px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 Show all ${total} active referrals (${hiddenCount} more)</button>`;
-                    }
-                    listEl.innerHTML = html;
-                    listEl.style.display = 'block';
-                } else {
-                    listEl.innerHTML = '<p style="color:#495670;font-size:13px;padding:8px 0;">No active referrals yet. Share your link!</p>';
-                    listEl.style.display = 'block';
-                }
-            }
-        }
-    } catch (error) {}
-}
-
-function toggleActiveReferrals() {
-    const hiddenDiv = document.getElementById('hiddenActiveRefs');
-    const button = document.querySelector('button[onclick="toggleActiveReferrals()"]');
-    if (hiddenDiv) {
-        if (hiddenDiv.style.display === 'none' || hiddenDiv.style.display === '') {
-            hiddenDiv.style.display = 'block';
-            if (button) button.textContent = '🔼 Show less';
-        } else {
-            hiddenDiv.style.display = 'none';
-            if (button) {
-                const total = document.querySelectorAll('.active-ref-item').length || 0;
-                const visible = 3;
-                const hiddenCount = total - visible;
-                if (hiddenCount > 0) button.textContent = `📋 Show all ${total} active referrals (${hiddenCount} more)`;
-                else button.style.display = 'none';
-            }
-        }
-    }
-}
-
 async function claimWelcomeBonus() {
     if (window._isBanned) return;
     const userId = tgUser ? tgUser.id : '0';
@@ -1246,7 +1171,7 @@ async function claimWelcomeBonus() {
                     const errorData = await response.json().catch(() => ({}));
                     if (errorData.message && errorData.message.toLowerCase().includes('already claimed')) {
                         safePopup({ title: '✅ Already Claimed', message: 'You have already claimed your welcome bonus!', buttons: [{type: 'ok'}] });
-                        loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
+                        loadUserData(); loadTasks(); loadReferralProgress();
                         return;
                     }
                     safePopup({ title: '❌ Error', message: errorData.message || 'Something went wrong.', buttons: [{type: 'ok'}] });
@@ -1255,12 +1180,12 @@ async function claimWelcomeBonus() {
                 const data = await response.json();
                 if (data.success === false && data.message && data.message.toLowerCase().includes('already claimed')) {
                     safePopup({ title: '✅ Already Claimed', message: 'You have already claimed your welcome bonus!', buttons: [{type: 'ok'}] });
-                    loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
+                    loadUserData(); loadTasks(); loadReferralProgress();
                     return;
                 }
                 if (data.success) {
                     safePopup({ title: '🎉 Bonus Claimed!', message: data.message + '\n\nNew balance: $' + data.new_balance.toFixed(2), buttons: [{type: 'ok'}] });
-                    loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
+                    loadUserData(); loadTasks(); loadReferralProgress();
                 } else {
                     safePopup({ title: '❌ Error', message: data.message || 'Failed to claim bonus.', buttons: [{type: 'ok'}] });
                 }
@@ -1271,7 +1196,7 @@ async function claimWelcomeBonus() {
                     const userData = await fetch(`${API_BASE}/api/user?telegram_id=${userId}`).then(r => r.json());
                     if (userData.success && userData.has_received_welcome_bonus) {
                         safePopup({ title: '✅ Bonus Claimed!', message: 'Your welcome bonus has been credited! 💰', buttons: [{type: 'ok'}] });
-                        loadUserData(); loadActiveReferrals(); loadTasks(); loadReferralProgress();
+                        loadUserData(); loadTasks(); loadReferralProgress();
                         return;
                     }
                 } catch (e) {}
@@ -1338,7 +1263,7 @@ async function loadTasks() {
                     return !task.claimed;
                 });
                 totalTasks = visibleTasks.length;
-                const categories = {'investments':{icon:'🌱',label:'Investments'},'referrals':{icon:'👤',label:'Referrals'},'active_referrals':{icon:'🔥',label:'Active Referrals'},'milestones':{icon:'🏆',label:'Milestones'}};
+                const categories = {'investments':{icon:'🌱',label:'Investments'},'community':{icon:'📢',label:'Community'},'milestones':{icon:'🏆',label:'Milestones'}};
                 const sortedTasks = visibleTasks.sort((a, b) => a.task_id - b.task_id);
                 let currentCategory = '';
                 let categoryCounts = {};
@@ -1366,7 +1291,9 @@ async function loadTasks() {
                     let progressPercent = 0;
                     const conditionValue = getTaskConditionValue(task.task_id);
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
-                    if (!isCompleted && conditionValue !== null && currentValue !== null) {
+                    if (task.category === 'community') {
+                        // Community tasks: handled manually
+                    } else if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
                             var displayValue = Math.min(currentValue, conditionValue);
                             progressText = `${Number(displayValue).toFixed(3)}/${conditionValue}`;
@@ -1383,6 +1310,13 @@ async function loadTasks() {
                     const statusColor = isCompleted ? (isClaimed ? '#495670' : '#00ff87') : '#495670';
                     const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(2);
                     const hiddenStyle = hideTask ? 'style="display:none;"' : '';
+                    // For community tasks: show Join button instead of Claim
+                    let actionButton = '';
+                    if (task.category === 'community' && !isClaimed) {
+                        actionButton = `<button onclick="openCommunityLink(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00d4ff,#0088ff);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔗 Join</button>`;
+                    } else if (isCompleted && !isClaimed) {
+                        actionButton = `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>`;
+                    }
                     html += `<div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hiddenStyle}>
                         <div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted && !isClaimed ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1397,7 +1331,7 @@ async function loadTasks() {
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-size:11px;color:${statusColor};">${statusBadge}</div>
-                                    ${isCompleted && !isClaimed ? `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>` : ''}
+                                    ${actionButton}
                                 </div>
                             </div>
                         </div>
@@ -1419,6 +1353,42 @@ async function loadTasks() {
     } catch (error) {}
 }
 
+function openCommunityLink(taskId) {
+    if (window._isBanned) return;
+    const communityLinks = {
+        27: 'https://t.me/PlantUSDTchannel',
+        28: 'https://t.me/PlantUSDT',
+        29: 'https://t.me/PlantUSDTtransactions'
+    };
+    const link = communityLinks[taskId];
+    if (!link) return;
+    showInterstitialIfNeeded();
+    safePopupWithCallback({
+        title: '📢 Join Community',
+        message: 'Join our ' + (taskId === 27 ? 'channel' : taskId === 28 ? 'group' : 'transactions channel') + '?\n\nAfter joining, come back and click Claim to receive 0.02 USDT.',
+        buttons: [{id:'cancel',type:'cancel'},{id:'join',type:'ok',text:'🔗 Join Now'}]
+    }, function(buttonId) {
+        if (buttonId === 'join') {
+            if (typeof tg !== 'undefined' && tg.openTelegramLink) {
+                tg.openTelegramLink(link);
+            } else {
+                window.open(link, '_blank');
+            }
+            setTimeout(function() {
+                safePopupWithCallback({
+                    title: '✅ Joined?',
+                    message: 'Did you join? Click Yes to claim your 0.02 USDT reward.',
+                    buttons: [{id:'no',type:'cancel',text:'Not yet'},{id:'yes',type:'ok',text:'✅ Yes, Claim'}]
+                }, function(buttonId2) {
+                    if (buttonId2 === 'yes') {
+                        claimTaskReward(taskId);
+                    }
+                });
+            }, 3000);
+        }
+    });
+}
+
 function showMoreTasks(category) {
     if (window._isBanned) return;
     const taskItems = document.querySelectorAll(`.task-item[data-category="${category}"]`);
@@ -1433,7 +1403,7 @@ function showMoreTasks(category) {
 }
 
 function getTaskConditionValue(taskId) {
-    const taskConditions = {1:1,2:10,3:50,4:100,5:200,6:500,7:1000,17:1,18:3,19:5,20:10,21:25,22:50,23:100,24:250,25:500,26:1000,27:1,28:3,29:5,30:10,31:25,32:50,33:100,34:250,35:500,36:1000,37:1,38:10,39:25,40:50,41:100,42:250,43:500,44:1000};
+    const taskConditions = {1:1,2:10,3:50,4:100,5:200,6:500,7:1000,37:1,38:10,39:25,40:50,41:100,42:250,43:500,44:1000};
     return taskConditions[taskId] || null;
 }
 
@@ -1446,16 +1416,6 @@ function getTaskCurrentValue(taskId, userStats) {
         5: Number(userStats.total_invested) || 0,
         6: Number(userStats.total_invested) || 0,
         7: Number(userStats.total_invested) || 0,
-        17: Number(userStats.total_referrals) || 0, 18: Number(userStats.total_referrals) || 0,
-        19: Number(userStats.total_referrals) || 0, 20: Number(userStats.total_referrals) || 0,
-        21: Number(userStats.total_referrals) || 0, 22: Number(userStats.total_referrals) || 0,
-        23: Number(userStats.total_referrals) || 0, 24: Number(userStats.total_referrals) || 0,
-        25: Number(userStats.total_referrals) || 0, 26: Number(userStats.total_referrals) || 0,
-        27: Number(userStats.total_active_referrals) || 0, 28: Number(userStats.total_active_referrals) || 0,
-        29: Number(userStats.total_active_referrals) || 0, 30: Number(userStats.total_active_referrals) || 0,
-        31: Number(userStats.total_active_referrals) || 0, 32: Number(userStats.total_active_referrals) || 0,
-        33: Number(userStats.total_active_referrals) || 0, 34: Number(userStats.total_active_referrals) || 0,
-        35: Number(userStats.total_active_referrals) || 0, 36: Number(userStats.total_active_referrals) || 0,
         37: Number(userStats.total_earnings) || 0, 38: Number(userStats.total_earnings) || 0,
         39: Number(userStats.total_earnings) || 0, 40: Number(userStats.total_earnings) || 0,
         41: Number(userStats.total_earnings) || 0, 42: Number(userStats.total_earnings) || 0,
@@ -1579,32 +1539,33 @@ window.loadAdStats = loadAdStats;
 window.claimInvestment = claimInvestment;
 window.showInterstitialIfNeeded = showInterstitialIfNeeded;
 window.upgradeReferralTier = upgradeReferralTier;
-window.loadActiveReferrals = loadActiveReferrals;
-window.toggleActiveReferrals = toggleActiveReferrals;
 window.claimWelcomeBonus = claimWelcomeBonus;
 window.disableInterstitialAds = disableInterstitialAds;
 window.loadTasks = loadTasks;
 window.claimTaskReward = claimTaskReward;
 window.showMoreTasks = showMoreTasks;
+window.openCommunityLink = openCommunityLink;
 window.loadReferralProgress = loadReferralProgress;
 window.toggleReferralList = toggleReferralList;
 window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 
-console.log('✅ PlantUSDT app loaded successfully (v73)');
-console.log('📢 Welcome bonus: 0.1 USDT — everyone can claim!');
+console.log('✅ PlantUSDT app loaded successfully (v74)');
+console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 when friend connects wallet + watches 3 ads');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
 console.log('🔥 Active Referrals tracked silently for ambassador promotion');
 console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
+console.log('♾️ Ads have no limits now — watch as many as you like');
+console.log('📢 Community tasks added: Join Channel, Group, Transactions (0.02 each)');
 console.log('🚫 Ban system active — banned users see suspension notice');
 console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
-console.log('📊 Task rewards display 2 decimals (no more 0.010)');
+console.log('📊 Task rewards display 2 decimals');
 console.log('💳 Withdrawal fees: 15% / 18% / 20%');
 console.log('🔒 Duplicate wallet protection active');
 console.log('🎯 Math captcha accepts 0 as valid answer');
 console.log('💰 Pending referral rewards accumulate until claimed');
 console.log('📋 Referral progress table shows wallet + 3 ads status');
-console.log('🔄 No more auto-timer — giveaway drawn manually by admin');
-console.log('🎨 UI cleaned: no giveaway pool display, no active referral bonus row');
+console.log('🔄 Removed: active referrals display, giveaway timer, giveaway pool');
+console.log('🎨 UI cleaned: no more active referrals list, no more timer');
