@@ -12,42 +12,27 @@ from decimal import Decimal
 from functools import wraps
 from collections import defaultdict
 
-# Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import Config FIRST
 from config.settings import Config
-
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_session import Session
-
 from database.db_manager import DatabaseManager
 from database.models import User, Withdrawal, Investment, Deposit, DailyPayout, PendingDepositCheck, AuditLog, AdLog
 from sqlalchemy import func
 from services.referral import check_and_award_active_referrals
-
 import requests as http_requests
 
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
-# ============================================
-# CORS CONFIGURATION - RESTRICTED ORIGINS
-# ============================================
-ALLOWED_ORIGINS = [
-    'https://plant-usdt.vercel.app',
-    'https://web.telegram.org',
-    'https://*.telegram.org'
-]
+ALLOWED_ORIGINS = ['https://plant-usdt.vercel.app', 'https://web.telegram.org', 'https://*.telegram.org']
 
 @app.after_request
 def cors_headers(response):
     if 'Access-Control-Allow-Origin' not in response.headers:
         origin = request.headers.get('Origin')
-        allowed_origins = [
-            'https://plant-usdt.vercel.app',
-            'https://web.telegram.org'
-        ]
+        allowed_origins = ['https://plant-usdt.vercel.app', 'https://web.telegram.org']
         if origin and any(origin.startswith(o.rstrip('*')) for o in allowed_origins):
             response.headers['Access-Control-Allow-Origin'] = origin
             response.headers['Access-Control-Allow-Credentials'] = 'true'
@@ -55,9 +40,6 @@ def cors_headers(response):
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
-# ============================================
-# SESSION CONFIGURATION
-# ============================================
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
@@ -69,9 +51,6 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
 Session(app)
 
-# ============================================
-# RATE LIMITING
-# ============================================
 rate_limits = defaultdict(list)
 RATE_LIMIT = 160
 RATE_WINDOW = 60
@@ -88,9 +67,6 @@ def rate_limit(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ============================================
-# SECURITY HEADERS
-# ============================================
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['TRAP_BAD_REQUEST_ERRORS'] = True
 app.config['TRAP_HTTP_EXCEPTIONS'] = True
@@ -104,9 +80,6 @@ def security_headers(response):
         response.headers['Expires'] = '0'
     return response
 
-# ============================================
-# API CACHING
-# ============================================
 cache = {}
 CACHE_TTL = 5
 
@@ -133,20 +106,13 @@ from services.deposit_scanner import DepositScanner
 deposit_scanner = DepositScanner()
 
 from services.task_system import (
-    get_user_task_progress,
-    check_task_conditions,
-    claim_task_reward,
-    get_task_stats,
-    get_all_tasks,
-    get_user_stats
+    get_user_task_progress, check_task_conditions, claim_task_reward,
+    get_task_stats, get_all_tasks, get_user_stats
 )
 
 def get_webapp_dir():
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'webapp')
 
-# ============================================
-# AUTHENTICATION HELPER
-# ============================================
 def get_authenticated_user(telegram_id):
     if not telegram_id or telegram_id == '0':
         return None, jsonify({'success': False, 'message': 'User not authenticated'}), 401
@@ -156,10 +122,7 @@ def get_authenticated_user(telegram_id):
         if not user:
             return None, jsonify({'success': False, 'message': 'User not found'}), 404
         if user.is_banned:
-            return None, jsonify({
-                'success': False,
-                'message': 'Your account has been suspended. Please contact support.'
-            }), 403
+            return None, jsonify({'success': False, 'message': 'Your account has been suspended. Please contact support.'}), 403
         return user, None, None
     finally:
         session_db.close()
@@ -170,23 +133,14 @@ def sanitize_input(value):
     return str(value).strip()
 
 def isValidTonAddress(address):
-    """Validate TON address (UQ, EQ, or raw format)"""
     if not address:
         return False
     return bool(re.match(r'^(UQ|EQ)[A-Za-z0-9_-]{46}$', address)) or bool(re.match(r'^-?\d+:[a-fA-F0-9]{64}$', address))
 
-# ============================================
-# ADMIN NOTIFICATIONS
-# ============================================
 def notify_admins_new_withdrawal(withdrawal_id, user_username, user_telegram_id,
                                   amount, fee, net_amount, currency, wallet_address):
-    """
-    Send an instant notification to all admins when a withdrawal request is created.
-    Best-effort — failures are logged but never block the withdrawal.
-    """
     try:
         currency_label = "💎 GRAM (TON)" if currency == 'gram' else "🟣 USDT (Polygon)"
-
         message = (
             f"🔔 **New Withdrawal Request!**\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -202,42 +156,28 @@ def notify_admins_new_withdrawal(withdrawal_id, user_username, user_telegram_id,
             f"`/complete_payout {withdrawal_id} TX_HASH`\n"
             f"📋 Or view all: /pending"
         )
-
         for admin_id in Config.ADMIN_IDS:
             try:
                 url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/sendMessage"
-                payload = {
-                    "chat_id": admin_id,
-                    "text": message,
-                    "parse_mode": "Markdown"
-                }
+                payload = {"chat_id": admin_id, "text": message, "parse_mode": "Markdown"}
                 resp = http_requests.post(url, json=payload, timeout=5)
                 if resp.status_code == 200:
                     logger.info(f"✅ Withdrawal notification sent to admin {admin_id}")
                 else:
-                    logger.warning(f"⚠️ Admin notification failed for {admin_id}: {resp.status_code} {resp.text[:200]}")
+                    logger.warning(f"⚠️ Admin notification failed for {admin_id}: {resp.status_code}")
             except Exception as e:
                 logger.error(f"❌ Failed to notify admin {admin_id}: {e}")
     except Exception as e:
         logger.error(f"❌ notify_admins_new_withdrawal error: {e}")
 
-# ============================================
-# MATH CAPTCHA
-# ============================================
 def generate_math_captcha():
     num1 = random.randint(1, 20)
     num2 = random.randint(1, 20)
     operator = random.choice(['+', '-', '*'])
-    
-    if operator == '+':
-        answer = num1 + num2
-    elif operator == '-':
-        answer = num1 - num2
-    else:
-        answer = num1 * num2
-    
-    question = f"{num1} {operator} {num2} = ?"
-    return question, answer
+    if operator == '+': answer = num1 + num2
+    elif operator == '-': answer = num1 - num2
+    else: answer = num1 * num2
+    return f"{num1} {operator} {num2} = ?", answer
 
 def reset_daily_ad_count(user):
     if not user.last_ad_reset:
@@ -245,7 +185,6 @@ def reset_daily_ad_count(user):
         user.daily_ad_count = 0
         clear_user_cache(user.telegram_id)
         return True
-    
     now = datetime.utcnow()
     if now.date() > user.last_ad_reset.date():
         user.daily_ad_count = 0
@@ -263,9 +202,7 @@ def reset_daily_ad_count(user):
 def get_wallet():
     telegram_id = sanitize_input(request.args.get('telegram_id', '0'))
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
@@ -281,54 +218,31 @@ def save_wallet():
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     wallet_address = sanitize_input(data.get('wallet_address', ''))
-    
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
-        # Disconnect case
         if not wallet_address:
             user.wallet_address = ''
             session_db.commit()
             clear_user_cache(telegram_id)
             return jsonify({'success': True, 'message': 'Wallet disconnected'})
-        
-        # Format validation
         if not wallet_address.startswith('0x') or len(wallet_address) != 42:
             return jsonify({'success': False, 'message': 'Invalid wallet address'}), 400
-        
-        # Project wallet block
         if wallet_address.lower() == PROJECT_WALLET.lower():
             return jsonify({'success': False, 'message': 'This is the project wallet. Please enter your own wallet address.'}), 400
-        
-        # ============================================
-        # STRICT DUPLICATE WALLET CHECK
-        # ============================================
         wallet_in_use = session_db.query(User).filter(
             func.lower(User.wallet_address) == wallet_address.lower(),
             User.telegram_id != int(telegram_id)
         ).first()
-
         if wallet_in_use:
-            logger.warning(
-                f"⛔ Duplicate wallet blocked: user {telegram_id} tried to save wallet "
-                f"{wallet_address[:10]}... already used by user {wallet_in_use.telegram_id}"
-            )
-            return jsonify({
-                'success': False,
-                'message': 'This wallet is already connected to another account. Please use a different wallet.'
-            }), 400
-        # ============================================
-        
+            logger.warning(f"⛔ Duplicate wallet blocked: user {telegram_id} tried wallet {wallet_address[:10]}... used by {wallet_in_use.telegram_id}")
+            return jsonify({'success': False, 'message': 'This wallet is already connected to another account. Please use a different wallet.'}), 400
         user.wallet_address = wallet_address
         session_db.commit()
         clear_user_cache(telegram_id)
@@ -346,24 +260,19 @@ def withdraw():
     from decimal import Decimal
     from datetime import datetime, timedelta
     import math
-    
+
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     currency = sanitize_input(data.get('currency', 'usdt')).lower()
-    
     try:
         amount = float(data.get('amount', 0))
     except (TypeError, ValueError):
         return jsonify({'success': False, 'message': 'Invalid amount'}), 400
-    
     address = sanitize_input(data.get('address'))
-    
     if not telegram_id or not amount or not address:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     if currency not in ['usdt', 'gram']:
         return jsonify({'success': False, 'message': 'Invalid currency'}), 400
-    
     if currency == 'usdt':
         if not address.startswith('0x') or len(address) != 42:
             return jsonify({'success': False, 'message': 'Invalid Polygon wallet address'}), 400
@@ -372,28 +281,16 @@ def withdraw():
     elif currency == 'gram':
         if not isValidTonAddress(address):
             return jsonify({'success': False, 'message': 'Invalid TON wallet address (UQ or EQ format)'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
-        existing_pending = session_db.query(Withdrawal).filter_by(
-            user_id=user.id,
-            status='pending'
-        ).first()
-        
+        existing_pending = session_db.query(Withdrawal).filter_by(user_id=user.id, status='pending').first()
         if existing_pending:
-            return jsonify({
-                'success': False,
-                'message': 'You already have a pending withdrawal. Please wait for it to be processed.'
-            }), 400
-        
+            return jsonify({'success': False, 'message': 'You already have a pending withdrawal. Please wait for it to be processed.'}), 400
         if user.last_withdrawal_at:
             time_since_last = (datetime.utcnow() - user.last_withdrawal_at).total_seconds()
             if time_since_last < 86400:
@@ -401,87 +298,47 @@ def withdraw():
                 hours = remaining // 3600
                 minutes = (remaining % 3600) // 60
                 seconds = remaining % 60
-                time_str = f"{hours}h {minutes}m {seconds}s"
                 return jsonify({
                     'success': False,
-                    'message': f'You can withdraw again in {time_str}',
+                    'message': f'You can withdraw again in {hours}h {minutes}m {seconds}s',
                     'cooldown_remaining': remaining
                 }), 400
-        
         if user.balance < amount:
             return jsonify({'success': False, 'message': f'Insufficient balance. Your balance is ${user.balance:.2f} USDT'}), 400
-        
         if abs(amount - float(user.balance)) > 0.01:
-            return jsonify({
-                'success': False,
-                'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'
-            }), 400
-        
+            return jsonify({'success': False, 'message': f'You can only withdraw your full balance (${float(user.balance):.2f}). Partial withdrawals are not allowed.'}), 400
         withdraw_amount = math.floor(amount * 100) / 100
         dust = amount - withdraw_amount
-        
         user.balance = Decimal(str(dust))
-        
         if withdraw_amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
-        
         amount = withdraw_amount
-        
-        # ============================================
-        # WITHDRAWAL FEE STRUCTURE
-        # $1 - $49.99     -> 15%
-        # $50 - $99.99    -> 18%
-        # $100+           -> 20%
-        # ============================================
         fee_percent = 0.0
-        if amount < 50:
-            fee_percent = 0.15
-        elif amount < 100:
-            fee_percent = 0.18
-        else:
-            fee_percent = 0.20
-
+        if amount < 50: fee_percent = 0.15
+        elif amount < 100: fee_percent = 0.18
+        else: fee_percent = 0.20
         fee = amount * fee_percent
         net_amount = amount - fee
-        
         withdrawal = Withdrawal(
-            user_id=user.id,
-            amount=amount,
-            fee=fee,
-            net_amount=net_amount,
-            wallet_address=address,
-            status='pending'
+            user_id=user.id, amount=amount, fee=fee, net_amount=net_amount,
+            wallet_address=address, status='pending'
         )
         session_db.add(withdrawal)
-        
         audit = AuditLog(
-            user_id=user.id,
-            action='withdrawal_request',
-            field_changed='balance',
+            user_id=user.id, action='withdrawal_request', field_changed='balance',
             old_value=float(user.balance + Decimal(str(amount)) + Decimal(str(dust))),
-            new_value=float(user.balance),
-            amount=float(amount),
+            new_value=float(user.balance), amount=float(amount),
             description=f'Withdrawal request of ${amount:.2f} in {currency.upper()} to {address[:10]}... (dust: ${dust:.3f})',
-            source='user',
-            created_at=datetime.utcnow()
+            source='user', created_at=datetime.utcnow()
         )
         session_db.add(audit)
-        
         session_db.commit()
         clear_user_cache(telegram_id)
-
-        # 🔔 Notify admins instantly (after commit, so withdrawal.id exists)
         notify_admins_new_withdrawal(
-            withdrawal_id=withdrawal.id,
-            user_username=user.username,
-            user_telegram_id=user.telegram_id,
-            amount=amount,
-            fee=fee,
-            net_amount=net_amount,
-            currency=currency,
-            wallet_address=address
+            withdrawal_id=withdrawal.id, user_username=user.username,
+            user_telegram_id=user.telegram_id, amount=amount, fee=fee,
+            net_amount=net_amount, currency=currency, wallet_address=address
         )
-
         return jsonify({'success': True, 'message': f'Withdrawal request submitted in {currency.upper()}'})
     finally:
         session_db.close()
@@ -492,20 +349,14 @@ def get_referral_code():
     telegram_id = sanitize_input(request.args.get('telegram_id', '0'))
     if telegram_id == '0':
         return jsonify({'success': False, 'message': 'User not found'}), 404
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        return jsonify({
-            'success': True,
-            'referral_code': user.referral_code
-        })
+        return jsonify({'success': True, 'referral_code': user.referral_code})
     finally:
         session_db.close()
 
@@ -513,25 +364,19 @@ def get_referral_code():
 @rate_limit
 def get_referral_stats(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         level1_refs = session_db.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
         level1_earnings = user.referral_deposit_earnings or 0
         total_referral_earnings = (user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0)
-        
         return jsonify({
-            'success': True,
-            'level1_count': level1_count,
-            'level1_earnings': level1_earnings,
-            'total_referrals': level1_count,
+            'success': True, 'level1_count': level1_count,
+            'level1_earnings': level1_earnings, 'total_referrals': level1_count,
             'total_earnings': float(total_referral_earnings)
         })
     except Exception as e:
@@ -543,110 +388,65 @@ def get_referral_stats(telegram_id):
 @rate_limit
 def get_user():
     telegram_id = sanitize_input(request.args.get('telegram_id', '0'))
-    
     if telegram_id == '0':
         return jsonify({
-            'success': True,
-            'balance': 0,
-            'total_invested': 0,
-            'total_deposited': 0,
-            'fields': [],
-            'referrals': 0,
-            'referral_earned': 0,
-            'investment_earnings': 0,
-            'total_earnings': 0,
-            'level1_count': 0,
-            'total_ad_earnings': 0,
-            'interstitial_ads_disabled': False,
-            'has_received_welcome_bonus': False,
-            'tasks_earnings': 0,
-            'referral_tier': 'free',
-            'expected_daily_earnings': 0,
-            'last_withdrawal_at': None,
-            'daily_ad_count': 0,
-            'last_ad_reset': None
+            'success': True, 'balance': 0, 'total_invested': 0, 'total_deposited': 0,
+            'fields': [], 'referrals': 0, 'referral_earned': 0, 'investment_earnings': 0,
+            'total_earnings': 0, 'level1_count': 0, 'total_ad_earnings': 0,
+            'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
+            'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
+            'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None
         })
-    
     cached = get_cached_user(telegram_id)
-    if cached:
-        return jsonify(cached)
-    
+    if cached: return jsonify(cached)
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             response = {
-                'success': True,
-                'balance': 0,
-                'total_invested': 0,
-                'total_deposited': 0,
-                'fields': [],
-                'referrals': 0,
-                'referral_earned': 0,
-                'investment_earnings': 0,
-                'total_earnings': 0,
-                'level1_count': 0,
-                'total_ad_earnings': 0,
-                'interstitial_ads_disabled': False,
-                'has_received_welcome_bonus': False,
-                'tasks_earnings': 0,
-                'referral_tier': 'free',
-                'expected_daily_earnings': 0,
-                'last_withdrawal_at': None,
-                'daily_ad_count': 0,
-                'last_ad_reset': None
+                'success': True, 'balance': 0, 'total_invested': 0, 'total_deposited': 0,
+                'fields': [], 'referrals': 0, 'referral_earned': 0, 'investment_earnings': 0,
+                'total_earnings': 0, 'level1_count': 0, 'total_ad_earnings': 0,
+                'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
+                'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
+                'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
-        
-        if user and user.last_ad_reset:
+        if user.last_ad_reset:
             now = datetime.utcnow()
             if now.date() > user.last_ad_reset.date():
                 clear_user_cache(telegram_id)
-        
         investments = session_db.query(Investment).filter_by(user_id=user.id).all()
         fields = []
         expected_daily_earnings = 0.0
-        
         for inv in investments:
             if inv.is_active or not inv.is_completed:
                 fields.append({
-                    'field_number': inv.field_number,
-                    'amount': float(inv.amount),
-                    'total_return': float(inv.expected_return),
-                    'paid_out': float(inv.paid_out or 0),
-                    'start_date': inv.start_date.isoformat(),
-                    'is_active': inv.is_active,
-                    'next_payout_date': None,
-                    'lock_period': inv.lock_period,
+                    'field_number': inv.field_number, 'amount': float(inv.amount),
+                    'total_return': float(inv.expected_return), 'paid_out': float(inv.paid_out or 0),
+                    'start_date': inv.start_date.isoformat(), 'is_active': inv.is_active,
+                    'next_payout_date': None, 'lock_period': inv.lock_period,
                     'unlock_date': inv.unlock_date.isoformat() if inv.unlock_date else None,
-                    'is_locked': inv.is_locked,
-                    'expected_return': float(inv.expected_return)
+                    'is_locked': inv.is_locked, 'expected_return': float(inv.expected_return)
                 })
-                
                 if inv.is_active and inv.is_locked and inv.lock_period > 0:
                     profit = float(inv.expected_return) - float(inv.amount)
                     daily = profit / inv.lock_period
                     expected_daily_earnings += daily
-        
         level1_refs = session_db.query(User).filter_by(referred_by=user.id).all()
         level1_count = len(level1_refs)
-        
         referral_earned = float((user.referral_earnings_all_time or 0) + (user.active_referral_bonus_earned or 0))
         investment_earnings = float(user.investment_earnings_all_time or 0)
         total_earnings = referral_earned + investment_earnings + float(user.total_ad_earnings or 0) + float(user.tasks_earnings or 0)
-        
         response = {
             'success': True,
             'balance': round(float(user.balance or 0), 3),
             'total_invested': round(float(user.total_invested or 0), 3),
             'total_deposited': round(float(user.total_deposited or 0), 3),
-            'fields': fields,
-            'referrals': level1_count,
+            'fields': fields, 'referrals': level1_count,
             'referral_earned': round(referral_earned, 3),
             'investment_earnings': round(investment_earnings, 3),
             'total_earnings': round(total_earnings, 3),
@@ -661,7 +461,6 @@ def get_user():
             'daily_ad_count': user.daily_ad_count or 0,
             'last_ad_reset': user.last_ad_reset.isoformat() if user.last_ad_reset else None
         }
-        
         set_cached_user(telegram_id, response)
         return jsonify(response)
     finally:
@@ -673,71 +472,30 @@ def get_real_history():
     telegram_id = sanitize_input(request.args.get('telegram_id', '0'))
     if telegram_id == '0':
         return jsonify({'success': False, 'message': 'User not found'}), 404
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         transactions = []
-        
         deposits = session_db.query(Deposit).filter_by(user_id=user.id).all()
         for d in deposits:
-            transactions.append({
-                'type': 'deposit',
-                'amount': round(float(d.amount), 3),
-                'status': 'completed',
-                'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')
-            })
-        
+            transactions.append({'type': 'deposit', 'amount': round(float(d.amount), 3), 'status': 'completed', 'date': d.confirmed_at.strftime('%Y-%m-%d %H:%M')})
         payouts = session_db.query(DailyPayout).filter_by(user_id=user.id).all()
         for p in payouts:
-            transactions.append({
-                'type': 'earnings',
-                'amount': round(float(p.amount), 3),
-                'status': 'completed',
-                'date': p.paid_at.strftime('%Y-%m-%d %H:%M')
-            })
-        
+            transactions.append({'type': 'earnings', 'amount': round(float(p.amount), 3), 'status': 'completed', 'date': p.paid_at.strftime('%Y-%m-%d %H:%M')})
         referral_earnings = user.referral_deposit_earnings or 0
         if referral_earnings > 0:
-            transactions.append({
-                'type': 'referral_earnings',
-                'amount': round(float(referral_earnings), 3),
-                'status': 'completed',
-                'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
-            })
-        
+            transactions.append({'type': 'referral_earnings', 'amount': round(float(referral_earnings), 3), 'status': 'completed', 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')})
         if user.total_ad_earnings and user.total_ad_earnings > 0:
-            transactions.append({
-                'type': 'ad_earnings',
-                'amount': round(float(user.total_ad_earnings), 3),
-                'status': 'completed',
-                'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
-            })
-        
+            transactions.append({'type': 'ad_earnings', 'amount': round(float(user.total_ad_earnings), 3), 'status': 'completed', 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')})
         if user.tasks_earnings and user.tasks_earnings > 0:
-            transactions.append({
-                'type': 'tasks_earnings',
-                'amount': round(float(user.tasks_earnings), 3),
-                'status': 'completed',
-                'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')
-            })
-        
+            transactions.append({'type': 'tasks_earnings', 'amount': round(float(user.tasks_earnings), 3), 'status': 'completed', 'date': datetime.utcnow().strftime('%Y-%m-%d %H:%M')})
         withdrawals = session_db.query(Withdrawal).filter_by(user_id=user.id).all()
         for w in withdrawals:
-            transactions.append({
-                'type': 'withdraw',
-                'amount': round(float(w.amount), 3),
-                'status': w.status,
-                'date': w.created_at.strftime('%Y-%m-%d %H:%M')
-            })
-        
+            transactions.append({'type': 'withdraw', 'amount': round(float(w.amount), 3), 'status': w.status, 'date': w.created_at.strftime('%Y-%m-%d %H:%M')})
         transactions.sort(key=lambda x: x['date'], reverse=True)
         return jsonify({'transactions': transactions})
     finally:
@@ -747,28 +505,22 @@ def get_real_history():
 @rate_limit
 def get_investments(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         investments = session_db.query(Investment).filter_by(user_id=user.id).all()
         transactions = []
         for inv in investments:
             transactions.append({
-                'type': 'investment',
-                'amount': round(float(inv.amount), 3),
+                'type': 'investment', 'amount': round(float(inv.amount), 3),
                 'status': 'active' if inv.is_active else 'completed',
                 'date': inv.start_date.strftime('%Y-%m-%d %H:%M'),
-                'field': inv.field_number,
-                'paid_out': round(float(inv.paid_out or 0), 3),
+                'field': inv.field_number, 'paid_out': round(float(inv.paid_out or 0), 3),
                 'total_return': round(float(inv.expected_return), 3)
             })
-        
         return jsonify({'transactions': transactions})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -782,46 +534,29 @@ def invest():
     telegram_id = sanitize_input(data.get('telegram_id'))
     field_number = data.get('field_number')
     amount = data.get('amount')
-    
     if not telegram_id or not field_number or not amount:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         if user.balance < amount:
             return jsonify({'success': False, 'message': 'Insufficient balance'}), 400
-        
         if amount < 5 or amount > 100:
             return jsonify({'success': False, 'message': 'Amount must be between $5 and $100'}), 400
-        
-        existing = session_db.query(Investment).filter_by(
-            user_id=user.id,
-            field_number=field_number,
-            is_active=True
-        ).first()
-        
+        existing = session_db.query(Investment).filter_by(user_id=user.id, field_number=field_number, is_active=True).first()
         if existing:
             return jsonify({'success': False, 'message': f'Field #{field_number} is already planted'}), 400
-        
         from config.settings import Config
         from datetime import datetime, timedelta
         total_return = amount * Config.DAILY_RATE * Config.INVESTMENT_DAYS
         now = datetime.utcnow()
-        
         investment = Investment(
-            user_id=user.id,
-            field_number=field_number,
-            amount=amount,
-            total_return=total_return,
-            end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
+            user_id=user.id, field_number=field_number, amount=amount,
+            total_return=total_return, end_date=now + timedelta(days=Config.INVESTMENT_DAYS),
             next_payout_date=now + timedelta(hours=24)
         )
         session_db.add(investment)
@@ -829,11 +564,7 @@ def invest():
         user.total_invested += amount
         session_db.commit()
         clear_user_cache(telegram_id)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Successfully invested ${amount} in Field #{field_number}'
-        })
+        return jsonify({'success': True, 'message': f'Successfully invested ${amount} in Field #{field_number}'})
     finally:
         session_db.close()
 
@@ -841,78 +572,49 @@ def invest():
 @rate_limit
 def invest_locked():
     from decimal import Decimal
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     field_number = data.get('field_number')
     amount = data.get('amount')
     lock_period = data.get('lock_period', 30)
-    
     if not telegram_id or not field_number or not amount or not lock_period:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     if lock_period not in [1, 7, 30]:
         return jsonify({'success': False, 'message': 'Lock period must be 1, 7, or 30 days'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         if user.balance < amount:
             return jsonify({'success': False, 'message': 'Insufficient balance'}), 400
-        
         if amount < 5 or amount > 100:
             return jsonify({'success': False, 'message': 'Amount must be between $5 and $100'}), 400
-        
-        existing = session_db.query(Investment).filter_by(
-            user_id=user.id,
-            field_number=field_number,
-            is_active=True
-        ).first()
-        
+        existing = session_db.query(Investment).filter_by(user_id=user.id, field_number=field_number, is_active=True).first()
         if existing:
             return jsonify({'success': False, 'message': f'Field #{field_number} is already active'}), 400
-        
         from datetime import datetime, timedelta
         now = datetime.utcnow()
-        
         multipliers = {1: 1.02, 7: 1.18, 30: 1.80}
         multiplier = multipliers.get(lock_period, 1.80)
         expected_return = amount * multiplier
         unlock_date = now + timedelta(days=lock_period)
-        
         investment = Investment(
-            user_id=user.id,
-            field_number=field_number,
-            amount=amount,
-            lock_period=lock_period,
-            unlock_date=unlock_date,
-            expected_return=expected_return,
-            start_date=now,
-            end_date=unlock_date,
-            is_active=True,
-            is_locked=True,
-            completed_at=None,
-            principal_returned=False
+            user_id=user.id, field_number=field_number, amount=amount,
+            lock_period=lock_period, unlock_date=unlock_date, expected_return=expected_return,
+            start_date=now, end_date=unlock_date, is_active=True, is_locked=True,
+            completed_at=None, principal_returned=False
         )
         session_db.add(investment)
-        
         user.balance -= Decimal(str(amount))
-        
         session_db.commit()
         clear_user_cache(telegram_id)
-        
         return jsonify({
             'success': True,
             'message': f'Successfully invested ${amount} in Field #{field_number} on Polygon network',
-            'lock_period': lock_period,
-            'expected_return': expected_return,
+            'lock_period': lock_period, 'expected_return': expected_return,
             'unlock_date': unlock_date.isoformat()
         })
     except Exception as e:
@@ -927,47 +629,30 @@ def invest_locked():
 def check_deposit_with_amount():
     telegram_id = sanitize_input(request.args.get('telegram_id'))
     expected_amount = request.args.get('expected_amount', type=float)
-    
     if not telegram_id or not expected_amount:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     try:
         from telegram import Bot
         bot = Bot(token=Config.BOT_TOKEN)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
         session_db = db.get_session()
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if user:
             session_db.query(PendingDepositCheck).filter_by(user_id=user.id).delete()
-            pending = PendingDepositCheck(
-                user_id=user.id,
-                amount=expected_amount
-            )
+            pending = PendingDepositCheck(user_id=user.id, amount=expected_amount)
             session_db.add(pending)
             session_db.commit()
         session_db.close()
-        
-        result = loop.run_until_complete(
-            deposit_scanner.check_deposit_with_amount(
-                int(telegram_id),
-                expected_amount,
-                bot
-            )
-        )
+        result = loop.run_until_complete(deposit_scanner.check_deposit_with_amount(int(telegram_id), expected_amount, bot))
         loop.close()
-        
         if result and result.get('success'):
             clear_user_cache(telegram_id)
             return jsonify(result)
         else:
             return jsonify({'success': False, 'message': 'No new deposit found. Please wait a few minutes and try again.'})
-            
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
@@ -981,152 +666,112 @@ def can_watch_ad():
 def credit_ad_reward():
     from decimal import Decimal
     from datetime import datetime
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
-    
     captcha_answer = data.get('captcha_answer')
     captcha_question = data.get('captcha_question')
-    
     if not captcha_answer or not captcha_question:
-        return jsonify({
-            'success': False, 
-            'message': 'Please solve the math question to earn ad reward.',
-            'need_captcha': True
-        }), 400
-    
+        return jsonify({'success': False, 'message': 'Please solve the math question to earn ad reward.', 'need_captcha': True}), 400
     try:
         expected_answer = int(captcha_answer)
     except ValueError:
-        return jsonify({
-            'success': False,
-            'message': 'Invalid captcha answer.',
-            'need_captcha': True
-        }), 400
-    
+        return jsonify({'success': False, 'message': 'Invalid captcha answer.', 'need_captcha': True}), 400
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         if user.flagged_for_anomaly:
+            return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
+
+        # ============================================
+        # FINGERPRINT ENFORCEMENT
+        # ============================================
+        if not user.device_fingerprint and (user.total_ads_watched or 0) >= 10:
+            user.flagged_for_anomaly = True
+            session_db.commit()
+            logger.warning(f"🚩 FLAGGED: user {user.telegram_id} has {user.total_ads_watched} ads but no device fingerprint — likely API farming")
             return jsonify({
                 'success': False,
-                'message': 'Your account has been flagged for suspicious activity. Please contact support.'
+                'message': 'Verification failed. Please reopen the Mini App from Telegram and try again.'
             }), 403
-        
+        # ============================================
+
         reset_daily_ad_count(user)
-        
         if user.daily_ad_count >= 100:
             ad_log = AdLog(
-                user_id=user.id,
-                watched_at=datetime.utcnow(),
-                reward=0,
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent', 'unknown'),
+                user_id=user.id, watched_at=datetime.utcnow(), reward=0,
+                ip_address=request.remote_addr, user_agent=request.headers.get('User-Agent', 'unknown'),
                 session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
             )
             session_db.add(ad_log)
             session_db.commit()
             return jsonify({
-                'success': True,
-                'reward': 0,
-                'balance': float(user.balance),
-                'daily_ad_count': user.daily_ad_count,
-                'daily_ad_limit': 100,
+                'success': True, 'reward': 0, 'balance': float(user.balance),
+                'daily_ad_count': user.daily_ad_count, 'daily_ad_limit': 100,
                 'limit_reached': True,
                 'message': 'You have reached the daily limit. No reward for this ad. Watch tomorrow!'
             }), 200
-        
         fingerprint = data.get('device_fingerprint', 'unknown')
         if fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
             user.flagged_for_anomaly = True
             session_db.commit()
             logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints")
-        
         if not user.device_fingerprint and fingerprint != 'unknown':
             user.device_fingerprint = fingerprint
-        
         reward = Decimal('0.001')
         old_balance = Decimal(user.balance or 0)
-        
         user.balance = (user.balance or Decimal('0')) + reward
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
         user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
-        
         ad_log = AdLog(
-            user_id=user.id,
-            watched_at=datetime.utcnow(),
-            reward=reward,
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent', 'unknown'),
+            user_id=user.id, watched_at=datetime.utcnow(), reward=reward,
+            ip_address=request.remote_addr, user_agent=request.headers.get('User-Agent', 'unknown'),
             session_id=request.headers.get('X-Telegram-WebApp-Session', 'unknown')
         )
         session_db.add(ad_log)
-        
         audit = AuditLog(
-            user_id=user.id,
-            action='ad_earnings',
-            field_changed='balance',
-            old_value=float(old_balance),
-            new_value=float(user.balance),
+            user_id=user.id, action='ad_earnings', field_changed='balance',
+            old_value=float(old_balance), new_value=float(user.balance),
             amount=float(reward),
             description=f'Ad reward #{user.total_ads_watched} (day {user.daily_ad_count}/100)',
-            source='ad_reward',
-            created_at=datetime.utcnow()
+            source='ad_reward', created_at=datetime.utcnow()
         )
         session_db.add(audit)
-        
-        # REFERRAL REWARD CREDIT LOGIC
         if user.referred_by:
             referrer = session_db.query(User).filter_by(id=user.referred_by).first()
-            if referrer:
-                if user.wallet_address and user.total_ads_watched >= 3:
-                    existing = session_db.query(AuditLog).filter(
-                        AuditLog.user_id == referrer.id,
-                        AuditLog.action == 'referral_reward',
-                        AuditLog.description.like(f'%{user.telegram_id}%')
-                    ).first()
-                    
-                    if not existing:
-                        referrer.balance = (referrer.balance or Decimal('0')) + Decimal('0.002')
-                        referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + Decimal('0.002')
-                        referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + Decimal('0.002')
-                        
-                        reward_audit = AuditLog(
-                            user_id=referrer.id,
-                            action='referral_reward',
-                            field_changed='balance',
-                            old_value=float(referrer.balance - Decimal('0.002')),
-                            new_value=float(referrer.balance),
-                            amount=0.002,
-                            description=f'Referral reward for {user.telegram_id} (wallet + 3 ads)',
-                            source='referral_reward',
-                            created_at=datetime.utcnow()
-                        )
-                        session_db.add(reward_audit)
-                        session_db.commit()
-                        logger.info(f"✅ Referral reward $0.002 credited to {referrer.telegram_id} for {user.telegram_id}")
-        
+            if referrer and user.wallet_address and user.total_ads_watched >= 3:
+                existing = session_db.query(AuditLog).filter(
+                    AuditLog.user_id == referrer.id,
+                    AuditLog.action == 'referral_reward',
+                    AuditLog.description.like(f'%{user.telegram_id}%')
+                ).first()
+                if not existing:
+                    referrer.balance = (referrer.balance or Decimal('0')) + Decimal('0.002')
+                    referrer.referral_earnings_all_time = (referrer.referral_earnings_all_time or Decimal('0')) + Decimal('0.002')
+                    referrer.total_earnings_all_time = (referrer.total_earnings_all_time or Decimal('0')) + Decimal('0.002')
+                    reward_audit = AuditLog(
+                        user_id=referrer.id, action='referral_reward', field_changed='balance',
+                        old_value=float(referrer.balance - Decimal('0.002')),
+                        new_value=float(referrer.balance), amount=0.002,
+                        description=f'Referral reward for {user.telegram_id} (wallet + 3 ads)',
+                        source='referral_reward', created_at=datetime.utcnow()
+                    )
+                    session_db.add(reward_audit)
+                    session_db.commit()
+                    logger.info(f"✅ Referral reward $0.002 credited to {referrer.telegram_id} for {user.telegram_id}")
         session_db.commit()
         clear_user_cache(telegram_id)
         return jsonify({
-            'success': True,
-            'reward': float(reward),
-            'balance': float(user.balance),
-            'daily_ad_count': user.daily_ad_count,
-            'daily_ad_limit': 100,
-            'limit_reached': False,
-            'total_ad_earnings': float(user.total_ad_earnings)
+            'success': True, 'reward': float(reward), 'balance': float(user.balance),
+            'daily_ad_count': user.daily_ad_count, 'daily_ad_limit': 100,
+            'limit_reached': False, 'total_ad_earnings': float(user.total_ad_earnings)
         })
     except Exception as e:
         session_db.rollback()
@@ -1139,85 +784,57 @@ def credit_ad_reward():
 @rate_limit
 def claim_investment():
     from decimal import Decimal
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     field_number = data.get('field_number')
-    
     if not telegram_id or not field_number:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         investment = session_db.query(Investment).filter_by(
-            user_id=user.id,
-            field_number=field_number,
-            is_active=True,
-            is_locked=True
+            user_id=user.id, field_number=field_number, is_active=True, is_locked=True
         ).first()
-        
         if not investment:
             return jsonify({'success': False, 'message': 'No locked investment found for this field'}), 404
-        
         now = datetime.utcnow()
         if investment.unlock_date > now:
             return jsonify({'success': False, 'message': 'Investment is not yet unlocked'}), 400
-        
         profit = Decimal(str(investment.expected_return)) - Decimal(str(investment.amount))
         amount_to_credit = Decimal(str(investment.expected_return))
         old_balance = Decimal(user.balance or 0)
-        
         investment.is_locked = False
         investment.is_active = False
         investment.is_completed = True
         investment.completed_at = now
         investment.principal_returned = True
-        
         user.balance = (user.balance or Decimal('0')) + amount_to_credit
         user.total_earned = (user.total_earned or Decimal('0')) + profit
         user.investment_earnings_all_time = (user.investment_earnings_all_time or Decimal('0')) + profit
         user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + profit
-        
         payout = DailyPayout(
-            user_id=user.id,
-            investment_id=investment.id,
-            amount=float(profit),
-            day_number=investment.lock_period,
-            paid_at=now
+            user_id=user.id, investment_id=investment.id, amount=float(profit),
+            day_number=investment.lock_period, paid_at=now
         )
         session_db.add(payout)
-        
         audit = AuditLog(
-            user_id=user.id,
-            action='investment_claim',
-            field_changed='balance',
-            old_value=float(old_balance),
-            new_value=float(user.balance),
+            user_id=user.id, action='investment_claim', field_changed='balance',
+            old_value=float(old_balance), new_value=float(user.balance),
             amount=float(amount_to_credit),
             description=f'Claimed Field #{field_number} ({investment.lock_period} days)',
-            source='investment',
-            created_at=datetime.utcnow()
+            source='investment', created_at=datetime.utcnow()
         )
         session_db.add(audit)
-        
         session_db.commit()
         clear_user_cache(telegram_id)
-        
         return jsonify({
-            'success': True,
-            'amount': float(amount_to_credit),
-            'profit': float(profit),
+            'success': True, 'amount': float(amount_to_credit), 'profit': float(profit),
             'message': f'Successfully claimed ${amount_to_credit:.2f} USDT from Field #{field_number}'
         })
-        
     except Exception as e:
         session_db.rollback()
         logger.error(f"Error claiming investment: {e}")
@@ -1229,15 +846,12 @@ def claim_investment():
 @rate_limit
 def total_withdrawn(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         total = session_db.query(func.sum(Withdrawal.amount)).filter_by(user_id=user.id, status='completed').scalar() or 0
         return jsonify({'success': True, 'total_withdrawn': float(total)})
     except Exception as e:
@@ -1249,33 +863,22 @@ def total_withdrawn(telegram_id):
 @rate_limit
 def get_referral_tiers():
     from services.referral import REFERRAL_TIERS
-    return jsonify({
-        'success': True,
-        'tiers': REFERRAL_TIERS
-    })
+    return jsonify({'success': True, 'tiers': REFERRAL_TIERS})
 
 @app.route('/api/referral_stats_full/<int:telegram_id>', methods=['GET'])
 @rate_limit
 def get_referral_stats_full(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         from services.referral import get_referral_stats, get_active_referral_list
         stats = get_referral_stats(user.id, session_db)
         active_list = get_active_referral_list(user.id, session_db)
-        
-        return jsonify({
-            'success': True,
-            'stats': stats,
-            'active_list': active_list
-        })
+        return jsonify({'success': True, 'stats': stats, 'active_list': active_list})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
@@ -1285,34 +888,22 @@ def get_referral_stats_full(telegram_id):
 @rate_limit
 def upgrade_tier():
     from services.referral import upgrade_referral_tier
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     tier = sanitize_input(data.get('tier'))
-    
     if not telegram_id or not tier:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         success, msg = upgrade_referral_tier(user.id, tier, session_db)
-        
         if success:
             clear_user_cache(telegram_id)
-            return jsonify({
-                'success': True,
-                'message': msg,
-                'new_tier': tier,
-                'new_balance': user.balance
-            })
+            return jsonify({'success': True, 'message': msg, 'new_tier': tier, 'new_balance': user.balance})
         else:
             return jsonify({'success': False, 'message': msg}), 400
     except Exception as e:
@@ -1326,52 +917,35 @@ def upgrade_tier():
 def disable_interstitial_ads():
     from decimal import Decimal
     from datetime import datetime
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
-    
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         if user.interstitial_ads_disabled:
             return jsonify({'success': False, 'message': 'Interstitial ads already disabled'}), 400
-        
         cost = Decimal('4')
         old_balance = Decimal(user.balance or 0)
-        
         if user.balance < cost:
             return jsonify({'success': False, 'message': f'Insufficient balance. Need $4.00 USDT (you have ${user.balance:.2f})'}), 400
-        
         user.balance = (user.balance or Decimal('0')) - cost
         user.interstitial_ads_disabled = True
         user.interstitial_disabled_at = datetime.utcnow()
-        
         audit = AuditLog(
-            user_id=user.id,
-            action='disable_ads',
-            field_changed='balance',
-            old_value=float(old_balance),
-            new_value=float(user.balance),
-            amount=float(cost),
-            description='Disabled interstitial ads',
-            source='user',
-            created_at=datetime.utcnow()
+            user_id=user.id, action='disable_ads', field_changed='balance',
+            old_value=float(old_balance), new_value=float(user.balance),
+            amount=float(cost), description='Disabled interstitial ads',
+            source='user', created_at=datetime.utcnow()
         )
         session_db.add(audit)
-        
         session_db.commit()
         clear_user_cache(telegram_id)
-        
         return jsonify({
             'success': True,
             'message': 'Interstitial ads disabled! You will no longer see ads on button clicks.',
@@ -1387,25 +961,19 @@ def disable_interstitial_ads():
 @rate_limit
 def get_active_referrals(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         from services.referral import get_active_referral_count, get_active_referral_list
         active_count = get_active_referral_count(user.id, session_db)
         active_list = get_active_referral_list(user.id, session_db)
         total_referrals = session_db.query(User).filter_by(referred_by=user.id).count()
-        
         return jsonify({
-            'success': True,
-            'active_count': active_count,
-            'total_referrals': total_referrals,
-            'active_list': active_list
+            'success': True, 'active_count': active_count,
+            'total_referrals': total_referrals, 'active_list': active_list
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -1416,32 +984,21 @@ def get_active_referrals(telegram_id):
 @rate_limit
 def claim_welcome_bonus():
     from services.referral import award_welcome_bonus
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
-    
     if not telegram_id:
         return jsonify({'success': False, 'message': 'Missing telegram_id'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         success, msg = award_welcome_bonus(user.id, session_db)
-        
         if success:
             clear_user_cache(telegram_id)
-            return jsonify({
-                'success': True,
-                'message': msg,
-                'new_balance': user.balance
-            })
+            return jsonify({'success': True, 'message': msg, 'new_balance': user.balance})
         else:
             return jsonify({'success': False, 'message': msg}), 400
     except Exception as e:
@@ -1454,21 +1011,16 @@ def claim_welcome_bonus():
 @rate_limit
 def get_tasks(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         from services.referral import get_user_tasks as get_referral_tasks
         tasks = get_referral_tasks(user.id, session_db)
-        
         return jsonify({
-            'success': True,
-            'tasks': tasks,
+            'success': True, 'tasks': tasks,
             'completed_count': sum(1 for task in tasks.values() if task['completed']),
             'total_count': len(tasks)
         })
@@ -1481,24 +1033,18 @@ def get_tasks(telegram_id):
 @rate_limit
 def api_get_tasks(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         completed = check_task_conditions(user, session_db)
         tasks = get_user_task_progress(user.id, session_db, include_hidden=False)
         stats = get_task_stats(user.id, session_db)
         user_stats = get_user_stats(user, session_db)
-        
         return jsonify({
-            'success': True,
-            'tasks': tasks,
-            'stats': stats,
+            'success': True, 'tasks': tasks, 'stats': stats,
             'user_stats': user_stats,
             'newly_completed': [t["id"] for t in completed]
         })
@@ -1511,33 +1057,22 @@ def api_get_tasks(telegram_id):
 @rate_limit
 def api_claim_task_reward():
     from decimal import Decimal
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     task_id = data.get('task_id')
-    
     if not telegram_id or not task_id:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         success, msg = claim_task_reward(user.id, task_id, session_db)
-        
         if success:
             clear_user_cache(telegram_id)
-            return jsonify({
-                'success': True,
-                'message': msg,
-                'new_balance': float(user.balance)
-            })
+            return jsonify({'success': True, 'message': msg, 'new_balance': float(user.balance)})
         else:
             return jsonify({'success': False, 'message': msg}), 400
     except Exception as e:
@@ -1550,20 +1085,14 @@ def api_claim_task_reward():
 @rate_limit
 def api_task_stats(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         stats = get_task_stats(user.id, session_db)
-        return jsonify({
-            'success': True,
-            'stats': stats
-        })
+        return jsonify({'success': True, 'stats': stats})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
@@ -1573,20 +1102,14 @@ def api_task_stats(telegram_id):
 @rate_limit
 def api_get_user_tasks(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         tasks = get_user_task_progress(user.id, session_db, include_hidden=False)
-        return jsonify({
-            'success': True,
-            'tasks': tasks
-        })
+        return jsonify({'success': True, 'tasks': tasks})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
@@ -1598,23 +1121,17 @@ def api_complete_task():
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     task_id = data.get('task_id')
-    
     if not telegram_id or not task_id:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         from services.task_manager import complete_task
         success, msg = complete_task(user.id, task_id, session_db)
-        
         if success:
             clear_user_cache(telegram_id)
             return jsonify({'success': True, 'message': msg})
@@ -1630,33 +1147,22 @@ def api_complete_task():
 @rate_limit
 def api_claim_task_reward_old():
     from decimal import Decimal
-    
     data = request.json
     telegram_id = sanitize_input(data.get('telegram_id'))
     task_id = data.get('task_id')
-    
     if not telegram_id or not task_id:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
     user, err_response, status = get_authenticated_user(telegram_id)
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=int(telegram_id)).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         success, msg = claim_task_reward(user.id, task_id, session_db)
-        
         if success:
             clear_user_cache(telegram_id)
-            return jsonify({
-                'success': True,
-                'message': msg,
-                'new_balance': float(user.balance)
-            })
+            return jsonify({'success': True, 'message': msg, 'new_balance': float(user.balance)})
         else:
             return jsonify({'success': False, 'message': msg}), 400
     except Exception as e:
@@ -1665,25 +1171,17 @@ def api_claim_task_reward_old():
     finally:
         session_db.close()
 
-# ============================================
-# REFERRAL PROGRESS ENDPOINT
-# ============================================
-
 @app.route('/api/get_referral_progress/<int:telegram_id>', methods=['GET'])
 @rate_limit
 def get_referral_progress(telegram_id):
     user, err_response, status = get_authenticated_user(str(telegram_id))
-    if err_response:
-        return err_response, status
-    
+    if err_response: return err_response, status
     session_db = db.get_session()
     try:
         user = session_db.query(User).filter_by(telegram_id=telegram_id).first()
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
-        
         referrals = session_db.query(User).filter_by(referred_by=user.id).all()
-        
         result = []
         for ref in referrals:
             reward_given = session_db.query(AuditLog).filter(
@@ -1691,27 +1189,17 @@ def get_referral_progress(telegram_id):
                 AuditLog.action == 'referral_reward',
                 AuditLog.description.like(f'%{ref.telegram_id}%')
             ).first() is not None
-            
             result.append({
                 'username': ref.username or ref.first_name or 'User',
                 'wallet_connected': bool(ref.wallet_address and ref.wallet_address != ''),
                 'ads_watched': ref.total_ads_watched or 0,
                 'reward_claimed': reward_given
             })
-        
-        return jsonify({
-            'success': True,
-            'referrals': result
-        })
-        
+        return jsonify({'success': True, 'referrals': result})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         session_db.close()
-
-# ============================================
-# SERVE STATIC FILES
-# ============================================
 
 @app.route('/deposit')
 def deposit_page():
