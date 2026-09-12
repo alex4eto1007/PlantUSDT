@@ -1222,7 +1222,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASKS — explicit per-category render
+// TASKS — all tasks visible (including claimed)
 // ============================================
 async function loadTasks() {
     if (window._isBanned) return;
@@ -1244,11 +1244,12 @@ async function loadTasks() {
             }
         }
 
-        const allTasks = data.tasks.filter(t => !t.claimed);
+        const allTasks = data.tasks.slice();
         const userStats = data.user_stats || {};
 
         function renderTask(task, hide) {
             const isCompleted = task.completed;
+            const isClaimed = task.claimed;
             const conditionValue = getTaskConditionValue(task.task_id);
             const currentValue = getTaskCurrentValue(task.task_id, userStats);
             let progressText = '';
@@ -1267,17 +1268,19 @@ async function loadTasks() {
                     progressPercent = 100;
                 }
             }
-            const statusBadge = isCompleted ? 'Claim Now!' : (progressText ? `⏳ ${progressText}` : '');
-            const statusColor = isCompleted ? '#00ff87' : '#495670';
+            const statusBadge = isClaimed ? '✅ Claimed' : (isCompleted ? 'Claim Now!' : (progressText ? `⏳ ${progressText}` : ''));
+            const statusColor = isClaimed ? '#00ff87' : (isCompleted ? '#00ff87' : '#495670');
             const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(2);
             const hideStyle = hide ? 'style="display:none;"' : '';
             let actionButton = '';
-            if (task.category === 'community' && !task.claimed) {
+            if (isClaimed) {
+                actionButton = '<span style="font-size:11px;color:#00ff87;font-weight:700;">✅</span>';
+            } else if (task.category === 'community') {
                 actionButton = `<button onclick="openCommunityLink(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00d4ff,#0088ff);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔗 Join</button>`;
-            } else if (isCompleted && !task.claimed) {
+            } else if (isCompleted) {
                 actionButton = `<button onclick="claimTaskReward(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;border-radius:6px;color:#0a0e17;font-weight:700;font-size:13px;cursor:pointer;">💰 Claim</button>`;
             }
-            return `<div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hideStyle}><div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted ? 'rgba(0,255,135,0.3)' : 'rgba(255,255,255,0.05)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;flex:1;"><div style="font-size:20px;">${task.icon || '📌'}</div><div style="flex:1;"><div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div><div style="font-size:12px;color:#8892b0;">${task.description}</div><div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>${!isCompleted && progressText ? `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;"></div></div>` : ''}</div></div><div style="text-align:right;"><div style="font-size:11px;color:${statusColor};">${statusBadge}</div>${actionButton}</div></div></div></div>`;
+            return `<div class="task-item" data-category="${task.category}" data-task-id="${task.task_id}" ${hideStyle}><div style="background:rgba(0,0,0,0.3);border:1px solid ${isCompleted && !isClaimed ? 'rgba(0,255,135,0.3)' : (isClaimed ? 'rgba(0,255,135,0.15)' : 'rgba(255,255,255,0.05)')};border-radius:10px;padding:12px 14px;margin-bottom:8px;opacity:${isClaimed ? '0.75' : '1'};"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;flex:1;"><div style="font-size:20px;">${task.icon || '📌'}</div><div style="flex:1;"><div style="font-weight:600;font-size:14px;color:${isCompleted ? '#00ff87' : '#ccd6f0'};">${task.title}</div><div style="font-size:12px;color:#8892b0;">${task.description}</div><div style="font-size:11px;color:#ffd93d;">💰 ${rewardDisplay} USDT</div>${!isCompleted && !isClaimed && progressText ? `<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);border-radius:2px;"></div></div>` : ''}</div></div><div style="text-align:right;"><div style="font-size:11px;color:${statusColor};">${statusBadge}</div>${actionButton}</div></div></div></div>`;
         }
 
         let html = '';
@@ -1294,7 +1297,7 @@ async function loadTasks() {
             if (cat === 'milestones') {
                 let shown = 0, hidden = 0;
                 items.forEach(t => {
-                    const shouldHide = !t.completed && shown >= 3;
+                    const shouldHide = !t.completed && !t.claimed && shown >= 3;
                     if (shouldHide) hidden++; else shown++;
                     html += renderTask(t, shouldHide);
                 });
@@ -1307,7 +1310,7 @@ async function loadTasks() {
         });
 
         if (allTasks.length === 0) {
-            html = `<div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);"><div style="font-size:48px;margin-bottom:10px;">🎉</div><div style="font-size:18px;font-weight:700;color:#00ff87;">All Tasks Completed!</div></div>`;
+            html = `<div style="text-align:center;padding:30px 20px;background:rgba(0,255,135,0.05);border-radius:12px;border:1px solid rgba(0,255,135,0.1);"><div style="font-size:48px;margin-bottom:10px;">🎉</div><div style="font-size:18px;font-weight:700;color:#00ff87;">No tasks available</div></div>`;
         }
         tasksEl.innerHTML = html;
 
@@ -1521,7 +1524,7 @@ window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 
-console.log('✅ PlantUSDT app loaded successfully (v77)');
+console.log('✅ PlantUSDT app loaded successfully (v78)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
@@ -1530,7 +1533,7 @@ console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
 console.log('♾️ Ads have no limits — watch as many as you like');
 console.log('📊 Ads stat shows Total Ads Watched (from API total_ads_watched)');
 console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
-console.log('📢 Tasks: explicit per-category render (investments, community, milestones)');
+console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
 console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
 console.log('📊 Task rewards display 2 decimals');
@@ -1539,5 +1542,5 @@ console.log('🔒 Duplicate wallet protection active');
 console.log('🎯 Math captcha accepts 0 as valid answer');
 console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
 console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');
-console.log('🔧 Community tasks render explicitly per category (bug fix)');
+console.log('✅ Claimed tasks now stay visible with ✅ tick (not hidden)');
 console.log('📈 total_ads_watched added to /api/user response');
