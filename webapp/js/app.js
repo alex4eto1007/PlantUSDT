@@ -1237,6 +1237,9 @@ async function disableInterstitialAds() {
     });
 }
 
+// ============================================
+// TASKS (fixed: community tasks always visible)
+// ============================================
 async function loadTasks() {
     if (window._isBanned) return;
     const userId = tgUser ? tgUser.id : '0';
@@ -1279,20 +1282,20 @@ async function loadTasks() {
                     }
                     categoryCounts[task.category] = (categoryCounts[task.category] || 0) + 1;
                     const currentCount = categoryCounts[task.category];
-                    if (currentCount === 4 && !isCompleted) {
-                        const hiddenCount = sortedTasks.filter(t => t.category === task.category && !t.claimed).length - 3;
+                    if (currentCount === 4 && !isCompleted && task.category === 'milestones') {
+                        const hiddenCount = sortedTasks.filter(t => t.category === 'milestones' && !t.claimed).length - 3;
                         if (hiddenCount > 0) {
-                            html += `<button onclick="showMoreTasks('${task.category}')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 More ${categories[task.category]?.label || task.category} tasks (${hiddenCount} remaining)...</button>`;
+                            html += `<button onclick="showMoreTasks('milestones')" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(130,71,229,0.1);border:1px solid rgba(130,71,229,0.2);border-radius:8px;color:#a29bfe;font-weight:600;font-size:13px;cursor:pointer;">📋 More Milestones (${hiddenCount} remaining)...</button>`;
                         }
                     }
-                    const hideTask = (currentCount > 3 && !isCompleted);
+                    const hideTask = (currentCount > 3 && !isCompleted && task.category === 'milestones');
                     const userStats = data.user_stats || {};
                     let progressText = '';
                     let progressPercent = 0;
                     const conditionValue = getTaskConditionValue(task.task_id);
                     const currentValue = getTaskCurrentValue(task.task_id, userStats);
                     if (task.category === 'community') {
-                        // Community tasks: handled manually
+                        // Manual
                     } else if (!isCompleted && conditionValue !== null && currentValue !== null) {
                         if (task.category === 'milestones') {
                             var displayValue = Math.min(currentValue, conditionValue);
@@ -1306,11 +1309,10 @@ async function loadTasks() {
                         progressText = `${displayMax}/${displayMax}`;
                         progressPercent = 100;
                     }
-                    const statusBadge = isCompleted ? (isClaimed ? '✅ Claimed' : 'Claim Now!') : (progressText ? `⏳ ${progressText}` : '⏳ Current Task Progress');
+                    const statusBadge = isCompleted ? (isClaimed ? '✅ Claimed' : 'Claim Now!') : (progressText ? `⏳ ${progressText}` : '');
                     const statusColor = isCompleted ? (isClaimed ? '#495670' : '#00ff87') : '#495670';
                     const rewardDisplay = task.reward < 0.01 ? '0.00' : Number(task.reward).toFixed(2);
                     const hiddenStyle = hideTask ? 'style="display:none;"' : '';
-                    // For community tasks: show Join button instead of Claim
                     let actionButton = '';
                     if (task.category === 'community' && !isClaimed) {
                         actionButton = `<button onclick="openCommunityLink(${task.task_id})" style="margin-top:4px;padding:6px 12px;background:linear-gradient(135deg,#00d4ff,#0088ff);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔗 Join</button>`;
@@ -1480,12 +1482,12 @@ async function loadReferralProgress() {
         const showMoreBtn = document.getElementById('showMoreReferralsBtn');
         if (!container) return;
         if (!data.success) {
-            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet.</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No eligible referrals yet.</td></tr>';
             return;
         }
         const referrals = data.referrals || [];
         if (referrals.length === 0) {
-            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No referrals yet. Share your link!</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:10px;color:#8892b0;">No eligible referrals yet.</td></tr>';
             return;
         }
         const showCount = referralListExpanded ? referrals.length : 5;
@@ -1553,19 +1555,17 @@ window.showBanScreen = showBanScreen;
 
 console.log('✅ PlantUSDT app loaded successfully (v74)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
-console.log('🎁 Referral reward: $0.005 when friend connects wallet + watches 3 ads');
+console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
 console.log('🔥 Active Referrals tracked silently for ambassador promotion');
 console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
-console.log('♾️ Ads have no limits now — watch as many as you like');
-console.log('📢 Community tasks added: Join Channel, Group, Transactions (0.02 each)');
+console.log('♾️ Ads have no limits — watch as many as you like');
+console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
 console.log('🚫 Ban system active — banned users see suspension notice');
 console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
 console.log('📊 Task rewards display 2 decimals');
 console.log('💳 Withdrawal fees: 15% / 18% / 20%');
 console.log('🔒 Duplicate wallet protection active');
 console.log('🎯 Math captcha accepts 0 as valid answer');
-console.log('💰 Pending referral rewards accumulate until claimed');
-console.log('📋 Referral progress table shows wallet + 3 ads status');
-console.log('🔄 Removed: active referrals display, giveaway timer, giveaway pool');
-console.log('🎨 UI cleaned: no more active referrals list, no more timer');
+console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
+console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');

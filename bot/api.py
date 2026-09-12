@@ -1149,6 +1149,9 @@ def api_claim_task_reward_old():
     finally:
         session_db.close()
 
+# ============================================
+# REFERRAL PROGRESS — ELIGIBLE ONLY
+# ============================================
 @app.route('/api/get_referral_progress/<int:telegram_id>', methods=['GET'])
 @rate_limit
 def get_referral_progress(telegram_id):
@@ -1162,6 +1165,12 @@ def get_referral_progress(telegram_id):
         referrals = session_db.query(User).filter_by(referred_by=user.id).all()
         result = []
         for ref in referrals:
+            # Only include referrals that have completed the requirements:
+            # wallet connected + 3+ ads watched
+            wallet_ok = bool(ref.wallet_address and ref.wallet_address != '')
+            ads_ok = (ref.total_ads_watched or 0) >= 3
+            if not (wallet_ok and ads_ok):
+                continue
             reward_given = session_db.query(AuditLog).filter(
                 AuditLog.user_id == user.id,
                 AuditLog.action == 'referral_reward',
@@ -1169,7 +1178,7 @@ def get_referral_progress(telegram_id):
             ).first() is not None
             result.append({
                 'username': ref.username or ref.first_name or 'User',
-                'wallet_connected': bool(ref.wallet_address and ref.wallet_address != ''),
+                'wallet_connected': wallet_ok,
                 'ads_watched': ref.total_ads_watched or 0,
                 'reward_claimed': reward_given
             })
