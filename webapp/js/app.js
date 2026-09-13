@@ -180,7 +180,16 @@ function navigateTo(page) {
     if (pages[page]) { showInterstitialIfNeeded(); window.location.href = pages[page]; }
 }
 
-function goBack() { window.history.back(); }
+// ============================================
+// GO BACK — FIXED (fallback to index.html)
+// ============================================
+function goBack() {
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.location.href = 'index.html';
+    }
+}
 
 // ============================================
 // CURRENCY SELECTION
@@ -1572,3 +1581,4 @@ console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');
 console.log('✅ Claimed tasks now stay visible with ✅ tick (not hidden)');
 console.log('📈 total_ads_watched added to /api/user response');
 console.log('🎁 ads_watched_this_cycle added for giveaway progress');
+console.log('🔙 goBack() fallback added — falls back to index.html if no history');
