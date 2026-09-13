@@ -379,7 +379,7 @@ def get_user():
             'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
             'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
             'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None,
-            'pending_referral_rewards': 0, 'total_ads_watched': 0
+            'pending_referral_rewards': 0, 'total_ads_watched': 0, 'ads_watched_this_cycle': 0
         })
     cached = get_cached_user(telegram_id)
     if cached: return jsonify(cached)
@@ -396,7 +396,7 @@ def get_user():
                 'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
                 'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
                 'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None,
-                'pending_referral_rewards': 0, 'total_ads_watched': 0
+                'pending_referral_rewards': 0, 'total_ads_watched': 0, 'ads_watched_this_cycle': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -444,6 +444,7 @@ def get_user():
             'expected_daily_earnings': round(expected_daily_earnings, 2),
             'last_withdrawal_at': user.last_withdrawal_at.isoformat() if user.last_withdrawal_at else None,
             'total_ads_watched': int(user.total_ads_watched or 0),
+            'ads_watched_this_cycle': int(user.ads_watched_this_cycle or 0),
             'daily_ad_count': user.daily_ad_count or 0,
             'last_ad_reset': user.last_ad_reset.isoformat() if user.last_ad_reset else None,
             'pending_referral_rewards': round(float(user.pending_referral_rewards or 0), 3)
@@ -690,6 +691,7 @@ def credit_ad_reward():
         reset_daily_ad_count(user)
         reward = Decimal('0')
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
+        user.ads_watched_this_cycle = (user.ads_watched_this_cycle or 0) + 1
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
         ad_log = AdLog(
             user_id=user.id, watched_at=datetime.utcnow(), reward=reward,

@@ -5,7 +5,9 @@ from services.investment import InvestmentService
 from services.deposit_scanner import DepositScanner
 from services.referral import check_missed_active_referrals
 from scripts.fix_missing_referral_rewards import fix_missing_referral_rewards
-from datetime import datetime
+from database.db_manager import DatabaseManager
+from database.models import User, GiveawayEntry
+from datetime import datetime, timedelta
 import logging
 import asyncio
 
@@ -16,6 +18,7 @@ class SchedulerService:
         self.scheduler = BackgroundScheduler()
         self.investment_service = InvestmentService()
         self.deposit_scanner = DepositScanner()
+        self.db = DatabaseManager()
 
     def start(self):
         self.scheduler.add_job(
@@ -46,7 +49,6 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # Daily check for missed active referrals at midnight UTC
         self.scheduler.add_job(
             self.check_missed_active_referrals,
             trigger=CronTrigger(hour=0, minute=0),
@@ -54,11 +56,17 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # ✅ NEW: Daily check for missing referral rewards at midnight UTC
         self.scheduler.add_job(
             self.check_missing_referral_rewards,
             trigger=CronTrigger(hour=0, minute=0),
             id='check_missing_referral_rewards',
+            replace_existing=True
+        )
+
+        self.scheduler.add_job(
+            self.snapshot_and_reset_giveaway,
+            trigger=CronTrigger(day_of_week='fri', hour=0, minute=0),
+            id='giveaway_weekly_reset',
             replace_existing=True
         )
 
@@ -67,6 +75,7 @@ class SchedulerService:
         logger.info("🔍 Polygon deposit scanner running every 5 minutes")
         logger.info("🔄 Active referral catch-up check scheduled daily at 00:00 UTC")
         logger.info("🎁 Referral rewards check scheduled daily at 00:00 UTC")
+        logger.info("🏆 Giveaway snapshot + reset scheduled every Friday at 00:00 UTC")
 
     async def process_locked_investments(self):
         try:
@@ -110,6 +119,34 @@ class SchedulerService:
             logger.info("✅ Referral rewards check completed")
         except Exception as e:
             logger.error(f"Error checking missing referral rewards: {e}")
+
+    def snapshot_and_reset_giveaway(self):
+        """Friday 00:00 UTC — snapshot eligible users, then reset the cycle counter."""
+        session = self.db.get_session()
+        try:
+            now = datetime.utcnow()
+            cycle_start = now - timedelta(days=7)
+            eligible = session.query(User).filter(User.ads_watched_this_cycle >= 150).all()
+
+            for u in eligible:
+                entry = GiveawayEntry(
+                    user_id=u.id,
+                    telegram_id=u.telegram_id,
+                    username=u.username,
+                    ads_watched=u.ads_watched_this_cycle,
+                    cycle_start=cycle_start,
+                    cycle_end=now
+                )
+                session.add(entry)
+
+            session.query(User).update({User.ads_watched_this_cycle: 0})
+            session.commit()
+            logger.info(f"🏆 Giveaway: snapshotted {len(eligible)} eligible users, reset cycle counter")
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error in giveaway snapshot: {e}")
+        finally:
+            session.close()
 
     def stop(self):
         self.scheduler.shutdown()

@@ -243,6 +243,7 @@ async function loadUserData(retries = 3) {
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
             updateClaimReferralButton(data);
+            updateGiveawayProgress(data);
             var loadingEl = document.getElementById('loadingMessage');
             var appContent = document.getElementById('appContent');
             if (loadingEl) loadingEl.style.display = 'none';
@@ -311,6 +312,28 @@ function updateDashboardUI(data) {
 function updateDailyEarnings(data) {
     var dailyEl = document.getElementById('dailyEarnings');
     if (dailyEl) dailyEl.textContent = '+$' + Number(data.expected_daily_earnings || 0).toFixed(2) + ' / day';
+}
+
+function updateGiveawayProgress(data) {
+    var cycleAds = Number(data.ads_watched_this_cycle || 0);
+    var progressBar = document.getElementById('giveawayProgressBar');
+    var progressText = document.getElementById('giveawayProgressText');
+    var statusEl = document.getElementById('giveawayStatus');
+    if (progressText) progressText.textContent = cycleAds + ' / 150';
+    if (progressBar) {
+        var pct = Math.min((cycleAds / 150) * 100, 100);
+        progressBar.style.width = pct + '%';
+        if (cycleAds >= 150) {
+            progressBar.style.background = 'linear-gradient(90deg,#00ff87,#00cc6a)';
+            if (statusEl) { statusEl.textContent = '✅ You are eligible for the next draw!'; statusEl.style.color = '#00ff87'; }
+        } else if (cycleAds >= 100) {
+            progressBar.style.background = 'linear-gradient(90deg,#ffd93d,#f9a825)';
+            if (statusEl) { statusEl.textContent = 'Keep watching — ' + (150 - cycleAds) + ' more to qualify'; statusEl.style.color = '#ffd93d'; }
+        } else {
+            progressBar.style.background = 'linear-gradient(90deg,#8247E5,#00ff87)';
+            if (statusEl) { statusEl.textContent = 'Watch 150 ads to qualify (' + (150 - cycleAds) + ' remaining)'; statusEl.style.color = '#8892b0'; }
+        }
+    }
 }
 
 function updateWelcomeBonusButton(data) {
@@ -1061,12 +1084,13 @@ async function watchRewardedAd() {
                 const data = await response.json();
                 if (data.success) {
                     loadAdStats();
+                    loadUserData();
                     safePopup({
                         title: '✅ Ad Watched!',
                         message: 'Thanks for supporting the community giveaway! 🎁\n\nYour ad helps fund the weekly prize pool. Winners announced every Friday.',
                         buttons: [{type: 'ok'}]
                     });
-                    setTimeout(() => { loadUserData(); loadTasks(); loadReferralProgress(); }, 2000);
+                    setTimeout(() => { loadTasks(); loadReferralProgress(); }, 2000);
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({ title: '🧮 Verification Required', message: data.message || 'Please solve the math question.', buttons: [{type: 'ok'}] });
@@ -1101,6 +1125,7 @@ async function loadAdStats() {
         if (adsTodayEl) adsTodayEl.textContent = String(totalAds);
         const watchBtn = document.getElementById('watchAdBtn');
         if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
+        updateGiveawayProgress(userData);
     } catch (error) {}
 }
 
@@ -1523,8 +1548,9 @@ window.toggleReferralList = toggleReferralList;
 window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
+window.updateGiveawayProgress = updateGiveawayProgress;
 
-console.log('✅ PlantUSDT app loaded successfully (v78)');
+console.log('✅ PlantUSDT app loaded successfully (v80)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
@@ -1532,6 +1558,7 @@ console.log('🔥 Active Referrals tracked silently for ambassador promotion');
 console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
 console.log('♾️ Ads have no limits — watch as many as you like');
 console.log('📊 Ads stat shows Total Ads Watched (from API total_ads_watched)');
+console.log('🎁 Giveaway progress bar: X / 150 ads this cycle');
 console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
 console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
@@ -1544,3 +1571,4 @@ console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)'
 console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');
 console.log('✅ Claimed tasks now stay visible with ✅ tick (not hidden)');
 console.log('📈 total_ads_watched added to /api/user response');
+console.log('🎁 ads_watched_this_cycle added for giveaway progress');

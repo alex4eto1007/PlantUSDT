@@ -32,6 +32,7 @@ class User(Base):
     ads_watched_today = Column(Integer, default=0)
     last_ad_date = Column(DateTime, nullable=True)
     total_ads_watched = Column(Integer, default=0)
+    ads_watched_this_cycle = Column(Integer, default=0)
     total_ad_earnings = Column(Numeric(20,6), default=0.0)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
@@ -249,3 +250,14 @@ class PendingDepositCheck(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     checked = Column(Boolean, default=False)
     user = relationship("User", back_populates="pending_deposit_checks")
+
+class GiveawayEntry(Base):
+    __tablename__ = "giveaway_entries"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    telegram_id = Column(BigInteger, nullable=False)
+    username = Column(String(100))
+    ads_watched = Column(Integer, nullable=False)
+    cycle_start = Column(DateTime, nullable=False)
+    cycle_end = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
