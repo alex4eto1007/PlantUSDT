@@ -147,12 +147,47 @@ function showInterstitialIfNeeded() {
 }
 
 // ============================================
+// TAB SWITCHING (bottom nav)
+// ============================================
+function switchTab(tab) {
+    try {
+        var sections = document.querySelectorAll('.tab-section');
+        var buttons = document.querySelectorAll('.nav-btn');
+        for (var i = 0; i < sections.length; i++) sections[i].classList.remove('active');
+        for (var j = 0; j < buttons.length; j++) buttons[j].classList.remove('active');
+        var section = document.getElementById('section-' + tab);
+        var btn = document.querySelector('.nav-btn[data-tab="' + tab + '"]');
+        if (section) section.classList.add('active');
+        if (btn) btn.classList.add('active');
+        try { localStorage.setItem('activeTab', tab); } catch (e) {}
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+    } catch (e) { console.error('switchTab error:', e); }
+}
+
+// ============================================
 // PAGE NAVIGATION
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     try {
         tg.ready();
         tg.expand();
+
+        // Wire up bottom nav
+        var navButtons = document.querySelectorAll('.nav-btn');
+        for (var n = 0; n < navButtons.length; n++) {
+            navButtons[n].addEventListener('click', function() {
+                switchTab(this.getAttribute('data-tab'));
+            });
+        }
+
+        // Restore last tab or default to home
+        var startTab = 'home';
+        try {
+            var saved = localStorage.getItem('activeTab');
+            if (saved && document.getElementById('section-' + saved)) startTab = saved;
+        } catch (e) {}
+        switchTab(startTab);
+
         function initializeApp() {
             if (tgUser) {
                 loadUserData();
@@ -171,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window._isBanned) return;
         var target = e.target.closest('button');
         if (!target) return;
-        if (target.classList.contains('back-btn') || target.classList.contains('no-ad') || target.id === 'watchAdBtn' || target.classList.contains('currency-btn')) return;
+        if (target.classList.contains('back-btn') || target.classList.contains('no-ad') || target.id === 'watchAdBtn' || target.classList.contains('currency-btn') || target.classList.contains('nav-btn')) return;
         if (target.type === 'submit' && target.closest('#withdrawForm')) return;
         showInterstitialIfNeeded();
     });
@@ -1621,8 +1656,10 @@ window.showBanScreen = showBanScreen;
 window.updateGiveawayProgress = updateGiveawayProgress;
 window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
+window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v83)');
+console.log('✅ PlantUSDT app loaded successfully (v84)');
+console.log('📱 Bottom nav active: 5 tabs (Home / Tasks / Giveaway / Referrals / Profile)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
