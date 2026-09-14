@@ -181,7 +181,7 @@ function navigateTo(page) {
 }
 
 // ============================================
-// GO BACK — FIXED (fallback to index.html)
+// GO BACK — fallback to index.html if no history
 // ============================================
 function goBack() {
     if (window.history.length > 1) {
@@ -323,24 +323,44 @@ function updateDailyEarnings(data) {
     if (dailyEl) dailyEl.textContent = '+$' + Number(data.expected_daily_earnings || 0).toFixed(2) + ' / day';
 }
 
+// ============================================
+// GIVEAWAY PROGRESS — clean gold when qualified
+// ============================================
 function updateGiveawayProgress(data) {
     var cycleAds = Number(data.ads_watched_this_cycle || 0);
     var progressBar = document.getElementById('giveawayProgressBar');
     var progressText = document.getElementById('giveawayProgressText');
     var statusEl = document.getElementById('giveawayStatus');
-    if (progressText) progressText.textContent = cycleAds + ' / 150';
-    if (progressBar) {
-        var pct = Math.min((cycleAds / 150) * 100, 100);
-        progressBar.style.width = pct + '%';
-        if (cycleAds >= 150) {
-            progressBar.style.background = 'linear-gradient(90deg,#00ff87,#00cc6a)';
-            if (statusEl) { statusEl.textContent = '✅ You are eligible for the next draw!'; statusEl.style.color = '#00ff87'; }
-        } else if (cycleAds >= 100) {
+    var subEl = document.getElementById('giveawaySubtext');
+
+    if (cycleAds >= 150) {
+        if (progressText) progressText.textContent = '150 / 150';
+        if (progressBar) {
+            progressBar.style.width = '100%';
             progressBar.style.background = 'linear-gradient(90deg,#ffd93d,#f9a825)';
-            if (statusEl) { statusEl.textContent = 'Keep watching — ' + (150 - cycleAds) + ' more to qualify'; statusEl.style.color = '#ffd93d'; }
-        } else {
+        }
+        if (statusEl) {
+            statusEl.textContent = '🏆 QUALIFIED FOR THIS WEEK\'S DRAW';
+            statusEl.style.color = '#ffd93d';
+            statusEl.style.fontWeight = '700';
+        }
+        if (subEl) {
+            subEl.textContent = 'Winners picked Friday 00:00 UTC';
+        }
+    } else {
+        var pct = Math.min((cycleAds / 150) * 100, 100);
+        if (progressText) progressText.textContent = cycleAds + ' / 150';
+        if (progressBar) {
+            progressBar.style.width = pct + '%';
             progressBar.style.background = 'linear-gradient(90deg,#8247E5,#00ff87)';
-            if (statusEl) { statusEl.textContent = 'Watch 150 ads to qualify (' + (150 - cycleAds) + ' remaining)'; statusEl.style.color = '#8892b0'; }
+        }
+        if (statusEl) {
+            statusEl.textContent = 'Watch 150 ads to qualify (' + (150 - cycleAds) + ' remaining)';
+            statusEl.style.color = '#8892b0';
+            statusEl.style.fontWeight = '400';
+        }
+        if (subEl) {
+            subEl.textContent = '';
         }
     }
 }
@@ -1559,7 +1579,7 @@ window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 window.updateGiveawayProgress = updateGiveawayProgress;
 
-console.log('✅ PlantUSDT app loaded successfully (v80)');
+console.log('✅ PlantUSDT app loaded successfully (v82)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
@@ -1568,6 +1588,8 @@ console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
 console.log('♾️ Ads have no limits — watch as many as you like');
 console.log('📊 Ads stat shows Total Ads Watched (from API total_ads_watched)');
 console.log('🎁 Giveaway progress bar: X / 150 ads this cycle');
+console.log('🏆 Gold bar + QUALIFIED badge when 150+ ads watched');
+console.log('📅 Subtext shows "Winners picked Friday 00:00 UTC" when qualified');
 console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
 console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
