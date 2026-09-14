@@ -6,9 +6,9 @@ Usage:
   python manual_credit.py <user_id> <amount> <type> [tx_hash] [description]
 
 Types:
-  - reward: Bonus/giveaway (balance only)
-  - compensation: Goodwill compensation (balance only)  
-  - deposit: Missed deposit (full deposit flow)
+  - reward:       Bonus/giveaway (balance only)
+  - compensation: Goodwill compensation (balance only)
+  - deposit:      Missed deposit (balance + total_deposited + audit record)
 
 Examples:
   python manual_credit.py 7736953092 0.50 reward "Bug bounty reward"
@@ -18,18 +18,17 @@ Examples:
 
 import sys
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 
-# Add project root to path
 sys.path.insert(0, '/root/PlantUSDT')
 
 from config.settings import Config
 from database.db_manager import DatabaseManager
-from database.models import User, AuditLog, Investment, Deposit, UserTaskProgress
-from services.task_system import check_task_conditions
+from database.models import User, AuditLog, Deposit
 
 db = DatabaseManager()
+
 
 def print_usage():
     print("""
@@ -39,9 +38,9 @@ Usage:
   python manual_credit.py <user_id> <amount> <type> [tx_hash] [description]
 
 Types:
-  - reward: Bonus/giveaway (balance only)
+  - reward:       Bonus/giveaway (balance only)
   - compensation: Goodwill compensation (balance only)
-  - deposit: Missed deposit (full deposit flow)
+  - deposit:      Missed deposit (balance + total_deposited + audit record)
 
 Examples:
   python manual_credit.py 7736953092 0.50 reward "Bug bounty reward"
@@ -49,11 +48,13 @@ Examples:
   python manual_credit.py 7736953092 5.00 deposit 0xea6b284c... "Missed deposit"
 """)
 
+
 def main():
     if len(sys.argv) < 4:
         print_usage()
         sys.exit(1)
 
+    session = None
     try:
         user_id = int(sys.argv[1])
         amount = Decimal(str(sys.argv[2]))
@@ -114,10 +115,10 @@ def main():
         session.add(audit)
 
         if credit_type == "deposit":
-            # Update total_deposited
+            # Update total_deposited only — no investment, no total_invested change
             user.total_deposited = (user.total_deposited or Decimal('0')) + amount
 
-            # Create deposit record
+            # Create deposit record (so history shows it)
             deposit = Deposit(
                 user_id=user.id,
                 amount=float(amount),
@@ -129,79 +130,44 @@ def main():
                 network='polygon'
             )
             session.add(deposit)
-
-            # If amount >= $5, create investment
-            if amount >= 5:
-                user.total_invested = (user.total_invested or Decimal('0')) + amount
-
-                now = datetime.now(timezone.utc)
-                unlock_date = now + timedelta(days=30)
-
-                investment = Investment(
-                    user_id=user.id,
-                    field_number=1,
-                    amount=float(amount),
-                    lock_period=30,
-                    unlock_date=unlock_date,
-                    expected_return=float(amount * 1.80),
-                    start_date=now,
-                    end_date=unlock_date,
-                    is_active=True,
-                    is_locked=True,
-                    completed_at=None,
-                    principal_returned=False
-                )
-                session.add(investment)
-                print(f"✅ Investment created: ${amount:.2f} locked for 30 days")
-
-            # Initialize missing tasks
-            task_ids = [1, 2, 3, 4, 5, 6, 7, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
-            created_count = 0
-            for task_id in task_ids:
-                existing = session.query(UserTaskProgress).filter_by(
-                    user_id=user.id,
-                    task_id=task_id
-                ).first()
-                if not existing:
-                    task = UserTaskProgress(
-                        user_id=user.id,
-                        task_id=task_id,
-                        completed=False,
-                        claimed=False
-                    )
-                    session.add(task)
-                    created_count += 1
-
-            if created_count > 0:
-                print(f"✅ {created_count} tasks initialized")
-
             session.commit()
-
-            # Trigger task system
-            print("🔄 Checking tasks...")
-            check_task_conditions(user, session)
-            print("✅ Tasks checked")
 
             print(f"\n✅ Deposit processed successfully!")
             print(f"📊 New balance: ${new_balance:.2f}")
-            print(f"📊 Total invested: ${user.total_invested:.2f}")
             print(f"📊 Total deposited: ${user.total_deposited:.2f}")
+            print(f"📊 Total invested (unchanged): ${user.total_invested or 0:.2f}")
 
         else:
-            # Reward or compensation — just balance
+            # Reward or compensation — balance only
             session.commit()
             print(f"\n✅ {credit_type.capitalize()} credited successfully!")
             print(f"📊 New balance: ${new_balance:.2f}")
 
-        session.close()
-
     except ValueError as e:
         print(f"❌ Invalid input: {e}")
         print_usage()
+        if session:
+            session.rollback()
+            session.close()
         sys.exit(1)
     except Exception as e:
         print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        if session:
+            try:
+                session.rollback()
+                session.close()
+            except Exception:
+                pass
         sys.exit(1)
+    finally:
+        if session:
+            try:
+                session.close()
+            except Exception:
+                pass
+
 
 if __name__ == "__main__":
     main()
