@@ -172,6 +172,7 @@ function switchTab(tab) {
             console.warn('⚠️ switchTab: no nav button found for tab "' + tab + '"');
         }
 
+        // Keep writing localStorage for potential future use — not read on startup
         try { localStorage.setItem('activeTab', tab); } catch (e) {}
         // Only scroll to top if we've scrolled past the header
         try { if (window.scrollY > 50) window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
@@ -194,15 +195,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Restore last tab or default to home — only on tabbed pages
+        // Always start on Home tab — only on tabbed pages (no localStorage restore)
         var hasBottomNav = document.getElementById('bottomNav') !== null;
         if (hasBottomNav) {
-            var startTab = 'home';
-            try {
-                var saved = localStorage.getItem('activeTab');
-                if (saved && document.getElementById('section-' + saved)) startTab = saved;
-            } catch (e) {}
-            switchTab(startTab);
+            switchTab('home');
         }
 
         function initializeApp() {
@@ -1675,8 +1671,9 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v88)');
-console.log('🔇 switchTab silent on non-tabbed pages (deposit/withdraw/history/invest)');
+console.log('✅ PlantUSDT app loaded successfully (v89)');
+console.log('🏠 Always starts on Home tab (no restore of last tab)');
+console.log('🔇 switchTab silent on non-tabbed pages');
 console.log('🛡️ Safety fallback active — if app.js fails, all sections show');
 console.log('📱 Bottom nav active: 5 tabs (Home / Tasks / Giveaway / Referrals / Profile)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
