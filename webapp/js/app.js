@@ -9,6 +9,7 @@ const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
 let timerInterval = null;
+let giveawayTimerInterval = null;
 let lastAdTime = 0;
 const AD_COOLDOWN = 5000;
 let interstitialAdsDisabled = false;
@@ -28,6 +29,7 @@ function showBanScreen(reason) {
     window._isBanned = true;
     try {
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        if (giveawayTimerInterval) { clearInterval(giveawayTimerInterval); giveawayTimerInterval = null; }
     } catch (e) {}
     var ids = ['appContent','loadingMessage','fieldsContainer','dashboardStats','historyList'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
@@ -157,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadSavedWallet();
                 setupEventListeners();
                 startCountdownTimer();
+                startGiveawayTimer();
                 loadAdStats();
                 loadTasks();
                 loadReferralProgress();
@@ -324,14 +327,52 @@ function updateDailyEarnings(data) {
 }
 
 // ============================================
-// GIVEAWAY PROGRESS — clean gold when qualified
+// GIVEAWAY PROGRESS + RESET TIMER
 // ============================================
+function getNextFridayUTC() {
+    const now = new Date();
+    const utcDay = now.getUTCDay();
+    let daysUntilFri = (5 - utcDay + 7) % 7;
+    if (daysUntilFri === 0) daysUntilFri = 7;
+    return Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + daysUntilFri,
+        0, 0, 0, 0
+    );
+}
+
+function formatGiveawayCountdown(ms) {
+    if (ms < 0) ms = 0;
+    const totalSec = Math.floor(ms / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const pad = function(n) { return String(n).padStart(2, '0'); };
+    if (d > 0) return d + 'd ' + pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's';
+    return pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's';
+}
+
+function tickGiveawayTimer() {
+    const el = document.getElementById('giveawayResetTimer');
+    if (!el) return;
+    const diff = getNextFridayUTC() - Date.now();
+    el.textContent = '⏳ Resets in ' + formatGiveawayCountdown(diff);
+}
+
+function startGiveawayTimer() {
+    if (giveawayTimerInterval) clearInterval(giveawayTimerInterval);
+    tickGiveawayTimer();
+    giveawayTimerInterval = setInterval(tickGiveawayTimer, 1000);
+}
+
 function updateGiveawayProgress(data) {
     var cycleAds = Number(data.ads_watched_this_cycle || 0);
     var progressBar = document.getElementById('giveawayProgressBar');
     var progressText = document.getElementById('giveawayProgressText');
     var statusEl = document.getElementById('giveawayStatus');
-    var subEl = document.getElementById('giveawaySubtext');
+    var timerEl = document.getElementById('giveawayResetTimer');
 
     if (cycleAds >= 150) {
         if (progressText) progressText.textContent = '150 / 150';
@@ -344,8 +385,8 @@ function updateGiveawayProgress(data) {
             statusEl.style.color = '#ffd93d';
             statusEl.style.fontWeight = '700';
         }
-        if (subEl) {
-            subEl.textContent = 'Winners picked Friday 00:00 UTC';
+        if (timerEl) {
+            timerEl.style.color = '#ffd93d';
         }
     } else {
         var pct = Math.min((cycleAds / 150) * 100, 100);
@@ -359,8 +400,8 @@ function updateGiveawayProgress(data) {
             statusEl.style.color = '#8892b0';
             statusEl.style.fontWeight = '400';
         }
-        if (subEl) {
-            subEl.textContent = '';
+        if (timerEl) {
+            timerEl.style.color = '#8892b0';
         }
     }
 }
@@ -1578,8 +1619,10 @@ window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
 window.updateGiveawayProgress = updateGiveawayProgress;
+window.startGiveawayTimer = startGiveawayTimer;
+window.tickGiveawayTimer = tickGiveawayTimer;
 
-console.log('✅ PlantUSDT app loaded successfully (v82)');
+console.log('✅ PlantUSDT app loaded successfully (v83)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
@@ -1589,7 +1632,8 @@ console.log('♾️ Ads have no limits — watch as many as you like');
 console.log('📊 Ads stat shows Total Ads Watched (from API total_ads_watched)');
 console.log('🎁 Giveaway progress bar: X / 150 ads this cycle');
 console.log('🏆 Gold bar + QUALIFIED badge when 150+ ads watched');
-console.log('📅 Subtext shows "Winners picked Friday 00:00 UTC" when qualified');
+console.log('⏳ Live countdown timer shows time until next Friday 00:00 UTC');
+console.log('📅 Timer auto-updates every second via setInterval');
 console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
 console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
