@@ -10,7 +10,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <title>🌱 PlantUSDT</title>
-    <link rel="stylesheet" href="css/style.css?v=49">
+    <link rel="stylesheet" href="css/style.css?v=50">
     <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js" crossorigin="anonymous"></script>
 </head>
@@ -114,6 +114,11 @@
                 <button class="action-btn" onclick="navigateTo('withdraw')" style="background:linear-gradient(135deg,#00ff87,#00cc6a)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">🏦</span> Withdraw</button>
                 <button class="action-btn" onclick="navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;"><span class="btn-icon">📊</span> Dashboard</button>
             </div>
+
+            <div class="tab-footer">
+                <p>🔒 Powered by Polygon Blockchain</p>
+                <p>© 2026 PlantUSDT. All rights reserved.</p>
+            </div>
         </div>
 
         <!-- ============================================== -->
@@ -125,6 +130,11 @@
                 <span id="taskProgress" style="font-size:13px;color:#8892b0;">0/35 tasks completed</span>
             </div>
             <div id="tasksList"></div>
+
+            <div class="tab-footer">
+                <p>🔒 Powered by Polygon Blockchain</p>
+                <p>© 2026 PlantUSDT. All rights reserved.</p>
+            </div>
         </div>
 
         <!-- ============================================== -->
@@ -185,6 +195,11 @@
                 <p style="font-size:10px;color:#495670;margin-top:4px;text-align:center;">
                     One-time payment. You'll still be able to watch rewarded ads.
                 </p>
+            </div>
+
+            <div class="tab-footer">
+                <p>🔒 Powered by Polygon Blockchain</p>
+                <p>© 2026 PlantUSDT. All rights reserved.</p>
             </div>
         </div>
 
@@ -292,6 +307,11 @@
 
                 <div id="upgradeResult" style="margin-top: 10px; display: none; padding: 10px; border-radius: 6px;"></div>
             </div>
+
+            <div class="tab-footer">
+                <p>🔒 Powered by Polygon Blockchain</p>
+                <p>© 2026 PlantUSDT. All rights reserved.</p>
+            </div>
         </div>
 
         <!-- ============================================== -->
@@ -300,6 +320,17 @@
         <div class="tab-section" id="section-profile">
             <div class="section-header-tab">
                 <h2>📊 Profile & Info</h2>
+            </div>
+
+            <div class="profile-big-actions">
+                <button class="action-btn-big" onclick="navigateTo('dashboard')">
+                    <span class="btn-icon-big">📊</span>
+                    <span class="btn-label-big">Dashboard</span>
+                </button>
+                <button class="action-btn-big" onclick="navigateTo('history')">
+                    <span class="btn-icon-big">📜</span>
+                    <span class="btn-label-big">History</span>
+                </button>
             </div>
 
             <div class="info-card">
@@ -316,16 +347,7 @@
                 <p style="color:#8247E5;margin-top:8px;font-weight:500;">⛓️ Powered by Polygon Network</p>
             </div>
 
-            <div class="actions-grid">
-                <button class="action-btn" onclick="navigateTo('dashboard')" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;">
-                    <span class="btn-icon">📊</span> Dashboard
-                </button>
-                <button class="action-btn" onclick="navigateTo('history')" style="background:linear-gradient(135deg,#a29bfe,#6c5ce7)!important;color:#fff!important;border:none;padding:16px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;">
-                    <span class="btn-icon">📜</span> History
-                </button>
-            </div>
-
-            <div class="footer" style="margin-top: 20px;">
+            <div class="tab-footer">
                 <p>🔒 Powered by Polygon Blockchain</p>
                 <p>© 2026 PlantUSDT. All rights reserved.</p>
             </div>
@@ -396,6 +418,6 @@
         window.AD_REWARD = AD_REWARD;
     </script>
 
-    <script src="js/app.js?v=84"></script>
+    <script src="js/app.js?v=85"></script>
 </body>
 </html>
