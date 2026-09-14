@@ -147,26 +147,31 @@ function showInterstitialIfNeeded() {
 }
 
 // ============================================
-// TAB SWITCHING (bottom nav)
+// TAB SWITCHING (bottom nav) — silent on non-tabbed pages
 // ============================================
 function switchTab(tab) {
     try {
+        var hasNav = document.getElementById('bottomNav') !== null;
         var sections = document.querySelectorAll('.tab-section');
         var buttons = document.querySelectorAll('.nav-btn');
         for (var i = 0; i < sections.length; i++) sections[i].classList.remove('active');
         for (var j = 0; j < buttons.length; j++) buttons[j].classList.remove('active');
+
         var section = document.getElementById('section-' + tab);
         var btn = document.querySelector('.nav-btn[data-tab="' + tab + '"]');
-        if (!section) {
-            console.warn('⚠️ switchTab: no section found for tab "' + tab + '" (missing id="section-' + tab + '")');
-        } else {
+
+        if (section) {
             section.classList.add('active');
+        } else if (hasNav) {
+            console.warn('⚠️ switchTab: no section found for tab "' + tab + '"');
         }
-        if (!btn) {
-            console.warn('⚠️ switchTab: no nav button found for tab "' + tab + '"');
-        } else {
+
+        if (btn) {
             btn.classList.add('active');
+        } else if (hasNav) {
+            console.warn('⚠️ switchTab: no nav button found for tab "' + tab + '"');
         }
+
         try { localStorage.setItem('activeTab', tab); } catch (e) {}
         // Only scroll to top if we've scrolled past the header
         try { if (window.scrollY > 50) window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
@@ -181,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.ready();
         tg.expand();
 
-        // Wire up bottom nav
+        // Wire up bottom nav (only present on index.html)
         var navButtons = document.querySelectorAll('.nav-btn');
         for (var n = 0; n < navButtons.length; n++) {
             navButtons[n].addEventListener('click', function() {
@@ -189,13 +194,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Restore last tab or default to home
-        var startTab = 'home';
-        try {
-            var saved = localStorage.getItem('activeTab');
-            if (saved && document.getElementById('section-' + saved)) startTab = saved;
-        } catch (e) {}
-        switchTab(startTab);
+        // Restore last tab or default to home — only on tabbed pages
+        var hasBottomNav = document.getElementById('bottomNav') !== null;
+        if (hasBottomNav) {
+            var startTab = 'home';
+            try {
+                var saved = localStorage.getItem('activeTab');
+                if (saved && document.getElementById('section-' + saved)) startTab = saved;
+            } catch (e) {}
+            switchTab(startTab);
+        }
 
         function initializeApp() {
             if (tgUser) {
@@ -1667,7 +1675,8 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v86)');
+console.log('✅ PlantUSDT app loaded successfully (v88)');
+console.log('🔇 switchTab silent on non-tabbed pages (deposit/withdraw/history/invest)');
 console.log('🛡️ Safety fallback active — if app.js fails, all sections show');
 console.log('📱 Bottom nav active: 5 tabs (Home / Tasks / Giveaway / Referrals / Profile)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
