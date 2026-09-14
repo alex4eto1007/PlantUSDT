@@ -56,6 +56,27 @@ PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76'
 # ============================================
 CHANNEL_ID = -1004391112772
 
+# ============================================
+# NETWORK DETECTION HELPERS
+# ============================================
+def detect_network_label(wallet_address, stored_network=None):
+    """
+    Determine withdrawal network label.
+    Prefers stored_network (new withdrawals have it), falls back to address heuristics.
+    """
+    if stored_network:
+        mapping = {
+            'polygon': '🟣 USDT (Polygon)',
+            'bep20': '🟡 USDT (BEP20 / BNB Chain)',
+            'gram': '💎 GRAM (TON)',
+        }
+        return mapping.get(stored_network, f'🟣 USDT ({stored_network})')
+
+    # Fallback for legacy rows without network set
+    if wallet_address and (wallet_address.startswith('UQ') or wallet_address.startswith('EQ')):
+        return '💎 GRAM (TON)'
+    return '🟣 USDT (Polygon)'
+
 async def send_to_channel(bot, message: str):
     try:
         await bot.send_message(
@@ -203,11 +224,12 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await query.edit_message_text(
             f"🏦 **Withdraw**\n\n"
-            f"Withdraw your earnings on Polygon or TON 🟣💎\n\n"
+            f"Withdraw your earnings on Polygon, BNB Chain, or TON 🟣🟡💎\n\n"
             f"💰 Your balance: **${user_data.balance:.2f}**\n"
             f"💸 Min withdrawal: $1.00\n\n"
             f"**Networks:**\n"
             f"🟣 USDT (Polygon)\n"
+            f"🟡 USDT (BEP20 / BNB Chain)\n"
             f"💎 GRAM (TON)\n\n"
             f"**Fee structure:**\n"
             f"• $1 — $49.99 → 15% fee\n"
@@ -480,10 +502,8 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for w in pending_w:
         user_obj = db.get_user_by_id(w.user_id)
         username = user_obj.username if user_obj else "Unknown"
-        
-        is_gram = w.wallet_address and (w.wallet_address.startswith('UQ') or w.wallet_address.startswith('EQ'))
-        currency_label = "💎 GRAM (TON)" if is_gram else "🟣 USDT (Polygon)"
-        
+        currency_label = detect_network_label(w.wallet_address, w.network)
+
         text += f"ID: {w.id}\n"
         text += f"👤 User: @{username}\n"
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
@@ -536,8 +556,19 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Withdrawal {withdrawal_id} is already {withdrawal.status}.")
         return
 
-    is_gram = withdrawal.wallet_address and (withdrawal.wallet_address.startswith('UQ') or withdrawal.wallet_address.startswith('EQ'))
-    currency_label = "GRAM (TON)" if is_gram else "USDT (Polygon)"
+    currency_label = detect_network_label(withdrawal.wallet_address, withdrawal.network)
+
+    # Determine explorer URL by network
+    network = withdrawal.network or ('gram' if (withdrawal.wallet_address and (withdrawal.wallet_address.startswith('UQ') or withdrawal.wallet_address.startswith('EQ'))) else 'polygon')
+    if network == 'bep20':
+        explorer_url = f"https://bscscan.com/tx/{tx_hash}"
+        explorer_name = "BscScan"
+    elif network == 'gram':
+        explorer_url = None
+        explorer_name = None
+    else:
+        explorer_url = f"https://polygonscan.com/tx/{tx_hash}"
+        explorer_name = "Polygonscan"
 
     updated = db.update_withdrawal_status(withdrawal_id, "completed", tx_hash)
     if updated:
@@ -553,12 +584,17 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         try:
+            if explorer_url:
+                tx_line = f"🔗 TX: [View on {explorer_name}]({explorer_url})\n"
+            else:
+                tx_line = f"🔗 TX: `{tx_hash}`\n"
+
             channel_message = (
                 f"📤 **Withdrawal Completed!**\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"💵 Amount: **${withdrawal.net_amount:.2f} USDT**\n"
                 f"💎 Currency: **{currency_label}**\n"
-                f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n"
+                f"{tx_line}"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"🏦 Project Wallet: `{PROJECT_WALLET}`"
             )
@@ -569,13 +605,18 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_obj = db.get_user_by_id(withdrawal.user_id)
         if user_obj:
             try:
+                if explorer_url:
+                    user_tx_line = f"🔗 TX: [View on {explorer_name}]({explorer_url})"
+                else:
+                    user_tx_line = f"🔗 TX: `{tx_hash}`"
+
                 await context.bot.send_message(
                     chat_id=user_obj.telegram_id,
                     text=f"✅ Your withdrawal request has been processed!\n\n"
                          f"💰 Amount: ${withdrawal.amount:.2f} USDT\n"
                          f"💵 Net: ${withdrawal.net_amount:.2f} USDT\n"
                          f"💎 Currency: {currency_label}\n"
-                         f"🔗 TX: [View on Polygonscan](https://polygonscan.com/tx/{tx_hash})\n\n"
+                         f"{user_tx_line}\n\n"
                          f"Check your wallet!"
                          + get_community_footer(),
                     parse_mode='Markdown'
@@ -709,7 +750,7 @@ TASK MANAGEMENT:
 /delete_task <task_id> - Delete a task
 /complete_task <user_id> <task_id> - Mark task as completed for a user
 
-Transactions on Polygon (USDT) and TON (GRAM)
+Withdrawals on Polygon (USDT), BNB Chain (USDT BEP20), and TON (GRAM)
 
 Fee Collection System:
 - Fees are automatically tracked when withdrawals are completed
@@ -1316,7 +1357,6 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response += f"📈 **Bonus:** {stats['tier_bonus']}%\n"
         response += f"━━━━━━━━━━━━━━━━━━━━\n"
         response += f"👥 **Total Referrals:** {stats['total_referred']}\n"
-        response += f"✅ **Active Referrals:** {stats['active_referrals']}\n"
         response += f"💰 **Active Bonus Earned:** ${stats['active_bonus_earned']:.3f}\n"
         response += f"💎 **Spent on Upgrades:** ${stats['upgrade_spent']:.2f}\n\n"
         
@@ -1483,7 +1523,7 @@ def main():
         logger.info("🌱 PlantUSDT Bot started! Press Ctrl+C to stop.")
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
-        logger.info("💎 GRAM (TON) withdrawal option active")
+        logger.info("💎 Withdrawals: USDT (Polygon) + USDT (BEP20 / BNB Chain) + GRAM (TON)")
         logger.info("🎁 Referral rewards: $0.005 per qualified referral")
         logger.info("🔄 Daily midnight referral rewards check scheduled")
         logger.info("🚫 Ban system active (is_banned field)")

@@ -243,30 +243,53 @@ function goBack() {
 }
 
 // ============================================
-// CURRENCY SELECTION
+// CURRENCY SELECTION (usdt / bep20 / gram)
 // ============================================
 function selectCurrency(currency) {
     window.selectedCurrency = currency;
-    var usdtBtn = document.getElementById('usdtBtn'), gramBtn = document.getElementById('gramBtn');
-    var usdtGroup = document.getElementById('usdtAddressGroup'), gramGroup = document.getElementById('gramAddressGroup');
+
+    var usdtBtn = document.getElementById('usdtBtn');
+    var bep20Btn = document.getElementById('bep20Btn');
+    var gramBtn = document.getElementById('gramBtn');
+    var usdtGroup = document.getElementById('usdtAddressGroup');
+    var bep20Group = document.getElementById('bep20AddressGroup');
+    var gramGroup = document.getElementById('gramAddressGroup');
     var networkLabel = document.getElementById('networkLabel');
+
+    // Clear active states
+    if (usdtBtn) usdtBtn.classList.remove('active');
+    if (bep20Btn) bep20Btn.classList.remove('active');
+    if (gramBtn) gramBtn.classList.remove('active');
+
+    // Hide all address groups
+    if (usdtGroup) usdtGroup.style.display = 'none';
+    if (bep20Group) bep20Group.style.display = 'none';
+    if (gramGroup) gramGroup.style.display = 'none';
+
+    // Activate selected
     if (currency === 'usdt') {
         if (usdtBtn) usdtBtn.classList.add('active');
-        if (gramBtn) gramBtn.classList.remove('active');
         if (usdtGroup) usdtGroup.style.display = 'block';
-        if (gramGroup) gramGroup.style.display = 'none';
         if (networkLabel) networkLabel.textContent = 'Polygon';
-    } else {
+    } else if (currency === 'bep20') {
+        if (bep20Btn) bep20Btn.classList.add('active');
+        if (bep20Group) bep20Group.style.display = 'block';
+        if (networkLabel) networkLabel.textContent = 'BNB Chain';
+    } else if (currency === 'gram') {
         if (gramBtn) gramBtn.classList.add('active');
-        if (usdtBtn) usdtBtn.classList.remove('active');
         if (gramGroup) gramGroup.style.display = 'block';
-        if (usdtGroup) usdtGroup.style.display = 'none';
         if (networkLabel) networkLabel.textContent = 'TON';
     }
+
+    // Update net display suffix (only on withdraw page)
     var feeNetEl = document.getElementById('feeNet');
     if (feeNetEl) {
         var currentText = feeNetEl.textContent.replace('~', '').replace(' in GRAM', '');
-        feeNetEl.textContent = currency === 'gram' ? '~' + currentText + ' in GRAM' : currentText;
+        if (currency === 'gram') {
+            feeNetEl.textContent = '~' + currentText + ' in GRAM';
+        } else {
+            feeNetEl.textContent = currentText;
+        }
     }
 }
 
@@ -1114,6 +1137,7 @@ function setupEventListeners() {
             var currency = window.selectedCurrency || 'usdt';
             var amountInput = document.getElementById('withdrawAmount');
             var addressInput = document.getElementById('withdrawAddress');
+            var bep20Input = document.getElementById('bep20Address');
             var gramInput = document.getElementById('gramAddress');
             var amount = 0;
             if (window.withdrawAmount !== undefined && window.withdrawAmount > 0) amount = window.withdrawAmount;
@@ -1124,9 +1148,19 @@ function setupEventListeners() {
             }
             var address = '';
             if (currency === 'usdt') {
-                address = addressInput ? addressInput.value : '';
+                address = addressInput ? addressInput.value.trim() : '';
                 if (!address || !address.startsWith('0x') || address.length !== 42) {
                     safePopup({title:'❌ Error', message:'Please enter a valid Polygon wallet address.', buttons:[{type:'ok'}]});
+                    return;
+                }
+                if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
+                    safePopup({title:'❌ Invalid Wallet', message:'Cannot withdraw to project wallet.', buttons:[{type:'ok'}]});
+                    return;
+                }
+            } else if (currency === 'bep20') {
+                address = bep20Input ? bep20Input.value.trim() : '';
+                if (!address || !address.startsWith('0x') || address.length !== 42) {
+                    safePopup({title:'❌ Error', message:'Please enter a valid BNB Chain (BEP20) wallet address.', buttons:[{type:'ok'}]});
                     return;
                 }
                 if (address.toLowerCase() === PROJECT_WALLET.toLowerCase()) {
@@ -1155,6 +1189,7 @@ function setupEventListeners() {
                     safePopup({title:'✅ Success!', message:data.message || 'Withdrawal submitted!', buttons:[{type:'ok'}]});
                     if (amountInput) amountInput.value = '';
                     if (addressInput) addressInput.value = '';
+                    if (bep20Input) bep20Input.value = '';
                     if (gramInput) gramInput.value = '';
                 } else {
                     if (data.cooldown_remaining) safePopup({title:'⏳ Cooldown Active', message:data.message, buttons:[{type:'ok'}]});
@@ -1671,7 +1706,8 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v89)');
+console.log('✅ PlantUSDT app loaded successfully (v90)');
+console.log('🟡 BEP20 withdrawals live — 3 currency options (Polygon / BEP20 / GRAM)');
 console.log('🏠 Always starts on Home tab (no restore of last tab)');
 console.log('🔇 switchTab silent on non-tabbed pages');
 console.log('🛡️ Safety fallback active — if app.js fails, all sections show');

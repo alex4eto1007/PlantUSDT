@@ -143,7 +143,13 @@ def isValidTonAddress(address):
 def notify_admins_new_withdrawal(withdrawal_id, user_username, user_telegram_id,
                                   amount, fee, net_amount, currency, wallet_address):
     try:
-        currency_label = "💎 GRAM (TON)" if currency == 'gram' else "🟣 USDT (Polygon)"
+        currency_labels = {
+            'usdt': '🟣 USDT (Polygon)',
+            'bep20': '🟡 USDT (BEP20 / BNB Chain)',
+            'gram': '💎 GRAM (TON)'
+        }
+        currency_label = currency_labels.get(currency, '🟣 USDT (Polygon)')
+
         message = (
             f"🔔 **New Withdrawal Request!**\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -265,16 +271,22 @@ def withdraw():
     address = sanitize_input(data.get('address'))
     if not telegram_id or not amount or not address:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    if currency not in ['usdt', 'gram']:
+
+    # Validate currency (usdt = Polygon, bep20 = BNB Chain, gram = TON)
+    if currency not in ['usdt', 'bep20', 'gram']:
         return jsonify({'success': False, 'message': 'Invalid currency'}), 400
-    if currency == 'usdt':
+
+    # Validate address per network
+    if currency in ['usdt', 'bep20']:
         if not address.startswith('0x') or len(address) != 42:
-            return jsonify({'success': False, 'message': 'Invalid Polygon wallet address'}), 400
+            network_name = 'BNB Chain (BEP20)' if currency == 'bep20' else 'Polygon'
+            return jsonify({'success': False, 'message': f'Invalid {network_name} wallet address'}), 400
         if address.lower() == PROJECT_WALLET.lower():
             return jsonify({'success': False, 'message': 'Cannot withdraw to project wallet.'}), 400
     elif currency == 'gram':
         if not isValidTonAddress(address):
             return jsonify({'success': False, 'message': 'Invalid TON wallet address (UQ or EQ format)'}), 400
+
     user, err_response, status = get_authenticated_user(telegram_id)
     if err_response: return err_response, status
     session_db = db.get_session()
@@ -309,7 +321,15 @@ def withdraw():
         else: fee_percent = 0.20
         fee = amount * fee_percent
         net_amount = amount - fee
-        withdrawal = Withdrawal(user_id=user.id, amount=amount, fee=fee, net_amount=net_amount, wallet_address=address, status='pending')
+
+        # Map currency to network for storage
+        network_map = {'usdt': 'polygon', 'bep20': 'bep20', 'gram': 'gram'}
+        network = network_map.get(currency, 'polygon')
+
+        withdrawal = Withdrawal(
+            user_id=user.id, amount=amount, fee=fee, net_amount=net_amount,
+            wallet_address=address, status='pending', network=network
+        )
         session_db.add(withdrawal)
         audit = AuditLog(
             user_id=user.id, action='withdrawal_request', field_changed='balance',
