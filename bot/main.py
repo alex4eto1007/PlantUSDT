@@ -169,7 +169,6 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"`{referral_link}`\n\n"
             f"📊 **Stats:**\n"
             f"Total Referrals: {total_refs}\n"
-            f"Active Referrals: {user_data.total_active_referrals or 0}\n"
             f"Earned: ${user_data.referral_earnings_all_time or 0:.2f}\n\n"
             f"💰 Earn up to 5% of their deposits based on your tier!",
             parse_mode='Markdown',
@@ -286,9 +285,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.utcnow()
     existing_user = db.get_user(user.id)
 
-    # ============================================
     # BAN CHECK
-    # ============================================
     if existing_user and existing_user.is_banned:
         await update.message.reply_text(
             "🚫 **Your account has been suspended.**\n\n"
@@ -296,7 +293,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         return
-    # ============================================
 
     db.update_user_info(user.id, user.username, user.first_name)
 
@@ -832,7 +828,6 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             logger.warning(f"🚫 User {target.telegram_id} banned by admin {user.id}. Reason: {reason}")
 
-            # Notify the banned user (best-effort)
             try:
                 await context.bot.send_message(
                     chat_id=target.telegram_id,
@@ -1443,7 +1438,6 @@ def main():
         application.add_handler(CommandHandler("reset_referral", reset_referral))
         application.add_handler(CommandHandler("manual_balance", manual_balance))
 
-        # BAN MANAGEMENT
         application.add_handler(CommandHandler("ban_user", ban_user))
         application.add_handler(CommandHandler("unban_user", unban_user))
         application.add_handler(CommandHandler("list_banned", list_banned))
@@ -1490,7 +1484,7 @@ def main():
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
         logger.info("💎 GRAM (TON) withdrawal option active")
-        logger.info("🎁 Referral rewards: $0.002 per qualified referral")
+        logger.info("🎁 Referral rewards: $0.005 per qualified referral")
         logger.info("🔄 Daily midnight referral rewards check scheduled")
         logger.info("🚫 Ban system active (is_banned field)")
 
