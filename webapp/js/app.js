@@ -157,10 +157,19 @@ function switchTab(tab) {
         for (var j = 0; j < buttons.length; j++) buttons[j].classList.remove('active');
         var section = document.getElementById('section-' + tab);
         var btn = document.querySelector('.nav-btn[data-tab="' + tab + '"]');
-        if (section) section.classList.add('active');
-        if (btn) btn.classList.add('active');
+        if (!section) {
+            console.warn('⚠️ switchTab: no section found for tab "' + tab + '" (missing id="section-' + tab + '")');
+        } else {
+            section.classList.add('active');
+        }
+        if (!btn) {
+            console.warn('⚠️ switchTab: no nav button found for tab "' + tab + '"');
+        } else {
+            btn.classList.add('active');
+        }
         try { localStorage.setItem('activeTab', tab); } catch (e) {}
-        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+        // Only scroll to top if we've scrolled past the header
+        try { if (window.scrollY > 50) window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
     } catch (e) { console.error('switchTab error:', e); }
 }
 
@@ -1658,7 +1667,8 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v84)');
+console.log('✅ PlantUSDT app loaded successfully (v86)');
+console.log('🛡️ Safety fallback active — if app.js fails, all sections show');
 console.log('📱 Bottom nav active: 5 tabs (Home / Tasks / Giveaway / Referrals / Profile)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');

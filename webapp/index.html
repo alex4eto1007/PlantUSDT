@@ -418,6 +418,32 @@
         window.AD_REWARD = AD_REWARD;
     </script>
 
-    <script src="js/app.js?v=85"></script>
+    <script src="js/app.js?v=86"></script>
+
+    <script>
+        // ============================================
+        // SAFETY FALLBACK (v86)
+        // If app.js fails to load or switchTab is missing after 3s,
+        // show all sections at once + hide the bottom nav, so users
+        // can still access everything (just not tabbed).
+        // ============================================
+        setTimeout(function() {
+            try {
+                if (typeof window.switchTab !== 'function') {
+                    console.warn('⚠️ app.js did not load — showing all sections as fallback');
+                    var sections = document.querySelectorAll('.tab-section');
+                    for (var i = 0; i < sections.length; i++) sections[i].style.display = 'block';
+                    var nav = document.getElementById('bottomNav');
+                    if (nav) nav.style.display = 'none';
+                    var loadingEl = document.getElementById('loadingMessage');
+                    var appContent = document.getElementById('appContent');
+                    if (loadingEl && appContent && appContent.style.display === 'none') {
+                        loadingEl.style.display = 'none';
+                        appContent.style.display = 'block';
+                    }
+                }
+            } catch (e) { console.warn('Fallback check error:', e); }
+        }, 3000);
+    </script>
 </body>
 </html>
