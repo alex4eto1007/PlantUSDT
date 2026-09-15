@@ -85,14 +85,15 @@ function generateMathCaptcha() {
 
 // ============================================
 // DEVICE FINGERPRINT
+// NOTE: userAgent is deliberately excluded — it contains OS version which
+// changes on updates and causes false-positive anomaly flags.
 // ============================================
 function getDeviceFingerprint() {
     try {
         const scr = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const language = navigator.language;
-        const userAgent = navigator.userAgent.substring(0, 100);
-        return `${scr}|${timezone}|${language}|${userAgent}`;
+        return `${scr}|${timezone}|${language}`;
     } catch (e) {
         return 'unknown';
     }
@@ -1706,7 +1707,8 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v90)');
+console.log('✅ PlantUSDT app loaded successfully (v91)');
+console.log('🛡️ Fingerprint fixed: no more false flags on OS updates');
 console.log('🟡 BEP20 withdrawals live — 3 currency options (Polygon / BEP20 / GRAM)');
 console.log('🏠 Always starts on Home tab (no restore of last tab)');
 console.log('🔇 switchTab silent on non-tabbed pages');
@@ -1726,7 +1728,6 @@ console.log('📅 Timer auto-updates every second via setInterval');
 console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
 console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
-console.log('🛡️ Fingerprint + real IP capture active for abuse detection');
 console.log('📊 Task rewards display 2 decimals');
 console.log('💳 Withdrawal fees: 15% / 18% / 20%');
 console.log('🔒 Duplicate wallet protection active');
