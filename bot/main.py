@@ -232,9 +232,9 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🟡 USDT (BEP20 / BNB Chain)\n"
             f"💎 GRAM (TON)\n\n"
             f"**Fee structure:**\n"
-            f"• $1 — $49.99 → 15% fee\n"
-            f"• $50 — $99.99 → 18% fee\n"
-            f"• $100+ → 20% fee\n\n"
+            f"• $1 — $49.99 → 8% fee\n"
+            f"• $50 — $99.99 → 10% fee\n"
+            f"• $100+ → 12% fee\n\n"
             f"⏳ Processing: Up to 24 hours\n"
             f"🔄 Cooldown: 1 withdrawal per 24 hours",
             parse_mode='Markdown',
@@ -333,15 +333,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         welcome_text = f"""🌱 Welcome to PlantUSDT, {user.first_name}!
 
-Grow your USDT with returns up to 80% on Polygon network!
+Grow your USDT with returns up to 35% on Polygon network!
 
 💰 **INVESTMENT DETAILS:**
-• 🌿 1 Day: 2% return
-• 🌿 7 Days: 18% return
-• 🌿 30 Days: 80% return
+• 🌿 1 Day: 1% return
+• 🌿 7 Days: 8% return
+• 🌿 30 Days: 35% return
 • 💰 Minimum deposit: $5 USDT
 • 🏦 Minimum withdrawal: $1 USDT
-• 🔒 Withdrawal fee: 15% – 20% (based on amount)
+• 🔒 Withdrawal fee: 8% – 12% (based on amount)
 • 🌱 3 Planting Fields: $100 max each
 • ⛓️ Network: Polygon (MATIC) - Low fees!
 
@@ -507,7 +507,7 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"ID: {w.id}\n"
         text += f"👤 User: @{username}\n"
         text += f"💰 Amount: ${w.amount:.2f} USDT\n"
-        text += f"🔒 Fee (15-20%): ${w.fee:.2f} USDT\n"
+        text += f"🔒 Fee: ${w.fee:.2f} USDT\n"
         text += f"💵 Net: ${w.net_amount:.2f} USDT\n"
         text += f"💎 Withdraw in: {currency_label}\n"
         text += f"🏦 Address: <code>{w.wallet_address}</code>\n"
@@ -755,7 +755,10 @@ Withdrawals on Polygon (USDT), BNB Chain (USDT BEP20), and TON (GRAM)
 Fee Collection System:
 - Fees are automatically tracked when withdrawals are completed
 - Use /pending_fees to see how much is uncollected
-- Use /collect_fees TX_HASH to mark all fees as collected"""
+- Use /collect_fees TX_HASH to mark all fees as collected
+
+Current withdrawal fees: 8% / 10% / 12%
+Current investment returns: 1% / 8% / 35%"""
 
     await update.message.reply_text(help_text + get_community_footer())
 
@@ -1524,6 +1527,8 @@ def main():
         logger.info(f"📱 Mini App URL: {VERCEL_URL}")
         logger.info("🔍 Deposit scanner running on Polygon (checks every 5 minutes)")
         logger.info("💎 Withdrawals: USDT (Polygon) + USDT (BEP20 / BNB Chain) + GRAM (TON)")
+        logger.info("📉 Investment returns: 1% / 8% / 35%")
+        logger.info("💸 Withdrawal fees: 8% / 10% / 12%")
         logger.info("🎁 Referral rewards: $0.005 per qualified referral")
         logger.info("🔄 Daily midnight referral rewards check scheduled")
         logger.info("🚫 Ban system active (is_banned field)")

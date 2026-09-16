@@ -251,9 +251,9 @@
             <strong>Gas Fees:</strong> Covered by us!</p>
             <div class="fee-breakdown">
                 <strong>Fee Structure:</strong><br>
-                • $1 - $49.99: 15%<br>
-                • $50 - $99.99: 18%<br>
-                • $100+: 20%
+                • $1 - $49.99: 8%<br>
+                • $50 - $99.99: 10%<br>
+                • $100+: 12%
             </div>
             <div id="cooldownContainer" style="display:none;">
                 <div class="cooldown-timer" id="cooldownTimer">
@@ -463,13 +463,14 @@
             
             document.getElementById('feeSummary').style.display = 'block';
             
+            // v92: Updated fee structure — 8% / 10% / 12%
             var feePercent = 0;
             if (amount < 50) {
-                feePercent = 0.15;
+                feePercent = 0.08;
             } else if (amount < 100) {
-                feePercent = 0.18;
+                feePercent = 0.10;
             } else {
-                feePercent = 0.20;
+                feePercent = 0.12;
             }
             
             var totalFee = amount * feePercent;
@@ -619,7 +620,6 @@
                             });
                             return;
                         }
-                        // Extra confirmation for BEP20 (address format is identical to Polygon)
                         var confirmed = confirm(
                             '⚠️ BEP20 WITHDRAWAL\n\n' +
                             'You are about to withdraw to a BNB Chain (BEP20) address:\n\n' +
@@ -724,6 +724,6 @@
         window.isValidTonAddress = isValidTonAddress;
         window.isValidEvmAddress = isValidEvmAddress;
     </script>
-    <script src="/js/app.js?v=91"></script>
+    <script src="/js/app.js?v=92"></script>
 </body>
 </html>

@@ -173,9 +173,7 @@ function switchTab(tab) {
             console.warn('⚠️ switchTab: no nav button found for tab "' + tab + '"');
         }
 
-        // Keep writing localStorage for potential future use — not read on startup
         try { localStorage.setItem('activeTab', tab); } catch (e) {}
-        // Only scroll to top if we've scrolled past the header
         try { if (window.scrollY > 50) window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
     } catch (e) { console.error('switchTab error:', e); }
 }
@@ -188,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.ready();
         tg.expand();
 
-        // Wire up bottom nav (only present on index.html)
         var navButtons = document.querySelectorAll('.nav-btn');
         for (var n = 0; n < navButtons.length; n++) {
             navButtons[n].addEventListener('click', function() {
@@ -196,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Always start on Home tab — only on tabbed pages (no localStorage restore)
         var hasBottomNav = document.getElementById('bottomNav') !== null;
         if (hasBottomNav) {
             switchTab('home');
@@ -232,9 +228,6 @@ function navigateTo(page) {
     if (pages[page]) { showInterstitialIfNeeded(); window.location.href = pages[page]; }
 }
 
-// ============================================
-// GO BACK — fallback to index.html if no history
-// ============================================
 function goBack() {
     if (window.history.length > 1) {
         window.history.back();
@@ -257,17 +250,14 @@ function selectCurrency(currency) {
     var gramGroup = document.getElementById('gramAddressGroup');
     var networkLabel = document.getElementById('networkLabel');
 
-    // Clear active states
     if (usdtBtn) usdtBtn.classList.remove('active');
     if (bep20Btn) bep20Btn.classList.remove('active');
     if (gramBtn) gramBtn.classList.remove('active');
 
-    // Hide all address groups
     if (usdtGroup) usdtGroup.style.display = 'none';
     if (bep20Group) bep20Group.style.display = 'none';
     if (gramGroup) gramGroup.style.display = 'none';
 
-    // Activate selected
     if (currency === 'usdt') {
         if (usdtBtn) usdtBtn.classList.add('active');
         if (usdtGroup) usdtGroup.style.display = 'block';
@@ -282,7 +272,6 @@ function selectCurrency(currency) {
         if (networkLabel) networkLabel.textContent = 'TON';
     }
 
-    // Update net display suffix (only on withdraw page)
     var feeNetEl = document.getElementById('feeNet');
     if (feeNetEl) {
         var currentText = feeNetEl.textContent.replace('~', '').replace(' in GRAM', '');
@@ -911,13 +900,16 @@ async function setWallet() {
     } catch (error) { safePopup({ title: '❌ Error', message: 'Failed to load wallet.', buttons: [{type: 'ok'}] }); }
 }
 
+// ============================================
+// INVESTMENT MATH (v92: 1% / 8% / 35%)
+// ============================================
 function calculateReturn(amount, days) {
-    const multipliers = {1: 1.02, 7: 1.18, 30: 1.80};
-    return amount * (multipliers[days] || 1.80);
+    const multipliers = {1: 1.01, 7: 1.08, 30: 1.35};
+    return amount * (multipliers[days] || 1.35);
 }
 
 function getLockOptions() {
-    return [{days:1,returnPercent:2},{days:7,returnPercent:18},{days:30,returnPercent:80}];
+    return [{days:1,returnPercent:1},{days:7,returnPercent:8},{days:30,returnPercent:35}];
 }
 
 async function investFieldWithLock(fieldNumber) {
@@ -1707,7 +1699,9 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v91)');
+console.log('✅ PlantUSDT app loaded successfully (v92)');
+console.log('📉 Investment returns: 1% / 8% / 35% (old investments unaffected)');
+console.log('💸 Withdrawal fees: 8% / 10% / 12%');
 console.log('🛡️ Fingerprint fixed: no more false flags on OS updates');
 console.log('🟡 BEP20 withdrawals live — 3 currency options (Polygon / BEP20 / GRAM)');
 console.log('🏠 Always starts on Home tab (no restore of last tab)');
@@ -1729,11 +1723,9 @@ console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)
 console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
 console.log('📊 Task rewards display 2 decimals');
-console.log('💳 Withdrawal fees: 15% / 18% / 20%');
 console.log('🔒 Duplicate wallet protection active');
 console.log('🎯 Math captcha accepts 0 as valid answer');
 console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
-console.log('🎨 UI cleaned: no active referrals display, no giveaway timer');
 console.log('✅ Claimed tasks now stay visible with ✅ tick (not hidden)');
 console.log('📈 total_ads_watched added to /api/user response');
 console.log('🎁 ads_watched_this_cycle added for giveaway progress');

@@ -315,10 +315,12 @@ def withdraw():
         if withdraw_amount < 1:
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
         amount = withdraw_amount
+
+        # v92: Updated fee structure — 8% / 10% / 12%
         fee_percent = 0.0
-        if amount < 50: fee_percent = 0.15
-        elif amount < 100: fee_percent = 0.18
-        else: fee_percent = 0.20
+        if amount < 50: fee_percent = 0.08
+        elif amount < 100: fee_percent = 0.10
+        else: fee_percent = 0.12
         fee = amount * fee_percent
         net_amount = amount - fee
 
@@ -605,8 +607,10 @@ def invest_locked():
             return jsonify({'success': False, 'message': f'Field #{field_number} is already active'}), 400
         from datetime import datetime, timedelta
         now = datetime.utcnow()
-        multipliers = {1: 1.02, 7: 1.18, 30: 1.80}
-        multiplier = multipliers.get(lock_period, 1.80)
+
+        # v92: Updated multipliers — 1% / 8% / 35%
+        multipliers = {1: 1.01, 7: 1.08, 30: 1.35}
+        multiplier = multipliers.get(lock_period, 1.35)
         expected_return = amount * multiplier
         unlock_date = now + timedelta(days=lock_period)
         investment = Investment(
