@@ -60,10 +60,6 @@ CHANNEL_ID = -1004391112772
 # NETWORK DETECTION HELPERS
 # ============================================
 def detect_network_label(wallet_address, stored_network=None):
-    """
-    Determine withdrawal network label.
-    Prefers stored_network (new withdrawals have it), falls back to address heuristics.
-    """
     if stored_network:
         mapping = {
             'polygon': '🟣 USDT (Polygon)',
@@ -71,8 +67,6 @@ def detect_network_label(wallet_address, stored_network=None):
             'gram': '💎 GRAM (TON)',
         }
         return mapping.get(stored_network, f'🟣 USDT ({stored_network})')
-
-    # Fallback for legacy rows without network set
     if wallet_address and (wallet_address.startswith('UQ') or wallet_address.startswith('EQ')):
         return '💎 GRAM (TON)'
     return '🟣 USDT (Polygon)'
@@ -111,13 +105,11 @@ def is_admin(user_id: int) -> bool:
 # ============================================
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show the main menu with inline buttons"""
     user = update.effective_user
-    
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     keyboard = [
         [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
         [InlineKeyboardButton("👛 Balance", callback_data="balance")],
@@ -127,7 +119,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📢 Announcements", callback_data="announcements")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await update.message.reply_text(
         "🌱 **PlantUSDT Menu**\n\n"
         "Choose an option below:",
@@ -140,18 +132,17 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============================================
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle menu button callbacks"""
     query = update.callback_query
     await query.answer()
-    
+
     user = query.from_user
     user_data = db.get_user(user.id)
-    
+
     if query.data == "balance":
         if not user_data:
             await query.edit_message_text("❌ User not found. Please /start first.")
             return
-        
+
         await query.edit_message_text(
             f"👛 **Your Balance**\n\n"
             f"💵 Balance: **${user_data.balance:.2f}** USDT\n"
@@ -163,12 +154,12 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
             ])
         )
-    
+
     elif query.data == "referrals":
         if not user_data:
             await query.edit_message_text("❌ User not found. Please /start first.")
             return
-        
+
         if not user_data.wallet_address:
             await query.edit_message_text(
                 "🔗 **Connect your wallet first!**\n\n"
@@ -180,10 +171,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ])
             )
             return
-        
+
         referral_link = f"https://t.me/PlantUSDT_bot?start={user_data.referral_code}"
         total_refs = db.get_referral_count(user_data.id)
-        
+
         await query.edit_message_text(
             f"👥 **Your Referrals**\n\n"
             f"🔗 Your referral link:\n"
@@ -198,12 +189,12 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
             ])
         )
-    
+
     elif query.data == "share_referral":
         if not user_data or not user_data.wallet_address:
             await query.edit_message_text("❌ Connect your wallet first.")
             return
-        
+
         referral_link = f"https://t.me/PlantUSDT_bot?start={user_data.referral_code}"
         await query.edit_message_text(
             f"📤 **Share your referral link**\n\n"
@@ -216,12 +207,12 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
             ])
         )
-    
+
     elif query.data == "withdraw":
         if not user_data:
             await query.edit_message_text("❌ User not found. Please /start first.")
             return
-        
+
         await query.edit_message_text(
             f"🏦 **Withdraw**\n\n"
             f"Withdraw your earnings on Polygon, BNB Chain, or TON 🟣🟡💎\n\n"
@@ -243,7 +234,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
             ])
         )
-    
+
     elif query.data == "ambassador":
         await query.edit_message_text(
             f"💎 **Ambassador Program**\n\n"
@@ -262,7 +253,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
             ])
         )
-    
+
     elif query.data == "announcements":
         await query.edit_message_text(
             f"📢 **Announcements**\n\n"
@@ -276,7 +267,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
             ])
         )
-    
+
     elif query.data == "back_to_menu":
         keyboard = [
             [InlineKeyboardButton("🌱 Open Mini App", web_app=WebAppInfo(url=VERCEL_URL))],
@@ -299,15 +290,14 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     now = datetime.utcnow()
     existing_user = db.get_user(user.id)
 
-    # BAN CHECK
     if existing_user and existing_user.is_banned:
         await update.message.reply_text(
             "🚫 **Your account has been suspended.**\n\n"
@@ -421,9 +411,9 @@ async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     db.update_user_info(user.id, user.username, user.first_name)
-    
+
     keyboard = [[InlineKeyboardButton("🌱 Open PlantUSDT", web_app=WebAppInfo(url=VERCEL_URL))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
@@ -447,13 +437,13 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         data = json.loads(update.message.web_app_data.data)
         logger.info(f"📩 WebApp data received: {data}")
-        
+
         data_type = data.get('type')
         user = update.effective_user
-        
+
         if data_type == 'share_referral':
             link = data.get('link')
-            
+
             message = (
                 f"🌱 **Share this referral link with your friends!**\n\n"
                 f"{link}\n\n"
@@ -461,16 +451,16 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 f"👥 Your current bonus: Check your tier in the Mini App.\n\n"
                 f"📊 Live Transactions: @PlantUSDTtransactions"
             )
-            
+
             await update.message.reply_text(
                 message,
                 parse_mode='Markdown'
             )
             logger.info(f"📤 Referral link shared by user {user.id}")
-            
+
         else:
             logger.info(f"Unknown web_app_data type: {data_type}")
-            
+
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse web_app_data: {e}")
     except Exception as e:
@@ -558,7 +548,6 @@ async def complete_payout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     currency_label = detect_network_label(withdrawal.wallet_address, withdrawal.network)
 
-    # Determine explorer URL by network
     network = withdrawal.network or ('gram' if (withdrawal.wallet_address and (withdrawal.wallet_address.startswith('UQ') or withdrawal.wallet_address.startswith('EQ'))) else 'polygon')
     if network == 'bep20':
         explorer_url = f"https://bscscan.com/tx/{tx_hash}"
@@ -647,7 +636,7 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += "━━━━━━━━━━━━━━━━━━━━\n"
     text += f"📊 Total: ${total_fees:.2f} USDT\n"
     text += f"📋 Number of fees: {len(fees)}\n\n"
-    
+
     if len(fees) > 0:
         text += "📝 Recent fees:\n"
         for fee in fees[:5]:
@@ -656,12 +645,12 @@ async def pending_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"  - ${fee.amount:.2f} from @{username}\n"
         if len(fees) > 5:
             text += f"  ... and {len(fees) - 5} more\n"
-    
+
     text += f"\n━━━━━━━━━━━━━━━━━━━━\n"
     text += f"To collect all fees:\n"
     text += f"/collect_fees TX_HASH\n\n"
     text += f"⚠️ This will mark ALL uncollected fees as collected."
-    
+
     await update.message.reply_text(text + get_community_footer())
 
 async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -683,14 +672,14 @@ async def collect_fees(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     tx_hash = context.args[0]
-    
+
     total_fees = db.get_uncollected_fees_total()
     if total_fees == 0:
         await update.message.reply_text("📋 No uncollected fees to collect." + get_community_footer())
         return
 
     count = db.mark_fees_collected(tx_hash)
-    
+
     await update.message.reply_text(
         f"✅ Fees Collected!\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -707,9 +696,9 @@ async def test_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(user.id):
         await update.message.reply_text("❌ Not authorized.")
         return
-    
+
     await update.message.reply_text("📤 Sending test message to channel...")
-    
+
     try:
         await context.bot.send_message(
             chat_id=CHANNEL_ID,
@@ -743,6 +732,10 @@ BAN MANAGEMENT:
 /ban_user <user_id> [reason] - Ban a user (full lockout)
 /unban_user <user_id> - Unban a user
 /list_banned - List all banned users
+
+FLAG MANAGEMENT:
+/flagged_users - List all accounts flagged for suspicious activity
+/unflag_user <telegram_id> - Remove flag from a user
 
 TASK MANAGEMENT:
 /add_task <title> | <description> | <reward> - Create a new task
@@ -996,16 +989,125 @@ async def list_banned(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session.close()
 
 # ============================================
+# FLAG MANAGEMENT COMMANDS (v93)
+# ============================================
+
+async def flagged_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    session = db.get_session()
+    try:
+        flagged = session.query(User).filter_by(flagged_for_anomaly=True).order_by(User.id.desc()).all()
+
+        if not flagged:
+            await update.message.reply_text(
+                "✅ No flagged users." + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            return
+
+        text = f"🚩 **FLAGGED USERS** ({len(flagged)})\n\n"
+        for u in flagged:
+            text += f"👤 @{u.username or u.first_name or 'User'} (`{u.telegram_id}`)\n"
+            text += f"📺 Ads: {u.total_ads_watched or 0} | 💰 Balance: ${u.balance or 0:.2f}\n"
+            text += f"🚫 Banned: {'✅' if u.is_banned else '❌'}\n"
+            if u.device_fingerprint:
+                text += f"🔍 FP: `{u.device_fingerprint[:50]}...`\n"
+            text += f"━━━━━━━━━━━━━━━━━━━━\n"
+
+        text += "\n_To unflag: `/unflag_user <telegram_id>`_"
+
+        await update.message.reply_text(
+            text + get_community_footer(),
+            parse_mode='Markdown'
+        )
+    finally:
+        session.close()
+
+async def unflag_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not check_rate_limit(user.id):
+        await update.message.reply_text("⏳ Too many requests. Please wait.")
+        return
+    if not is_admin(user.id):
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "❌ Usage: /unflag_user <telegram_id>\n\n"
+            "Example: /unflag_user 123456789"
+            + get_community_footer(),
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        target_telegram_id = int(context.args[0])
+
+        session = db.get_session()
+        try:
+            target = session.query(User).filter_by(telegram_id=target_telegram_id).first()
+            if not target:
+                await update.message.reply_text(f"❌ User {target_telegram_id} not found.")
+                return
+
+            if not target.flagged_for_anomaly:
+                await update.message.reply_text(
+                    f"ℹ️ User @{target.username or 'User'} is not flagged."
+                    + get_community_footer(),
+                    parse_mode='Markdown'
+                )
+                return
+
+            target.flagged_for_anomaly = False
+
+            audit = AuditLog(
+                user_id=target.id,
+                action='unflag_user',
+                field_changed='flagged_for_anomaly',
+                old_value=1,
+                new_value=0,
+                amount=None,
+                description=f'Unflagged by admin {user.id}',
+                source='admin',
+                created_by=user.id,
+                created_at=datetime.utcnow()
+            )
+            session.add(audit)
+            session.commit()
+
+            await update.message.reply_text(
+                f"✅ User UNFLAGGED!\n\n"
+                f"👤 @{target.username or 'User'} ({target.telegram_id})"
+                + get_community_footer(),
+                parse_mode='Markdown'
+            )
+            logger.info(f"✅ User {target.telegram_id} unflagged by admin {user.id}")
+
+        finally:
+            session.close()
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID.")
+
+# ============================================
 # ADMIN TASK COMMANDS
 # ============================================
 
 async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -1022,7 +1124,7 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         full_text = ' '.join(args)
         parts = full_text.split('|')
-        
+
         if len(parts) != 3:
             await update.message.reply_text(
                 "❌ Invalid format. Use: /add_task <title> | <description> | <reward>"
@@ -1055,7 +1157,7 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:
             await update.message.reply_text(f"❌ Failed to create task: {result}")
-            
+
     except ValueError:
         await update.message.reply_text(
             "❌ Invalid reward amount. Please enter a valid number."
@@ -1068,11 +1170,11 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -1104,11 +1206,11 @@ async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def delete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -1148,11 +1250,11 @@ async def delete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -1199,13 +1301,13 @@ async def complete_task_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     logger.info(f"📊 upgrade command received from user {user.id}")
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     db.update_user_info(user.id, user.username, user.first_name)
-    
+
     args = context.args
     if len(args) < 1:
         tier_list = "\n".join([f"{info['emoji']} {tier.title()}: {info['bonus_percent']}% (${info['price']:.2f})" for tier, info in REFERRAL_TIERS.items() if tier != "free"])
@@ -1218,7 +1320,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         return
-    
+
     tier = args[0].lower()
     if tier not in REFERRAL_TIERS:
         await update.message.reply_text(
@@ -1227,7 +1329,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         return
-    
+
     if tier == "free":
         await update.message.reply_text(
             "🌱 You're already on the Free tier (1%)."
@@ -1235,7 +1337,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         return
-    
+
     session = db.get_session()
     try:
         user_obj = session.query(User).filter_by(telegram_id=user.id).first()
@@ -1243,9 +1345,9 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ User not found.")
             session.close()
             return
-        
+
         current_tier = user_obj.referral_tier or "free"
-        
+
         if current_tier == tier:
             await update.message.reply_text(
                 f"✅ You're already on the {REFERRAL_TIERS[tier]['emoji']} {tier.title()} tier!"
@@ -1254,16 +1356,16 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             session.close()
             return
-        
+
         current_price = REFERRAL_TIERS[current_tier]["price"]
         new_price = REFERRAL_TIERS[tier]["price"]
         cost = new_price - current_price
-        
+
         if cost <= 0:
             await update.message.reply_text("❌ Invalid upgrade path.")
             session.close()
             return
-        
+
         keyboard = [
             [
                 InlineKeyboardButton("✅ Confirm Upgrade", callback_data=f"upgrade_confirm_{tier}"),
@@ -1271,7 +1373,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await update.message.reply_text(
             f"📊 **Upgrade to {REFERRAL_TIERS[tier]['emoji']} {tier.title()} Tier**\n\n"
             f"Current tier: {REFERRAL_TIERS[current_tier]['emoji']} {current_tier.title()} ({REFERRAL_TIERS[current_tier]['bonus_percent']}%)\n"
@@ -1283,7 +1385,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         session.close()
-        
+
     except Exception as e:
         logger.error(f"Upgrade error: {e}")
         await update.message.reply_text("❌ Error processing upgrade. Please try again.")
@@ -1292,17 +1394,17 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     user = query.from_user
     data = query.data
-    
+
     if data == "upgrade_cancel":
         await query.edit_message_text("❌ Upgrade cancelled.", parse_mode='Markdown')
         return
-    
+
     if data.startswith("upgrade_confirm_"):
         tier = data.replace("upgrade_confirm_", "")
-        
+
         session = db.get_session()
         try:
             user_obj = session.query(User).filter_by(telegram_id=user.id).first()
@@ -1310,9 +1412,9 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.edit_message_text("❌ User not found.")
                 session.close()
                 return
-            
+
             success, msg = upgrade_referral_tier(user_obj.id, tier, session)
-            
+
             if success:
                 await query.edit_message_text(
                     f"{msg}\n\n"
@@ -1324,7 +1426,7 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await query.edit_message_text(f"❌ {msg}" + get_community_footer(), parse_mode='Markdown')
             session.close()
-            
+
         except Exception as e:
             logger.error(f"Upgrade callback error: {e}")
             await query.edit_message_text("❌ Error processing upgrade. Please try again.")
@@ -1333,13 +1435,13 @@ async def upgrade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     logger.info(f"📊 referral_stats command received from user {user.id}")
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     db.update_user_info(user.id, user.username, user.first_name)
-    
+
     session = db.get_session()
     try:
         user_obj = session.query(User).filter_by(telegram_id=user.id).first()
@@ -1347,14 +1449,14 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ User not found.")
             session.close()
             return
-        
+
         stats = get_referral_stats(user_obj.id, session)
-        
+
         if not stats:
             await update.message.reply_text("❌ Error loading stats.")
             session.close()
             return
-        
+
         response = f"📊 **Your Referral Stats**\n\n"
         response += f"{stats['tier_emoji']} **Tier:** {stats['current_tier'].title()}\n"
         response += f"📈 **Bonus:** {stats['tier_bonus']}%\n"
@@ -1362,18 +1464,18 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response += f"👥 **Total Referrals:** {stats['total_referred']}\n"
         response += f"💰 **Active Bonus Earned:** ${stats['active_bonus_earned']:.3f}\n"
         response += f"💎 **Spent on Upgrades:** ${stats['upgrade_spent']:.2f}\n\n"
-        
+
         if stats['next_tier']:
             response += f"⬆️ **Next Tier:** {REFERRAL_TIERS[stats['next_tier']]['emoji']} {stats['next_tier'].title()}\n"
             response += f"💰 **Upgrade Cost:** ${stats['next_tier_price']:.2f}\n\n"
             response += f"Upgrade with: `/upgrade {stats['next_tier']}`"
         else:
             response += f"🏆 **You're at the highest tier!**"
-        
+
         response += get_community_footer()
-        
+
         await update.message.reply_text(response, parse_mode='Markdown')
-        
+
     except Exception as e:
         logger.error(f"Referral stats error: {e}")
         await update.message.reply_text(f"❌ Error fetching stats: {str(e)}")
@@ -1386,11 +1488,11 @@ async def referral_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
+
     if not check_rate_limit(user.id):
         await update.message.reply_text("⏳ Too many requests. Please wait.")
         return
-    
+
     if not is_admin(user.id):
         await update.message.reply_text("❌ You are not authorized to use this command.")
         return
@@ -1407,21 +1509,21 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_user_id = int(context.args[0])
         amount = Decimal(str(context.args[1]))
         description = ' '.join(context.args[2:])
-        
+
         session = db.get_session()
         target_user = session.query(User).filter_by(telegram_id=target_user_id).first()
-        
+
         if not target_user:
             await update.message.reply_text(f"❌ User {target_user_id} not found.")
             session.close()
             return
-        
+
         old_balance = Decimal(target_user.balance or 0)
         new_balance = old_balance + amount
-        
+
         target_user.balance = new_balance
         target_user.total_earnings_all_time = (target_user.total_earnings_all_time or Decimal('0')) + amount
-        
+
         audit = AuditLog(
             user_id=target_user.id,
             action='manual_update',
@@ -1436,7 +1538,7 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         session.add(audit)
         session.commit()
-        
+
         await update.message.reply_text(
             f"✅ Balance updated for @{target_user.username or 'User'}!\n\n"
             f"📊 Old: ${old_balance:.2f} → New: ${new_balance:.2f}\n"
@@ -1446,7 +1548,7 @@ async def manual_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         session.close()
-        
+
     except ValueError as e:
         await update.message.reply_text(f"❌ Invalid input: {e}")
     except Exception as e:
@@ -1484,6 +1586,9 @@ def main():
         application.add_handler(CommandHandler("ban_user", ban_user))
         application.add_handler(CommandHandler("unban_user", unban_user))
         application.add_handler(CommandHandler("list_banned", list_banned))
+
+        application.add_handler(CommandHandler("flagged_users", flagged_users))
+        application.add_handler(CommandHandler("unflag_user", unflag_user))
 
         application.add_handler(CommandHandler("add_task", add_task))
         application.add_handler(CommandHandler("list_tasks", list_tasks))
@@ -1532,6 +1637,7 @@ def main():
         logger.info("🎁 Referral rewards: $0.005 per qualified referral")
         logger.info("🔄 Daily midnight referral rewards check scheduled")
         logger.info("🚫 Ban system active (is_banned field)")
+        logger.info("🚩 Flag management: /flagged_users + /unflag_user")
 
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

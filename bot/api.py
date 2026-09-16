@@ -272,11 +272,9 @@ def withdraw():
     if not telegram_id or not amount or not address:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
 
-    # Validate currency (usdt = Polygon, bep20 = BNB Chain, gram = TON)
     if currency not in ['usdt', 'bep20', 'gram']:
         return jsonify({'success': False, 'message': 'Invalid currency'}), 400
 
-    # Validate address per network
     if currency in ['usdt', 'bep20']:
         if not address.startswith('0x') or len(address) != 42:
             network_name = 'BNB Chain (BEP20)' if currency == 'bep20' else 'Polygon'
@@ -324,7 +322,6 @@ def withdraw():
         fee = amount * fee_percent
         net_amount = amount - fee
 
-        # Map currency to network for storage
         network_map = {'usdt': 'polygon', 'bep20': 'bep20', 'gram': 'gram'}
         network = network_map.get(currency, 'polygon')
 
@@ -700,18 +697,39 @@ def credit_ad_reward():
         if user.flagged_for_anomaly:
             return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
         fingerprint = data.get('device_fingerprint', 'unknown')
+
+        # ============================================
+        # ANTI-ABUSE (v93): Smart fingerprint logic
+        # A single user switching devices / browsers / VPN / OS updates
+        # is NORMAL. Real abuse = one fingerprint used by MANY accounts.
+        # ============================================
+
+        # Track the fingerprint (first time only)
         if not user.device_fingerprint and fingerprint != 'unknown':
             user.device_fingerprint = fingerprint
         elif fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
-            user.flagged_for_anomaly = True
-            session_db.commit()
-            logger.warning(f"⚠️ User {user.telegram_id} has multiple device fingerprints")
-            return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
+            # Soft log only — never block a single user for this
+            logger.info(f"ℹ️ User {user.telegram_id} used a different fingerprint (soft log)")
+
+        # Suspicious signal (log only, never block): no fingerprint after many ads
         if not user.device_fingerprint and (user.total_ads_watched or 0) >= 10:
-            user.flagged_for_anomaly = True
-            session_db.commit()
-            logger.warning(f"🚩 FLAGGED: user {user.telegram_id} has {user.total_ads_watched} ads but no device fingerprint — likely API farming")
-            return jsonify({'success': False, 'message': 'Verification failed. Please reopen the Mini App from Telegram and try again.'}), 403
+            logger.warning(f"🚩 SUSPICIOUS (soft): user {user.telegram_id} has {user.total_ads_watched} ads but no fingerprint")
+
+        # REAL abuse signal: one fingerprint shared by 3+ active accounts
+        if fingerprint != 'unknown':
+            same_fp_count = session_db.query(User).filter(
+                User.device_fingerprint == fingerprint,
+                User.id != user.id,
+                User.is_banned == False
+            ).count()
+            if same_fp_count >= 2:  # this user + 2 others = 3 total
+                session_db.query(User).filter(User.device_fingerprint == fingerprint).update(
+                    {'flagged_for_anomaly': True}
+                )
+                session_db.commit()
+                logger.warning(f"🚩 FLAG: fingerprint shared by {same_fp_count + 1} accounts — starting with user {user.telegram_id}")
+                return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
+
         reset_daily_ad_count(user)
         reward = Decimal('0')
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
