@@ -73,6 +73,9 @@ class User(Base):
     banned_at = Column(DateTime, nullable=True)
     ban_reason = Column(Text, nullable=True)
 
+    # ENGAGEMENT TRACKING
+    last_seen_at = Column(DateTime, nullable=True)
+
     investments = relationship("Investment", back_populates="user")
     withdrawals = relationship("Withdrawal", back_populates="user")
     deposits = relationship("Deposit", back_populates="user")

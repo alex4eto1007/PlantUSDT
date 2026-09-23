@@ -433,6 +433,12 @@ def get_user():
                 session_db.commit()
                 clear_user_cache(telegram_id)
 
+        # Update last_seen_at (throttled: once every 5 min)
+        now = datetime.utcnow()
+        if not user.last_seen_at or (now - user.last_seen_at).total_seconds() > 300:
+            user.last_seen_at = now
+            session_db.commit()
+
         investments = session_db.query(Investment).filter_by(user_id=user.id).all()
         fields = []
         expected_daily_earnings = 0.0
@@ -706,15 +712,11 @@ def credit_ad_reward():
         if user.flagged_for_anomaly:
             return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
 
-        # Reset daily counter if the date changed
         reset_daily_ad_count(user)
-
-        # Determine if this ad earns a reward (first 20 of the day) or not
         within_daily_reward = (user.daily_ad_count or 0) < DAILY_AD_LIMIT
 
         fingerprint = data.get('device_fingerprint', 'unknown')
 
-        # Soft fingerprint tracking — never block single user
         if not user.device_fingerprint and fingerprint != 'unknown':
             user.device_fingerprint = fingerprint
         elif fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
@@ -723,7 +725,6 @@ def credit_ad_reward():
         if not user.device_fingerprint and (user.total_ads_watched or 0) >= 10:
             logger.warning(f"🚩 SUSPICIOUS (soft): user {user.telegram_id} has {user.total_ads_watched} ads but no fingerprint")
 
-        # Real abuse signal: one fingerprint shared by 3+ active accounts
         if fingerprint != 'unknown':
             same_fp_count = session_db.query(User).filter(
                 User.device_fingerprint == fingerprint,
@@ -738,7 +739,6 @@ def credit_ad_reward():
                 logger.warning(f"🚩 FLAG: fingerprint shared by {same_fp_count + 1} accounts — starting with user {user.telegram_id}")
                 return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
 
-        # Credit reward — only for the first 20 ads of the day
         reward = Decimal('0.001') if within_daily_reward else Decimal('0')
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.ads_watched_this_cycle = (user.ads_watched_this_cycle or 0) + 1
@@ -757,7 +757,6 @@ def credit_ad_reward():
         session_db.commit()
         clear_user_cache(telegram_id)
 
-        # Referral reward (wallet + 3 ads)
         if user.referred_by:
             referrer = session_db.query(User).filter_by(id=user.referred_by).first()
             if referrer and user.wallet_address and user.total_ads_watched >= 3:
