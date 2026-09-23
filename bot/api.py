@@ -26,7 +26,6 @@ import requests as http_requests
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
-# v93: Ad rewards restored + daily limit
 AD_REWARD = Decimal('0.001')
 DAILY_AD_LIMIT = 20
 
@@ -424,10 +423,16 @@ def get_user():
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
+
+        # Reset daily ad counter on display if new UTC day
         if user.last_ad_reset:
             now = datetime.utcnow()
             if now.date() > user.last_ad_reset.date():
+                user.daily_ad_count = 0
+                user.last_ad_reset = now
+                session_db.commit()
                 clear_user_cache(telegram_id)
+
         investments = session_db.query(Investment).filter_by(user_id=user.id).all()
         fields = []
         expected_daily_earnings = 0.0
@@ -704,17 +709,8 @@ def credit_ad_reward():
         # Reset daily counter if the date changed
         reset_daily_ad_count(user)
 
-        # Enforce daily ad limit
-        if (user.daily_ad_count or 0) >= DAILY_AD_LIMIT:
-            session_db.commit()
-            clear_user_cache(telegram_id)
-            return jsonify({
-                'success': False,
-                'message': f'Daily limit reached ({DAILY_AD_LIMIT} ads). Come back tomorrow!',
-                'limit_reached': True,
-                'daily_ad_count': user.daily_ad_count,
-                'daily_ad_limit': DAILY_AD_LIMIT
-            }), 400
+        # Determine if this ad earns a reward (first 20 of the day) or not
+        within_daily_reward = (user.daily_ad_count or 0) < DAILY_AD_LIMIT
 
         fingerprint = data.get('device_fingerprint', 'unknown')
 
@@ -742,14 +738,15 @@ def credit_ad_reward():
                 logger.warning(f"🚩 FLAG: fingerprint shared by {same_fp_count + 1} accounts — starting with user {user.telegram_id}")
                 return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
 
-        # Credit reward
-        reward = Decimal('0.001')
+        # Credit reward — only for the first 20 ads of the day
+        reward = Decimal('0.001') if within_daily_reward else Decimal('0')
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.ads_watched_this_cycle = (user.ads_watched_this_cycle or 0) + 1
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
-        user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
-        user.balance = (user.balance or Decimal('0')) + reward
-        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
+        if within_daily_reward:
+            user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
+            user.balance = (user.balance or Decimal('0')) + reward
+            user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
 
         ad_log = AdLog(
             user_id=user.id, watched_at=datetime.utcnow(), reward=reward,
@@ -790,6 +787,7 @@ def credit_ad_reward():
             'daily_ad_count': user.daily_ad_count,
             'daily_ad_limit': DAILY_AD_LIMIT,
             'limit_reached': user.daily_ad_count >= DAILY_AD_LIMIT,
+            'rewarded_this_ad': within_daily_reward,
             'total_ad_earnings': float(user.total_ad_earnings or 0)
         })
     except Exception as e:

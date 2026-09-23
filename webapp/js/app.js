@@ -374,7 +374,8 @@ function updateDailyEarnings(data) {
 }
 
 // ============================================
-// DAILY AD PROGRESS BAR (v94)
+// DAILY AD PROGRESS BAR (v95)
+// Never disables the button — user can always watch more
 // ============================================
 function updateDailyAdProgress(data) {
     var watchedToday = Number(data.daily_ad_count || 0);
@@ -386,12 +387,17 @@ function updateDailyAdProgress(data) {
     var adsTodayEl = document.getElementById('adsToday');
 
     if (adsTodayEl) adsTodayEl.textContent = String(watchedToday);
-    if (progressText) progressText.textContent = watchedToday + ' / ' + limit;
+
+    // Cap progress bar display at limit
+    var capped = Math.min(watchedToday, limit);
+    if (progressText) progressText.textContent = capped + ' / ' + limit;
 
     if (progressBar) {
         var pct = Math.min((watchedToday / limit) * 100, 100);
         progressBar.style.width = pct + '%';
-        if (watchedToday >= limit * 0.7) {
+        if (watchedToday >= limit) {
+            progressBar.style.background = 'linear-gradient(90deg,#ffd93d,#f9a825)';
+        } else if (watchedToday >= limit * 0.7) {
             progressBar.style.background = 'linear-gradient(90deg,#ffd93d,#f9a825)';
         } else {
             progressBar.style.background = 'linear-gradient(90deg,#8247E5,#00ff87)';
@@ -400,13 +406,13 @@ function updateDailyAdProgress(data) {
 
     if (statusEl) {
         if (watchedToday >= limit) {
-            statusEl.textContent = '✅ Daily limit reached — come back tomorrow!';
+            statusEl.textContent = '✅ 20/20 earned today — extra ads support the project (no reward)';
             statusEl.style.color = '#ffd93d';
-            statusEl.style.fontWeight = '700';
+            statusEl.style.fontWeight = '600';
         } else {
             var remaining = limit - watchedToday;
             var earnedToday = (watchedToday * AD_REWARD_DISPLAY).toFixed(3);
-            statusEl.textContent = remaining + ' more today • earned $' + earnedToday;
+            statusEl.textContent = remaining + ' more rewarded today • earned $' + earnedToday;
             statusEl.style.color = '#8892b0';
             statusEl.style.fontWeight = '400';
         }
@@ -414,15 +420,13 @@ function updateDailyAdProgress(data) {
 
     var watchBtn = document.getElementById('watchAdBtn');
     if (watchBtn) {
+        // Never disable — user can always watch more to support the project
+        watchBtn.disabled = false;
+        watchBtn.style.opacity = '1';
+        watchBtn.style.cursor = 'pointer';
         if (watchedToday >= limit) {
-            watchBtn.disabled = true;
-            watchBtn.style.opacity = '0.5';
-            watchBtn.style.cursor = 'not-allowed';
-            watchBtn.textContent = '✅ Daily limit reached (20/20)';
+            watchBtn.textContent = '▶️ Watch Ad — Support the Project (No Reward)';
         } else {
-            watchBtn.disabled = false;
-            watchBtn.style.opacity = '1';
-            watchBtn.style.cursor = 'pointer';
             watchBtn.textContent = '▶️ Watch Ad — Earn $0.001';
         }
     }
@@ -1226,26 +1230,26 @@ async function watchRewardedAd() {
                 if (data.success) {
                     loadAdStats();
                     loadUserData();
-                    var earnedMsg = 'You earned $' + Number(data.reward || 0).toFixed(3) + ' USDT!';
-                    if (data.limit_reached) {
-                        earnedMsg += '\n\n✅ Daily limit reached (20/20). Come back tomorrow!';
+                    if (data.rewarded_this_ad === false) {
+                        // Ad beyond daily limit — no reward but still counts
+                        safePopup({
+                            title: '✅ Ad Watched!',
+                            message: 'Thanks for supporting the project! 🎁\n\nYou\'ve already earned today\'s 20 rewarded ads. Extra ads still count toward the weekly giveaway.',
+                            buttons: [{type: 'ok'}]
+                        });
                     } else {
+                        var earnedMsg = 'You earned $' + Number(data.reward || 0).toFixed(3) + ' USDT!';
                         earnedMsg += '\n📺 ' + data.daily_ad_count + ' / ' + data.daily_ad_limit + ' today';
+                        safePopup({
+                            title: '✅ Ad Watched!',
+                            message: earnedMsg,
+                            buttons: [{type: 'ok'}]
+                        });
                     }
-                    safePopup({
-                        title: '✅ Ad Watched!',
-                        message: earnedMsg,
-                        buttons: [{type: 'ok'}]
-                    });
                     setTimeout(() => { loadTasks(); loadReferralProgress(); }, 2000);
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({ title: '🧮 Verification Required', message: data.message || 'Please solve the math question.', buttons: [{type: 'ok'}] });
-                    return false;
-                } else if (data.limit_reached) {
-                    safePopup({ title: '✅ Daily limit reached', message: data.message || 'Come back tomorrow!', buttons: [{type: 'ok'}] });
-                    loadAdStats();
-                    loadUserData();
                     return false;
                 } else {
                     safePopup({ title: '❌ Error', message: data.message || 'Failed to process ad.', buttons: [{type: 'ok'}] });
@@ -1695,12 +1699,14 @@ window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v94)');
-console.log('💰 Ad rewards restored: $0.001 per ad');
-console.log('🎯 Daily ad limit: 20 ads (resets 00:00 UTC)');
-console.log('📊 Daily progress bar live in "Watch Ads" tab');
-console.log('📺 Bottom nav: Watch Ads tab (was Giveaway)');
-console.log('🏆 Weekly giveaway: 150 ads/week still qualifies');
+console.log('✅ PlantUSDT app loaded successfully (v95)');
+console.log('💰 Ad rewards: $0.001 per ad (first 20/day rewarded)');
+console.log('📺 Ads 21+: allowed, no reward, still count toward weekly giveaway');
+console.log('🎯 Daily progress bar shows rewarded cap at 20/20');
+console.log('📊 Progress bar caps visually — button never disabled');
+console.log('ⓘ Clarification: count may show yesterday until next ad');
+console.log('🏆 Weekly giveaway threshold: 120 ads/week');
+console.log('📺 Bottom nav: Watch Ads tab');
 console.log('🛡️ Fingerprint fix: no more false flags on OS updates');
 console.log('🟡 BEP20 withdrawals live — 3 currency options (Polygon / BEP20 / GRAM)');
 console.log('🏠 Always starts on Home tab (no restore of last tab)');
