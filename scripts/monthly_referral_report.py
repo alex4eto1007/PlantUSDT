@@ -28,7 +28,7 @@ Definitions:
 
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 sys.path.insert(0, '/root/PlantUSDT')
@@ -42,7 +42,7 @@ db = DatabaseManager()
 def main():
     session = db.get_session()
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff = now - timedelta(days=30)
 
         print("=" * 70)
@@ -50,9 +50,6 @@ def main():
         print("=" * 70)
         print()
 
-        # Candidate referrers: any user who has at least 100 referrals
-        # We'll compute their stats and filter down.
-        # (Doing this in Python for clarity — small user base ~1555)
         candidate_ids = set()
         all_referrals = session.query(User).filter(User.referred_by.isnot(None)).all()
         referrer_id_counts = {}
@@ -74,12 +71,10 @@ def main():
 
             referrals = session.query(User).filter_by(referred_by=referrer_id).all()
 
-            # ---- Compute valid + engaged counts ----
             valid_count = 0
             engaged_count = 0
 
             for ref in referrals:
-                # Valid = wallet + 3 ads
                 if not (ref.wallet_address and ref.wallet_address.strip()):
                     continue
                 if (ref.total_ads_watched or 0) < 3:
@@ -87,10 +82,8 @@ def main():
 
                 valid_count += 1
 
-                # Engaged check (any of the 4 criteria)
                 engaged = False
 
-                # 1. Watched >= 2 ads in last 30 days
                 if not engaged:
                     ads_30d = session.query(AdLog).filter(
                         AdLog.user_id == ref.id,
@@ -99,7 +92,6 @@ def main():
                     if ads_30d >= 2:
                         engaged = True
 
-                # 2. Completed a task in last 30 days
                 if not engaged:
                     tasks_30d = session.query(UserTaskProgress).filter(
                         UserTaskProgress.user_id == ref.id,
@@ -109,7 +101,6 @@ def main():
                     if tasks_30d >= 1:
                         engaged = True
 
-                # 3. Invited a friend in last 30 days
                 if not engaged:
                     own_refs_30d = session.query(User).filter(
                         User.referred_by == ref.id,
@@ -118,7 +109,6 @@ def main():
                     if own_refs_30d >= 1:
                         engaged = True
 
-                # 4. Opened the app in last 30 days
                 if not engaged:
                     if ref.last_seen_at and ref.last_seen_at >= cutoff:
                         engaged = True
@@ -138,29 +128,24 @@ def main():
                 'pct': pct,
             }
 
-            # Flag check first
             if referrer.flagged_for_anomaly or referrer.is_banned:
                 skipped_flagged.append(entry)
                 continue
 
-            # 50% rule
             if pct < 50:
                 skipped_50.append(entry)
                 continue
 
-            # Qualify checks
             if valid_count >= 150:
                 no_fee_eligible.append(entry)
             elif valid_count >= 100:
                 bonus_eligible.append(entry)
 
-        # ---- Sort each list by valid_count desc ----
         bonus_eligible.sort(key=lambda x: x['valid'], reverse=True)
         no_fee_eligible.sort(key=lambda x: x['valid'], reverse=True)
         skipped_50.sort(key=lambda x: x['valid'], reverse=True)
         skipped_flagged.sort(key=lambda x: x['valid'], reverse=True)
 
-        # ---- Print plain-text report ----
         print(f"💰 BONUS ELIGIBLE ($0.30) — 100+ valid & 50%+ engaged ({len(bonus_eligible)}):")
         if not bonus_eligible:
             print("   (none)")
@@ -210,7 +195,6 @@ def main():
         print("=" * 70)
         print()
 
-        # ---- Print Telegram-ready markdown version ----
         print()
         print("──────── 📲 TELEGRAM-FORMATTED VERSION (copy/paste) ────────")
         print()
