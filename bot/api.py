@@ -26,6 +26,10 @@ import requests as http_requests
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
+# v93: Ad rewards restored + daily limit
+AD_REWARD = Decimal('0.001')
+DAILY_AD_LIMIT = 20
+
 ALLOWED_ORIGINS = ['https://plant-usdt.vercel.app', 'https://web.telegram.org', 'https://*.telegram.org']
 
 @app.after_request
@@ -314,7 +318,6 @@ def withdraw():
             return jsonify({'success': False, 'message': 'Minimum withdrawal is $1'}), 400
         amount = withdraw_amount
 
-        # v92: Updated fee structure — 8% / 10% / 12%
         fee_percent = 0.0
         if amount < 50: fee_percent = 0.08
         elif amount < 100: fee_percent = 0.10
@@ -397,8 +400,9 @@ def get_user():
             'total_earnings': 0, 'level1_count': 0, 'total_ad_earnings': 0,
             'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
             'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
-            'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None,
-            'pending_referral_rewards': 0, 'total_ads_watched': 0, 'ads_watched_this_cycle': 0
+            'last_withdrawal_at': None, 'daily_ad_count': 0, 'daily_ad_limit': DAILY_AD_LIMIT,
+            'last_ad_reset': None, 'pending_referral_rewards': 0, 'total_ads_watched': 0,
+            'ads_watched_this_cycle': 0
         })
     cached = get_cached_user(telegram_id)
     if cached: return jsonify(cached)
@@ -414,8 +418,9 @@ def get_user():
                 'total_earnings': 0, 'level1_count': 0, 'total_ad_earnings': 0,
                 'interstitial_ads_disabled': False, 'has_received_welcome_bonus': False,
                 'tasks_earnings': 0, 'referral_tier': 'free', 'expected_daily_earnings': 0,
-                'last_withdrawal_at': None, 'daily_ad_count': 0, 'last_ad_reset': None,
-                'pending_referral_rewards': 0, 'total_ads_watched': 0, 'ads_watched_this_cycle': 0
+                'last_withdrawal_at': None, 'daily_ad_count': 0, 'daily_ad_limit': DAILY_AD_LIMIT,
+                'last_ad_reset': None, 'pending_referral_rewards': 0, 'total_ads_watched': 0,
+                'ads_watched_this_cycle': 0
             }
             set_cached_user(telegram_id, response)
             return jsonify(response)
@@ -465,6 +470,7 @@ def get_user():
             'total_ads_watched': int(user.total_ads_watched or 0),
             'ads_watched_this_cycle': int(user.ads_watched_this_cycle or 0),
             'daily_ad_count': user.daily_ad_count or 0,
+            'daily_ad_limit': DAILY_AD_LIMIT,
             'last_ad_reset': user.last_ad_reset.isoformat() if user.last_ad_reset else None,
             'pending_referral_rewards': round(float(user.pending_referral_rewards or 0), 3)
         }
@@ -604,8 +610,6 @@ def invest_locked():
             return jsonify({'success': False, 'message': f'Field #{field_number} is already active'}), 400
         from datetime import datetime, timedelta
         now = datetime.utcnow()
-
-        # v92: Updated multipliers — 1% / 8% / 35%
         multipliers = {1: 1.01, 7: 1.08, 30: 1.35}
         multiplier = multipliers.get(lock_period, 1.35)
         expected_return = amount * multiplier
@@ -696,33 +700,41 @@ def credit_ad_reward():
             return jsonify({'success': False, 'message': 'User not found'}), 404
         if user.flagged_for_anomaly:
             return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
+
+        # Reset daily counter if the date changed
+        reset_daily_ad_count(user)
+
+        # Enforce daily ad limit
+        if (user.daily_ad_count or 0) >= DAILY_AD_LIMIT:
+            session_db.commit()
+            clear_user_cache(telegram_id)
+            return jsonify({
+                'success': False,
+                'message': f'Daily limit reached ({DAILY_AD_LIMIT} ads). Come back tomorrow!',
+                'limit_reached': True,
+                'daily_ad_count': user.daily_ad_count,
+                'daily_ad_limit': DAILY_AD_LIMIT
+            }), 400
+
         fingerprint = data.get('device_fingerprint', 'unknown')
 
-        # ============================================
-        # ANTI-ABUSE (v93): Smart fingerprint logic
-        # A single user switching devices / browsers / VPN / OS updates
-        # is NORMAL. Real abuse = one fingerprint used by MANY accounts.
-        # ============================================
-
-        # Track the fingerprint (first time only)
+        # Soft fingerprint tracking — never block single user
         if not user.device_fingerprint and fingerprint != 'unknown':
             user.device_fingerprint = fingerprint
         elif fingerprint != 'unknown' and user.device_fingerprint and user.device_fingerprint != fingerprint:
-            # Soft log only — never block a single user for this
             logger.info(f"ℹ️ User {user.telegram_id} used a different fingerprint (soft log)")
 
-        # Suspicious signal (log only, never block): no fingerprint after many ads
         if not user.device_fingerprint and (user.total_ads_watched or 0) >= 10:
             logger.warning(f"🚩 SUSPICIOUS (soft): user {user.telegram_id} has {user.total_ads_watched} ads but no fingerprint")
 
-        # REAL abuse signal: one fingerprint shared by 3+ active accounts
+        # Real abuse signal: one fingerprint shared by 3+ active accounts
         if fingerprint != 'unknown':
             same_fp_count = session_db.query(User).filter(
                 User.device_fingerprint == fingerprint,
                 User.id != user.id,
                 User.is_banned == False
             ).count()
-            if same_fp_count >= 2:  # this user + 2 others = 3 total
+            if same_fp_count >= 2:
                 session_db.query(User).filter(User.device_fingerprint == fingerprint).update(
                     {'flagged_for_anomaly': True}
                 )
@@ -730,11 +742,15 @@ def credit_ad_reward():
                 logger.warning(f"🚩 FLAG: fingerprint shared by {same_fp_count + 1} accounts — starting with user {user.telegram_id}")
                 return jsonify({'success': False, 'message': 'Your account has been flagged for suspicious activity. Please contact support.'}), 403
 
-        reset_daily_ad_count(user)
-        reward = Decimal('0')
+        # Credit reward
+        reward = Decimal('0.001')
         user.total_ads_watched = (user.total_ads_watched or 0) + 1
         user.ads_watched_this_cycle = (user.ads_watched_this_cycle or 0) + 1
         user.daily_ad_count = (user.daily_ad_count or 0) + 1
+        user.total_ad_earnings = (user.total_ad_earnings or Decimal('0')) + reward
+        user.balance = (user.balance or Decimal('0')) + reward
+        user.total_earnings_all_time = (user.total_earnings_all_time or Decimal('0')) + reward
+
         ad_log = AdLog(
             user_id=user.id, watched_at=datetime.utcnow(), reward=reward,
             ip_address=get_client_ip(), user_agent=request.headers.get('User-Agent', 'unknown'),
@@ -743,6 +759,8 @@ def credit_ad_reward():
         session_db.add(ad_log)
         session_db.commit()
         clear_user_cache(telegram_id)
+
+        # Referral reward (wallet + 3 ads)
         if user.referred_by:
             referrer = session_db.query(User).filter_by(id=user.referred_by).first()
             if referrer and user.wallet_address and user.total_ads_watched >= 3:
@@ -764,10 +782,15 @@ def credit_ad_reward():
                     session_db.commit()
                     clear_user_cache(referrer.telegram_id)
                     logger.info(f"✅ Referral reward $0.005 pending for {referrer.telegram_id} from {user.telegram_id}")
+
         return jsonify({
-            'success': True, 'reward': 0, 'balance': float(user.balance),
-            'daily_ad_count': user.daily_ad_count, 'daily_ad_limit': None,
-            'limit_reached': False, 'total_ad_earnings': float(user.total_ad_earnings or 0)
+            'success': True,
+            'reward': float(reward),
+            'balance': float(user.balance),
+            'daily_ad_count': user.daily_ad_count,
+            'daily_ad_limit': DAILY_AD_LIMIT,
+            'limit_reached': user.daily_ad_count >= DAILY_AD_LIMIT,
+            'total_ad_earnings': float(user.total_ad_earnings or 0)
         })
     except Exception as e:
         session_db.rollback()

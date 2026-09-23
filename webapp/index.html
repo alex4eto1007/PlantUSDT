@@ -137,59 +137,59 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB: GIVEAWAY                                   -->
+        <!-- TAB: GIVEAWAY (renamed to "Watch Ads & Earn")   -->
         <!-- ============================================== -->
         <div class="tab-section" id="section-giveaway">
             <div class="section-header-tab">
-                <h2>🎁 Weekly Giveaway</h2>
+                <h2>📺 Watch Ads & Earn</h2>
             </div>
 
             <div class="ad-section">
-                <h3>📺 Watch Ads — Fund the Giveaway</h3>
+                <h3>💰 Earn $0.001 per ad</h3>
                 <p style="font-size:13px;color:#8892b0;margin-bottom:12px;">
-                    Every ad you watch helps fund the <strong>weekly community giveaway</strong>!<br>
+                    Watch ads, earn real USDT instantly!<br>
                     <span style="font-size:12px;opacity:0.7;">
-                        🎁 10 winners share the pool every Friday • 100% of ad revenue goes to prizes
+                        💵 $0.001 per ad • Max 20 ads per day
                     </span>
                 </p>
 
                 <div class="ad-stats" style="grid-template-columns: 1fr 1fr;">
                     <div class="ad-stat-box">
-                        <span class="ad-stat-label">📊 Total Ads Watched</span>
+                        <span class="ad-stat-label">📊 Watched Today</span>
                         <span class="ad-stat-value" id="adsToday">0</span>
                     </div>
                     <div class="ad-stat-box">
-                        <span class="ad-stat-label">♾️ Limit</span>
-                        <span class="ad-stat-value" style="color:#00ff87;font-size:14px;">No Limits</span>
+                        <span class="ad-stat-label">🎯 Daily Limit</span>
+                        <span class="ad-stat-value" style="color:#00ff87;font-size:14px;">20 ads</span>
                     </div>
                 </div>
 
+                <!-- Daily progress bar -->
                 <div style="margin-top:12px;padding:12px;background:rgba(130,71,229,0.08);border-radius:8px;border:1px solid rgba(130,71,229,0.15);">
                     <div style="display:flex;justify-content:space-between;font-size:12px;color:#a29bfe;margin-bottom:6px;">
-                        <span>🎁 Giveaway Progress</span>
-                        <span id="giveawayProgressText">0 / 150</span>
+                        <span>📺 Daily Progress</span>
+                        <span id="dailyAdProgressText">0 / 20</span>
                     </div>
                     <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
-                        <div id="giveawayProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);transition:width 0.5s ease;"></div>
+                        <div id="dailyAdProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#8247E5,#00ff87);transition:width 0.5s ease;"></div>
                     </div>
-                    <div id="giveawayStatus" style="font-size:11px;color:#8892b0;margin-top:6px;text-align:center;">Watch 150 ads to qualify</div>
-                    <div id="giveawayResetTimer" style="font-size:11px;color:#8892b0;margin-top:4px;text-align:center;font-family:'Courier New',monospace;"></div>
+                    <div id="dailyAdStatus" style="font-size:11px;color:#8892b0;margin-top:6px;text-align:center;">Watch up to 20 ads per day</div>
                 </div>
 
-                <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;margin-top:12px;">▶️ Watch Ad — Support Giveaways</button>
+                <button class="action-btn primary" onclick="watchRewardedAd()" id="watchAdBtn" style="width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00ff87,#00cc6a);border:none;color:#0a0e17;margin-top:12px;">▶️ Watch Ad — Earn $0.001</button>
 
                 <div id="adStatus" style="margin-top:10px;font-size:13px;color:#ffd93d;text-align:center;display:none;"></div>
 
                 <div style="margin-top:12px;padding:10px;background:rgba(255,193,7,0.06);border-radius:8px;border:1px solid rgba(255,193,7,0.1);">
                     <p style="font-size:11px;color:#ffd93d;margin:0;text-align:center;line-height:1.5;">
-                        🎁 100% of ad revenue funds weekly community giveaways.<br>
-                        📊 Watch as many ads as you like — no daily limit!<br>
-                        🏆 Winners announced every Friday.
+                        💵 $0.001 per ad → credited instantly<br>
+                        🎯 20 ads/day limit → resets at 00:00 UTC<br>
+                        🏆 Weekly giveaway still runs — hit 150 ads/week to qualify!
                     </p>
                 </div>
 
                 <button class="action-btn warning" onclick="disableInterstitialAds()" id="disableAdsBtn" style="width:100%;margin-top:12px;padding:12px;border-radius:8px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);color:#ff6b6b;font-weight:600;cursor:pointer;">
-                    🔇 Disable Ads ($4)
+                    🔇 Disable Interstitial Ads ($4)
                 </button>
                 <p style="font-size:10px;color:#495670;margin-top:4px;text-align:center;">
                     One-time payment. You'll still be able to watch rewarded ads.
@@ -342,7 +342,8 @@
                 <p>6. When period ends, click <strong>"🌾 Claim Now!"</strong></p>
                 <p>7. Funds added to your balance and field resets</p>
                 <p>8. Withdraw once a day (min $1, 8%-12% fee)</p>
-                <p>9. Refer friends and earn up to 5% of their deposits based on your tier!</p>
+                <p>9. Watch ads — earn $0.001 per ad (max 20/day)</p>
+                <p>10. Refer friends and earn up to 5% of their deposits based on your tier!</p>
                 <p style="color:#8247E5;margin-top:8px;font-weight:500;">⛓️ Powered by Polygon Network</p>
             </div>
 
@@ -367,8 +368,8 @@
             <span class="nav-label">Tasks</span>
         </button>
         <button class="nav-btn" data-tab="giveaway">
-            <span class="nav-icon">🎁</span>
-            <span class="nav-label">Giveaway</span>
+            <span class="nav-icon">📺</span>
+            <span class="nav-label">Watch Ads</span>
         </button>
         <button class="nav-btn" data-tab="referrals">
             <span class="nav-icon">👥</span>
@@ -417,15 +418,10 @@
         window.AD_REWARD = AD_REWARD;
     </script>
 
-    <script src="js/app.js?v=92"></script>
+    <script src="js/app.js?v=94"></script>
 
     <script>
-        // ============================================
-        // SAFETY FALLBACK (v86)
-        // If app.js fails to load or switchTab is missing after 3s,
-        // show all sections at once + hide the bottom nav, so users
-        // can still access everything (just not tabbed).
-        // ============================================
+        // SAFETY FALLBACK — if app.js fails to load, show all sections
         setTimeout(function() {
             try {
                 if (typeof window.switchTab !== 'function') {

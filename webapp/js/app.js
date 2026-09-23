@@ -8,6 +8,8 @@ let tgUser = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 const PROJECT_WALLET = '0x6b2672E8b8A3D610AD3C148C70627f3b79D5cF76';
 const NETWORK = 'Polygon';
 const USDT_CONTRACT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+const DAILY_AD_LIMIT = 20;
+const AD_REWARD_DISPLAY = 0.001;
 let timerInterval = null;
 let giveawayTimerInterval = null;
 let lastAdTime = 0;
@@ -84,9 +86,7 @@ function generateMathCaptcha() {
 }
 
 // ============================================
-// DEVICE FINGERPRINT
-// NOTE: userAgent is deliberately excluded — it contains OS version which
-// changes on updates and causes false-positive anomaly flags.
+// DEVICE FINGERPRINT (userAgent excluded)
 // ============================================
 function getDeviceFingerprint() {
     try {
@@ -148,7 +148,7 @@ function showInterstitialIfNeeded() {
 }
 
 // ============================================
-// TAB SWITCHING (bottom nav) — silent on non-tabbed pages
+// TAB SWITCHING
 // ============================================
 function switchTab(tab) {
     try {
@@ -161,17 +161,11 @@ function switchTab(tab) {
         var section = document.getElementById('section-' + tab);
         var btn = document.querySelector('.nav-btn[data-tab="' + tab + '"]');
 
-        if (section) {
-            section.classList.add('active');
-        } else if (hasNav) {
-            console.warn('⚠️ switchTab: no section found for tab "' + tab + '"');
-        }
+        if (section) section.classList.add('active');
+        else if (hasNav) console.warn('⚠️ switchTab: no section for "' + tab + '"');
 
-        if (btn) {
-            btn.classList.add('active');
-        } else if (hasNav) {
-            console.warn('⚠️ switchTab: no nav button found for tab "' + tab + '"');
-        }
+        if (btn) btn.classList.add('active');
+        else if (hasNav) console.warn('⚠️ switchTab: no nav button for "' + tab + '"');
 
         try { localStorage.setItem('activeTab', tab); } catch (e) {}
         try { if (window.scrollY > 50) window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
@@ -194,9 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         var hasBottomNav = document.getElementById('bottomNav') !== null;
-        if (hasBottomNav) {
-            switchTab('home');
-        }
+        if (hasBottomNav) switchTab('home');
 
         function initializeApp() {
             if (tgUser) {
@@ -229,11 +221,8 @@ function navigateTo(page) {
 }
 
 function goBack() {
-    if (window.history.length > 1) {
-        window.history.back();
-    } else {
-        window.location.href = 'index.html';
-    }
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = 'index.html';
 }
 
 // ============================================
@@ -275,11 +264,8 @@ function selectCurrency(currency) {
     var feeNetEl = document.getElementById('feeNet');
     if (feeNetEl) {
         var currentText = feeNetEl.textContent.replace('~', '').replace(' in GRAM', '');
-        if (currency === 'gram') {
-            feeNetEl.textContent = '~' + currentText + ' in GRAM';
-        } else {
-            feeNetEl.textContent = currentText;
-        }
+        if (currency === 'gram') feeNetEl.textContent = '~' + currentText + ' in GRAM';
+        else feeNetEl.textContent = currentText;
     }
 }
 
@@ -316,7 +302,7 @@ async function loadUserData(retries = 3) {
             await updateWelcomeBonusButton(data);
             updateTierButtons(data);
             updateClaimReferralButton(data);
-            updateGiveawayProgress(data);
+            updateDailyAdProgress(data);
             var loadingEl = document.getElementById('loadingMessage');
             var appContent = document.getElementById('appContent');
             if (loadingEl) loadingEl.style.display = 'none';
@@ -388,19 +374,69 @@ function updateDailyEarnings(data) {
 }
 
 // ============================================
-// GIVEAWAY PROGRESS + RESET TIMER
+// DAILY AD PROGRESS BAR (v94)
+// ============================================
+function updateDailyAdProgress(data) {
+    var watchedToday = Number(data.daily_ad_count || 0);
+    var limit = Number(data.daily_ad_limit || DAILY_AD_LIMIT);
+
+    var progressBar = document.getElementById('dailyAdProgressBar');
+    var progressText = document.getElementById('dailyAdProgressText');
+    var statusEl = document.getElementById('dailyAdStatus');
+    var adsTodayEl = document.getElementById('adsToday');
+
+    if (adsTodayEl) adsTodayEl.textContent = String(watchedToday);
+    if (progressText) progressText.textContent = watchedToday + ' / ' + limit;
+
+    if (progressBar) {
+        var pct = Math.min((watchedToday / limit) * 100, 100);
+        progressBar.style.width = pct + '%';
+        if (watchedToday >= limit * 0.7) {
+            progressBar.style.background = 'linear-gradient(90deg,#ffd93d,#f9a825)';
+        } else {
+            progressBar.style.background = 'linear-gradient(90deg,#8247E5,#00ff87)';
+        }
+    }
+
+    if (statusEl) {
+        if (watchedToday >= limit) {
+            statusEl.textContent = '✅ Daily limit reached — come back tomorrow!';
+            statusEl.style.color = '#ffd93d';
+            statusEl.style.fontWeight = '700';
+        } else {
+            var remaining = limit - watchedToday;
+            var earnedToday = (watchedToday * AD_REWARD_DISPLAY).toFixed(3);
+            statusEl.textContent = remaining + ' more today • earned $' + earnedToday;
+            statusEl.style.color = '#8892b0';
+            statusEl.style.fontWeight = '400';
+        }
+    }
+
+    var watchBtn = document.getElementById('watchAdBtn');
+    if (watchBtn) {
+        if (watchedToday >= limit) {
+            watchBtn.disabled = true;
+            watchBtn.style.opacity = '0.5';
+            watchBtn.style.cursor = 'not-allowed';
+            watchBtn.textContent = '✅ Daily limit reached (20/20)';
+        } else {
+            watchBtn.disabled = false;
+            watchBtn.style.opacity = '1';
+            watchBtn.style.cursor = 'pointer';
+            watchBtn.textContent = '▶️ Watch Ad — Earn $0.001';
+        }
+    }
+}
+
+// ============================================
+// GIVEAWAY RESET TIMER
 // ============================================
 function getNextFridayUTC() {
     const now = new Date();
     const utcDay = now.getUTCDay();
     let daysUntilFri = (5 - utcDay + 7) % 7;
     if (daysUntilFri === 0) daysUntilFri = 7;
-    return Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate() + daysUntilFri,
-        0, 0, 0, 0
-    );
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilFri, 0, 0, 0, 0);
 }
 
 function formatGiveawayCountdown(ms) {
@@ -428,51 +464,10 @@ function startGiveawayTimer() {
     giveawayTimerInterval = setInterval(tickGiveawayTimer, 1000);
 }
 
-function updateGiveawayProgress(data) {
-    var cycleAds = Number(data.ads_watched_this_cycle || 0);
-    var progressBar = document.getElementById('giveawayProgressBar');
-    var progressText = document.getElementById('giveawayProgressText');
-    var statusEl = document.getElementById('giveawayStatus');
-    var timerEl = document.getElementById('giveawayResetTimer');
-
-    if (cycleAds >= 150) {
-        if (progressText) progressText.textContent = '150 / 150';
-        if (progressBar) {
-            progressBar.style.width = '100%';
-            progressBar.style.background = 'linear-gradient(90deg,#ffd93d,#f9a825)';
-        }
-        if (statusEl) {
-            statusEl.textContent = '🏆 QUALIFIED FOR THIS WEEK\'S DRAW';
-            statusEl.style.color = '#ffd93d';
-            statusEl.style.fontWeight = '700';
-        }
-        if (timerEl) {
-            timerEl.style.color = '#ffd93d';
-        }
-    } else {
-        var pct = Math.min((cycleAds / 150) * 100, 100);
-        if (progressText) progressText.textContent = cycleAds + ' / 150';
-        if (progressBar) {
-            progressBar.style.width = pct + '%';
-            progressBar.style.background = 'linear-gradient(90deg,#8247E5,#00ff87)';
-        }
-        if (statusEl) {
-            statusEl.textContent = 'Watch 150 ads to qualify (' + (150 - cycleAds) + ' remaining)';
-            statusEl.style.color = '#8892b0';
-            statusEl.style.fontWeight = '400';
-        }
-        if (timerEl) {
-            timerEl.style.color = '#8892b0';
-        }
-    }
-}
-
 function updateWelcomeBonusButton(data) {
     const btn = document.getElementById('claimWelcomeBtn');
     if (!btn) return;
-    if (data.has_received_welcome_bonus) {
-        btn.remove();
-    }
+    if (data.has_received_welcome_bonus) btn.remove();
 }
 
 function updateClaimReferralButton(data) {
@@ -901,7 +896,7 @@ async function setWallet() {
 }
 
 // ============================================
-// INVESTMENT MATH (v92: 1% / 8% / 35%)
+// INVESTMENT MATH (1% / 8% / 35%)
 // ============================================
 function calculateReturn(amount, days) {
     const multipliers = {1: 1.01, 7: 1.08, 30: 1.35};
@@ -1231,15 +1226,26 @@ async function watchRewardedAd() {
                 if (data.success) {
                     loadAdStats();
                     loadUserData();
+                    var earnedMsg = 'You earned $' + Number(data.reward || 0).toFixed(3) + ' USDT!';
+                    if (data.limit_reached) {
+                        earnedMsg += '\n\n✅ Daily limit reached (20/20). Come back tomorrow!';
+                    } else {
+                        earnedMsg += '\n📺 ' + data.daily_ad_count + ' / ' + data.daily_ad_limit + ' today';
+                    }
                     safePopup({
                         title: '✅ Ad Watched!',
-                        message: 'Thanks for supporting the community giveaway! 🎁\n\nYour ad helps fund the weekly prize pool. Winners announced every Friday.',
+                        message: earnedMsg,
                         buttons: [{type: 'ok'}]
                     });
                     setTimeout(() => { loadTasks(); loadReferralProgress(); }, 2000);
                     return true;
                 } else if (data.need_captcha) {
                     safePopup({ title: '🧮 Verification Required', message: data.message || 'Please solve the math question.', buttons: [{type: 'ok'}] });
+                    return false;
+                } else if (data.limit_reached) {
+                    safePopup({ title: '✅ Daily limit reached', message: data.message || 'Come back tomorrow!', buttons: [{type: 'ok'}] });
+                    loadAdStats();
+                    loadUserData();
                     return false;
                 } else {
                     safePopup({ title: '❌ Error', message: data.message || 'Failed to process ad.', buttons: [{type: 'ok'}] });
@@ -1266,12 +1272,7 @@ async function loadAdStats() {
         const response = await fetch(API_BASE + '/api/user?telegram_id=' + userId + '&t=' + Date.now());
         const userData = await response.json();
         if (!userData.success) return;
-        const totalAds = userData.total_ads_watched || 0;
-        const adsTodayEl = document.getElementById('adsToday');
-        if (adsTodayEl) adsTodayEl.textContent = String(totalAds);
-        const watchBtn = document.getElementById('watchAdBtn');
-        if (watchBtn) { watchBtn.disabled = false; watchBtn.textContent = '▶️ Watch Ad — Support Giveaways'; }
-        updateGiveawayProgress(userData);
+        updateDailyAdProgress(userData);
     } catch (error) {}
 }
 
@@ -1393,7 +1394,7 @@ async function disableInterstitialAds() {
 }
 
 // ============================================
-// TASKS — all tasks visible (including claimed)
+// TASKS
 // ============================================
 async function loadTasks() {
     if (window._isBanned) return;
@@ -1513,20 +1514,15 @@ function openCommunityLink(taskId) {
         buttons: [{id:'cancel',type:'cancel'},{id:'join',type:'ok',text:'🔗 Join Now'}]
     }, function(buttonId) {
         if (buttonId === 'join') {
-            if (typeof tg !== 'undefined' && tg.openTelegramLink) {
-                tg.openTelegramLink(link);
-            } else {
-                window.open(link, '_blank');
-            }
+            if (typeof tg !== 'undefined' && tg.openTelegramLink) tg.openTelegramLink(link);
+            else window.open(link, '_blank');
             setTimeout(function() {
                 safePopupWithCallback({
                     title: '✅ Joined?',
                     message: 'Did you join? Click Yes to claim your 0.02 USDT reward.',
                     buttons: [{id:'no',type:'cancel',text:'Not yet'},{id:'yes',type:'ok',text:'✅ Yes, Claim'}]
                 }, function(buttonId2) {
-                    if (buttonId2 === 'yes') {
-                        claimTaskReward(taskId);
-                    }
+                    if (buttonId2 === 'yes') claimTaskReward(taskId);
                 });
             }, 3000);
         }
@@ -1694,39 +1690,39 @@ window.toggleReferralList = toggleReferralList;
 window.selectCurrency = selectCurrency;
 window.isValidTonAddress = isValidTonAddress;
 window.showBanScreen = showBanScreen;
-window.updateGiveawayProgress = updateGiveawayProgress;
+window.updateDailyAdProgress = updateDailyAdProgress;
 window.startGiveawayTimer = startGiveawayTimer;
 window.tickGiveawayTimer = tickGiveawayTimer;
 window.switchTab = switchTab;
 
-console.log('✅ PlantUSDT app loaded successfully (v92)');
-console.log('📉 Investment returns: 1% / 8% / 35% (old investments unaffected)');
-console.log('💸 Withdrawal fees: 8% / 10% / 12%');
-console.log('🛡️ Fingerprint fixed: no more false flags on OS updates');
+console.log('✅ PlantUSDT app loaded successfully (v94)');
+console.log('💰 Ad rewards restored: $0.001 per ad');
+console.log('🎯 Daily ad limit: 20 ads (resets 00:00 UTC)');
+console.log('📊 Daily progress bar live in "Watch Ads" tab');
+console.log('📺 Bottom nav: Watch Ads tab (was Giveaway)');
+console.log('🏆 Weekly giveaway: 150 ads/week still qualifies');
+console.log('🛡️ Fingerprint fix: no more false flags on OS updates');
 console.log('🟡 BEP20 withdrawals live — 3 currency options (Polygon / BEP20 / GRAM)');
 console.log('🏠 Always starts on Home tab (no restore of last tab)');
 console.log('🔇 switchTab silent on non-tabbed pages');
 console.log('🛡️ Safety fallback active — if app.js fails, all sections show');
-console.log('📱 Bottom nav active: 5 tabs (Home / Tasks / Giveaway / Referrals / Profile)');
+console.log('📱 Bottom nav active: 5 tabs (Home / Tasks / Watch Ads / Referrals / Profile)');
 console.log('📢 Welcome bonus: 0.1 USDT — button removed after claiming');
 console.log('🎁 Referral reward: $0.005 pending until claimed');
 console.log('💰 Available Earnings button: shows unclaimed referral rewards');
 console.log('🔥 Active Referrals tracked silently for ambassador promotion');
-console.log('📺 Ads fund weekly community giveaways — no per-ad reward');
-console.log('♾️ Ads have no limits — watch as many as you like');
-console.log('📊 Ads stat shows Total Ads Watched (from API total_ads_watched)');
-console.log('🎁 Giveaway progress bar: X / 150 ads this cycle');
-console.log('🏆 Gold bar + QUALIFIED badge when 150+ ads watched');
-console.log('⏳ Live countdown timer shows time until next Friday 00:00 UTC');
+console.log('📊 Ads stat shows Watched Today (from API daily_ad_count)');
 console.log('📅 Timer auto-updates every second via setInterval');
 console.log('📢 Community tasks: Join Channel, Group, Transactions (0.02 each)');
 console.log('📢 Tasks: all tasks visible including claimed (with ✅ tick)');
 console.log('🚫 Ban system active — banned users see suspension notice');
+console.log('🚩 Flag management: /flagged_users + /unflag_user');
 console.log('📊 Task rewards display 2 decimals');
+console.log('📉 Investment returns: 1% / 8% / 35%');
+console.log('💸 Withdrawal fees: 8% / 10% / 12%');
 console.log('🔒 Duplicate wallet protection active');
 console.log('🎯 Math captcha accepts 0 as valid answer');
 console.log('📋 Referral table shows only eligible referrals (wallet + 3 ads)');
 console.log('✅ Claimed tasks now stay visible with ✅ tick (not hidden)');
-console.log('📈 total_ads_watched added to /api/user response');
-console.log('🎁 ads_watched_this_cycle added for giveaway progress');
+console.log('📈 total_ads_watched + ads_watched_this_cycle in /api/user response');
 console.log('🔙 goBack() fallback added — falls back to index.html if no history');
